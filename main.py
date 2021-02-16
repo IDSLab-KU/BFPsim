@@ -6,9 +6,21 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 
+from blocks import BFLinear
+
 from log import Log
 import signal
 import sys
+
+
+exitToken = 10
+def ExitCounter():
+    global exitToken
+    exitToken -= 1
+    if exitToken == 0:
+        sys.exit()
+
+
 
 def handler(signum, frame):
     # Log.Exit()
@@ -18,31 +30,52 @@ def handler(signum, frame):
 
 class Net(nn.Module):
     def __init__(self):
-        super(Net, self).__init__()        
-        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)     # 16x32x32
-        self.pool1 = nn.MaxPool2d(2, 2)                 # 16x16x16
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=0)    # 32x14x14
-        self.pool2 = nn.MaxPool2d(2, 2)                 # 32x7x7
-        self.conv3 = nn.Conv2d(32, 64, 3, padding=0)    # 64x5x5
-        self.fc1 = nn.Linear(64 * 5 * 5, 1024)
-        self.fc2 = nn.Linear(1024, 1024)
-        self.fc3 = nn.Linear(1024, 10)
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=0)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.conv3 = nn.Conv2d(32, 64, 3, padding=0)
+
+        self.fc1 = BFLinear(64 * 5 * 5, 1024)
+        self.fc2 = BFLinear(1024, 1024)
+        self.fc3 = BFLinear(1024, 10)
 
     def forward(self, x):
-        x = self.pool1(F.relu(self.conv1(x)))
-        x = self.pool2(F.relu(self.conv2(x)))
-        x = F.relu(self.conv3(x))
-        x = x.view(-1, 64 * 5 * 5)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc2(x)
+                                        #  3x32x32
+        x = F.relu(self.conv1(x))       # 16x32x32
+        x = self.pool1(x)               # 16x16x16
+        x = F.relu(self.conv2(x))       # 32x14x14
+        x = self.pool2(x)               # 32x 7x 7
+        x = F.relu(self.conv3(x))       # 64x 5x 5
+        x = x.view(-1, 64 * 5 * 5)      # 1600
+        x = F.relu(self.fc1(x))         # 1024
+        x = F.relu(self.fc2(x))         # 1024
+        x = self.fc3(x)                 # 10
         return x
+    
+
+
+
+def Evaluate(net, testloader):
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            outputs = net(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    Log.Print('Accuracy: %f' % (correct / total))
 
 
 
 def Train(net, trainloader, testloader):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+    lr = 0.0001
 
     for epoch in range(5):  # loop over the dataset multiple times
 
@@ -58,7 +91,21 @@ def Train(net, trainloader, testloader):
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+
+            # Manually designed optimizer
             optimizer.step()
+            """
+            with torch.no_grad():
+                net.conv1.weight -= lr * net.conv1.weight.grad
+                net.conv2.weight -= lr * net.conv2.weight.grad
+                net.conv3.weight -= lr * net.conv3.weight.grad
+                net.fc1.weight -= lr * net.fc1.weight.grad
+                net.fc2.weight -= lr * net.fc2.weight.grad
+                net.fc3.weight -= lr * net.fc3.weight.grad
+            """
+
+            # Exit after few iterations to check it's working
+            # ExitCounter()
 
             # print statistics
             running_loss += loss.item()
@@ -69,20 +116,6 @@ def Train(net, trainloader, testloader):
                 
         Evaluate(net, testloader)
     Log.Print('Finished Training')
-
-def Evaluation(net, testloader):
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    Log.Print('Accuracy: %f %%' % (correct / total))
-
-
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handler)
@@ -108,8 +141,10 @@ if __name__ == '__main__':
     
     # Define the network
     net = Net()
+    Log.Print("Model Summary:%s"%net,current=False, elapsed=False)
     # Train the network
     Train(net, trainloader, testloader)
+    
 
 
 
