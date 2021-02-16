@@ -1,6 +1,7 @@
-###############################
-# Logger
-###############################
+##############################
+# Logger 1.0 by R3C0D3r      #
+# cryptographcode@gmail.com  #
+##############################
 
 from datetime import datetime
 import os
@@ -54,32 +55,50 @@ class Logger:
         self.logFileLocation = None
         self.logFilePointer = None
         self.logValid = False
-        self.printCurrentTime = True
-        self.printElapsedTime = True
-
-    def Exit(self):
-        if self.isLogFile:
-            self.logFilePointer.close()
-            if not self.logValid:
-                if os.path.exists(self.logFileLocation):
-                    os.remove(self.logFileLocation)
-
+        self.printCurrentTime = False
+        self.printElapsedTime = False
+        self.MSPrecision = 3
+        self.printLevel = 0
+        self.messages = True
+        self.Message("Logger: is initalized.")
 
     def SetLogFile(self, b, t=None):
         self.isLogFile = b
         if self.isLogFile:
             if t == None:
+                if not os.path.exists("./logs"):
+                    os.makedirs("./logs")
                 self.logFileLocation = "./logs/%s.log"%(str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_"))
             else:
                 self.logFileLocation = t
-            if not os.path.exists("./logs"):
-                os.makedirs("./logs")
             
+    def SetPrintLevel(self, v):
+        assert isinstance(v, int), "Logger: Inputed value is not int"
+        self.printLevel = v
+        self.Message("Logger: Print Level is set to %d."%v)
+    
+    def SetMSPrecision(self, v):
+        assert v in [0, 1, 2, 3, 4, 5], "Logger: Precision Not Available"
+        self.MSPrecision = v
+        if self.MSPrecision > 5:
+            self.MSPrecision = 5
+        elif self.MSPrecision < 0:
+            self.MSPrecision = 0
+        self.Message("Logger: Milisecond Precision is set to %s."%v)
+
+    def SetMessages(self, b):
+        assert b in [True, False], "Logger: Incorrect value has been inputed"
+        self.Message("Logger: Messages from logger is set to %s."%b, f=True)
+        self.messages = b
 
     def SetPrintCurrentTime(self, b):
+        assert b in [True, False], "Logger: Incorrect value has been inputed"
         self.printCurrentTime = b
+        self.Message("Logger: PrintCurrentTime is set to %s."%b)
 
     def SetPrintElapsedTime(self, b):
+        assert b in [True, False], "Logger: Incorrect value has been inputed"
+        self.Message("Logger: PrintElapsedTime is set to %s."%b)
         self.printElapsedTime = b
 
     def GetCurrentTime(self):
@@ -87,33 +106,41 @@ class Logger:
 
     def GetElapsedTime(self):
         et = datetime.now().timestamp() - self.timeInit
-        etMS = int(et * 1000) % 1000
+        etMS = int(et * 1000000) % 1000000
         etS = int(et % 60)
         etM = int((et / 60) % 60)
         etH = int(et / 3600)
-        return "%02d:%02d:%02d.%3d"%(etH,etM,etS,etMS)
+        return "%02d:%02d:%02d.%6s"%(etH,etM,etS,str(etMS).zfill(6))
 
+    def Message(self, msg, f=False):
+        if self.messages or f:
+            self.Print(msg,current=False,elapsed=False,col='k',bg='bc',file=False)
 
-    def Print(self, msg, current = True, elapsed = True, col='', bg='', end = '\n'):
-        t = ""
-        if current or (not current and self.printCurrentTime):
-            t += str(datetime.now())[5:-3]
-        if elapsed or (not elapsed and self.printElapsedTime):
-            t += "[" + self.GetElapsedTime() + "]"
-        if current or elapsed:
-            t += ":"
-        if self.isLogFile: # Log file doesn't record colors
-            if self.logFilePointer == None:
-                self.logFilePointer = open(self.logFileLocation, mode="w", newline='', encoding='utf-8')
-            self.logFilePointer.write(t + msg + end)
-            
-        if col != '':
-            t += tCol[col]
-        if bg != '':
-            t += bCol[bg]
-        t += msg + rCol
-        e = end
+    def Print(self, msg, level = 0, current = True, elapsed = True, col='', bg='', end = '\n', file = True, flush = False):
+        if level <= self.printLevel:
+            t = ""
+            if self.MSPrecision == 0:
+                d = -7
+            else:
+                d = self.MSPrecision - 6
+            if current or (not current and self.printCurrentTime):
+                t += str(datetime.now())[5:][:d]
+            if elapsed or (not elapsed and self.printElapsedTime):
+                t += "[" + self.GetElapsedTime()[:d] + "]"
+            if current or elapsed:
+                t += ":"
+            if self.isLogFile and file: # Log file doesn't record colors
+                if self.logFilePointer == None:
+                    self.logFilePointer = open(self.logFileLocation, mode="w", newline='', encoding='utf-8')
+                    self.Message("Logger: Creating log file on %s."%self.logFileLocation)
+                self.logFilePointer.write(t + msg + end)
 
-        print(t, end = e)
+            if col != '':
+                t += tCol[col]
+            if bg != '':
+                t += bCol[bg]
+            t += msg + rCol
+            e, f = end, flush
+            print(t, end = e, flush = f)
 
 Log = Logger()
