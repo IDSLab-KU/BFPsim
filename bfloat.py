@@ -1,3 +1,17 @@
+"""
+bfloat.py
+Brain floating point python datatype with custom mantissa bits
+Mantissa bit can be set from 1 to 23, which smaller mantissa bits can lead incorrect values.
+BFloat supports:
+ - Assign value from float, int, and BFloat
+ - Basic arithmatic expression: add, sub, mul, div(truediv)
+ - Basic bitwise operation: and, or, xor
+ - type casting to int and float. Converting to int will set bit value of float.
+ - Comparsion operators: lt, gt, le, ge, eq, ne
+ - Unary operators: neg, pos, invert, abs
+ - If Bfloat is printed, it will print the bit value it holds.
+   Print float(BFloat) to print float value
+"""
 
 import struct
 # https://stackoverflow.com/questions/14431170/get-the-bits-of-a-float-in-python
@@ -181,6 +195,7 @@ class BFloat(object):
         # Shift mantissa and apply to exponential
         es = c - 1 - self.mb - value.mb
         r.e += es
+        # Suppose always mantissa bit have to shift right
         r.m = r.m >> (value.mb+self.mb-r.mb + es)
 
         # Apply mask to remove unnessary mantissa bit
@@ -188,14 +203,38 @@ class BFloat(object):
         return r
     # / (float, int, BFloat)
     def __truediv__(self, value):
+        # If the inputed value is float or int, create the BFloat and compute, with same mantissa
         if isinstance(value, float) or isinstance(value, int):
-            value = BFloat(1/value, mb=self.mb)
-        elif isinstance(value, BFloat):
-            value = BFloat(1/float(value), mb=value.mb)
-        else:
+            value = BFloat(value, mb=self.mb)
+        if not isinstance(value, BFloat):
             raise ValueError ("Input type not supported")
+
+        r = BFloat(0, mb=max(self.mb, value.mb))
+        if (self.m==0x0 and self.e==0x0) or (value.m==0x0 and value.e==0x0): # If one number is zero return zero
+            return r
+
+        # Sign
+        r.s = self.s ^ value.s
+        # Exponent
+        r.e = self.e - value.e + 127
+        # Mantissa
+        r.m = (self.m | (0x1 << self.mb)) // (value.m | (0x1 << value.mb))
+
+        # Have to shift value to match the first mantissa bit
+        # Get the calculated matissa's bit
+        t, c = r.m, 0
+        while (t != 0):
+            t = t >> 1
+            c += 1
+        # Shift mantissa and apply to exponential
+        es = c - 1 - self.mb - value.mb
+        r.e += es
+        # Suppose always mantissa bit have to shift left
+        r.m = r.m << -(value.mb+self.mb-r.mb + es)
         
-        return value * self
+        # Apply mask to remove unnessary mantissa bit
+        r.m = r.m & r.mask
+        return r
     # // __floordiv__ : not required
     # % __mod__ : not required
     # ** __pow__ : not required...?
@@ -247,7 +286,7 @@ class BFloat(object):
             raise ValueError ("Input type not supported")
         return float(self) <= float(value)
     # >= (float, int, BFloat)
-    def __gt__(self, value):
+    def __ge__(self, value):
         if isinstance(value, float) or isinstance(value, int):
             return float(self) >= value
         if not isinstance(value, BFloat):
@@ -288,110 +327,3 @@ class BFloat(object):
         r.s = 0
         return float(r)
 
-
-def TestBasic(v, m=8):
-    print("Inputed FP32:      ", v)
-    print("Bit Representation:", format(floatToBits(v),"032b"))
-    bf = BFloat(v, m)
-    print("Converted BFloat{:2d}: {}".format(m, bf))
-    print("Value of BFloat:   ", float(bf))
-    print("Difference:        ", float(bf)-v)
-def TestAdd(v1, v2, m=8):
-    b1, b2 = BFloat(v1), BFloat(v2)
-    print("First number:  {:10.5f} -> {} {:10.5f}".format(v1, b1, float(b1)))
-    print("Second number: {:10.5f} -> {} {:10.5f}".format(v2, b2, float(b2)))
-    print("Add:                         {} {:10.5f}".format(b1+b2, float(b1+b2)))
-    print("Difference:    {:10.5f}                        {:10.5f}".format(v1+v2, v1+v2 - float(b1+b2)))
-    print()
-def TestSub(v1, v2, m=8):
-    b1, b2 = BFloat(v1), BFloat(v2)
-    print("First number:  {:10.5f} -> {} {:10.5f}".format(v1, b1, float(b1)))
-    print("Second number: {:10.5f} -> {} {:10.5f}".format(v2, b2, float(b2)))
-    print("Sub:                         {} {:10.5f}".format(b1-b2, float(b1-b2)))
-    print("Difference:    {:10.5f}                        {:10.5f}".format(v1-v2, v1-v2 - float(b1-b2)))
-def TestMul(v1, v2, m=8):
-    b1, b2 = BFloat(v1), BFloat(v2)
-    print("First number:  {:10.5f} -> {} {:10.5f}".format(v1, b1, float(b1)))
-    print("Second number: {:10.5f} -> {} {:10.5f}".format(v2, b2, float(b2)))
-    print("Mul:                         {} {:10.5f}".format(b1*b2, float(b1*b2)))
-    print("Difference:    {:10.5f}                        {:10.5f}".format(v1*v2, v1*v2 - float(b1*b2)))
-def TestDiv(v1, v2, m=8):
-    b1, b2 = BFloat(v1), BFloat(v2)
-    print("First number:  {:10.5f} -> {} {:10.5f}".format(v1, b1, float(b1)))
-    print("Second number: {:10.5f} -> {} {:10.5f}".format(v2, b2, float(b2)))
-    print("Div:                         {} {:10.5f}".format(b1/b2, float(b1/b2)))
-    print("Difference:    {:10.5f}                        {:10.5f}".format(v1/v2, v1/v2 - float(b1/b2)))
-
-'''
-TestBasic(3.1415926535)
-TestAdd(1.414592, 10.1922)
-TestSub(1.414592, -10.1922)
-TestMul(1.414592, 10.1922)
-TestDiv(1.414592, 10.1922)
-'''
-
-# Repeat test
-import math
-import numpy as np
-
-ERROR_RATE = 10 # 1
-ERROR_VALUE = 1 # 0.1
-
-def TestRepeat(t="add", n=10000, p=1000, mb1=8, mb2=8, slient=False):
-    a = np.random.randn(n)
-    b = np.random.randn(n)
-    error, errorP = 0.0, 0.0
-    fail, miss, success = 0, 0, 0
-    if t == "add":
-        ts = "+"
-    elif t == "sub":
-        ts = "-"
-    elif t == "mul":
-        ts = "*"
-    elif t == "div":
-        ts = "/"
-    for i in range(n):
-        b1, b2 = BFloat(a[i], mb1), BFloat(b[i], mb2)
-        if t == "add":
-            br = b1+b2
-            r = a[i]+b[i]
-        elif t == "sub":
-            br = b1-b2
-            r = a[i]-b[i]
-        elif t == "mul":
-            br = b1*b2
-            r = a[i]*b[i]
-        elif t == "div":
-            br = b1/b2
-            r = a[i]*b[i]
-        diff = abs(r - float(br))
-        diffP = abs(diff / (r))
-        # diff = 0
-        if math.isnan(float(br)) or math.isnan(diff) or abs(diff) > 1000: # Absoulte error... something got really wrong
-            if not slient:
-                print("FAIL @ {}\n{}{}{}={} \n  -> {}{}{}={} | {}".format(i+1,a[i],ts,b[i],r,float(b1),ts,float(b2),float(br),diff))
-                print(b1,b2,br)
-            fail += 1
-        elif diffP > ERROR_RATE and diff > ERROR_VALUE: # Minor miss, error over 1% with value of 0.1, maybe because of one or two exponent bits
-            if not slient:
-                print("MISS @ {}\n{}{}{}={} \n  -> {}{}{}={} | {}".format(i+1,a[i],ts,b[i],r,float(b1),ts,float(b2),float(br),diff))
-                # BitToFloatsP((b1.s << 31) | (b1.e << 23) | (b1.m << (23 - b1.mb)))
-                print(b1,b2,br)
-            # print("{:6.3f}+{:6.3f}={:6.3f} -> {:6.3f}+{:6.3f}={:6.3f} | {:6.3f}".format(a[i],b[i],r,float(b1),float(b2),float(b1+b2),diff))
-            miss += 1
-        else:
-            success += 1
-            error += diff
-            errorP += diffP
-        if p!=0 and (i+1)%p == 0:
-            print("{:8d}/{:8d} Error (Only Success):{:10.6f} ({:7.3f}%)".format(i+1,n,error/(success),errorP/(success)*100))
-    
-    print("Test on {:s} finished, mantissa bit {}, {}".format(t, mb1, mb2))
-    print("  Total:   {:10d}\n  Success: {:10d}({:6.2f})\n  Failed:  {:10d}({:6.2f})\n  Missed:  {:10d}({:6.2f})".format(n, success, success/n*100, fail, fail/n*100, miss, miss/n*100))
-    if success > 0:
-        print("Average Error on Success:{:10.6f} ({:7.3f}%)".format(error/(success),errorP/(success)*100))
-    print()
-
-TestRepeat("div", 100,000, mb1=8, mb2=8, slient=False)
-# for i in ["div", "mul", "add", "sub"]:
-#     TestRepeat(i, 10000000,0, mb1=3, mb2=3, slient=True)
