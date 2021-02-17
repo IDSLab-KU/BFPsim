@@ -1,5 +1,7 @@
 __pycache__/blocks.cpython-37.pyc
 __pycache__/log.cpython-37.pyc
+__pycache__/bfloat.cpython-37.pyc
+__pycache__/_testbench.cpython-37.pyc
 data/cifar-10-python.tar.gz
 data/cifar-10-batches-py/batches.meta
 data/cifar-10-batches-py/data_batch_1
@@ -10,6 +12,5 @@ data/cifar-10-batches-py/data_batch_5
 data/cifar-10-batches-py/test_batch
 data/cifar-10-batches-py/readme.html
 logs/
-__pycache__/bfloat.cpython-37.pyc
 _testbench.py
 bfloat_test.py
