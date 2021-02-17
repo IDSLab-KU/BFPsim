@@ -10,3 +10,6 @@ data/cifar-10-batches-py/data_batch_5
 data/cifar-10-batches-py/test_batch
 data/cifar-10-batches-py/readme.html
 logs/
+__pycache__/bfloat.cpython-37.pyc
+_testbench.py
+bfloat_test.py
