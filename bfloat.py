@@ -218,8 +218,7 @@ class BFloat(object):
         # Exponent
         r.e = self.e - value.e + 127
         # Mantissa
-        r.m = (self.m | (0x1 << self.mb)) // (value.m | (0x1 << value.mb))
-
+        r.m = ((self.m | (0x1 << self.mb)) << r.mb) // (value.m | (0x1 << value.mb))
         # Have to shift value to match the first mantissa bit
         # Get the calculated matissa's bit
         t, c = r.m, 0
@@ -227,13 +226,13 @@ class BFloat(object):
             t = t >> 1
             c += 1
         # Shift mantissa and apply to exponential
-        es = c - 1 - self.mb - value.mb
-        r.e += es
+        es = 1 + r.mb - c
+        r.e -= es
         # Suppose always mantissa bit have to shift left
-        r.m = r.m << -(value.mb+self.mb-r.mb + es)
-        
+        r.m = r.m << es
         # Apply mask to remove unnessary mantissa bit
         r.m = r.m & r.mask
+        
         return r
     # // __floordiv__ : not required
     # % __mod__ : not required
