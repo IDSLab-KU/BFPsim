@@ -58,6 +58,7 @@ class BFArray(object):
         # Size of the array
         # On linear array, it's (output, input)
         self.size = size
+        self.shape = self.size # For easy usage
         self.count = 1
         for i in self.size:
             self.count *= i
@@ -70,6 +71,9 @@ class BFArray(object):
         # Sign is stored on mantissa
         self.e = np.zeros(size,dtype=np.uintc)
         self.m = np.zeros(size,dtype=np.intc)
+
+    def __str__(self):
+        return 'BFArray Object size of {}'.format(self.size)
 
     # Initialize with grouping numbers
     def initialize(self, method=0):
@@ -98,22 +102,46 @@ class BFArray(object):
         self.e = np.reshape(e_, self.size)
         self.m = np.reshape(m_, self.size)
 
-    def __str__(self):
-        return 'BFArray Object size of {}'.format(self.size)
+    # Override values from float array
+    def override_values(self, val):
+        # TODO : Optimize!!!!!!
+        if val.shape != self.size:
+            raise ValueError ("Matrix size not match")
+        for i in range(self.size[0]):
+            for j in range(self.size[1]):
+                v = floatToBits(val[i][j])
+                self.e[i,j] = (v & 0x7f800000) >> 23
+                # TODO : You know this is not good code, es, plz fix soon
+                self.m[i,j] = ((v & 0x007fffff) >> (23 - self.mb + 1)) | 0xf0
+                # print(self.e[i][j], format(self.m[i][j],"08b"))
+                if (v >> 31) & 0x1:
+                    self.m[i][j] = -self.m[i][j]
+        # make groups later on
+        # self.make_groups()
 
-    def getFloat(self, ind):
-        e_, m_ = self.e[ind], self.m[ind]
+    def get_value(self, ind, hex=True):
+        if self.m[ind] < 0:
+            s = "-"
+        else:
+            s = "+"
+        if hex:
+            return "{}{:02x}_{:02x}".format(s,self.e[ind], abs(self.m[ind]))
+        else:
+            return "{}{:08b}_{:08b}".format(s,self.e[ind], abs(self.m[ind]))
+            
+    def get_value_float(self, ind):
+        e_, m_ = self.e[ind], abs(self.m[ind])
         # Get the calculated matissa's bit
-        t, c = abs(m_), 0
+        #m_ = m_ >> 3
+        t, c = m_, 0
         while (t != 0):
             t = t >> 1
             c += 1
-        # print(format(e_,"08b"), format(m_,"08b"))
+        #print(format(e_,"08b"), format(m_,"08b"))
         m_ = (m_ << (self.mb - c + 1)) & mantissa_mask[self.mb]
-        e_ -= c
-        # print(format(e_,"08b"), format(m_,"08b"))
-        if m_ < 0:
-            m_ = -m_
+        e_ += c - self.mb
+        #print(format(e_,"08b"), format(m_,"08b"))
+        if self.m[ind] < 0:
             return BitToFloats((1<<31)|(e_<<23)|(m_<<(23 - self.mb)))
         else:
             return BitToFloats((e_<<23)|(m_<<(23 - self.mb)))
@@ -127,13 +155,13 @@ class BFArray(object):
         if val.e.shape[1] != 1:
             raise ValueError ("Operation not supported")
         
-        # create tile of transposed value
+        # Create tile of transposed value
         val_e_ = np.reshape(np.tile(np.transpose(val.e), self.size[0]),self.size)
         val_m_ = np.reshape(np.tile(np.transpose(val.m), self.size[0]),self.size)
         e_ = val_e_ + self.e - 127
         m_ = np.multiply(val_m_, self.m)
 
-        # Step 2: finding max exponent on each line
+        # Finding max exponent on each line
         bs = np.zeros(self.size,dtype=np.intc)
         for i in range(self.size[0]):
             bs[i] = np.amax(e_[i])
@@ -142,7 +170,7 @@ class BFArray(object):
         m_ = np.right_shift(m_,bs)
         # Add all mantissa        
         rm = m_.sum(axis=1)
-        re = np.zeros((self.size[0], 1))
+        re = np.zeros((self.size[0], 1), dtype=np.intc)
 
         out = BFArray((self.size[0], 1))
         # Match mantissa and apply shift
@@ -156,7 +184,7 @@ class BFArray(object):
                 c += 1
             # Shift mantissa bits
             out.m[i] = rm[i] >> (c - 8)
-            re[i] = c - 16 + e_[i][0]
+            re[i] = e_[i][0] + (c - 16)
         out.e = re
         out.m = out.m
         return out
