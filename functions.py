@@ -41,3 +41,51 @@ def set_mantissa(inp, out = None, mb = 8):
     
     if type(out) != np.ndarray:
         return outx
+
+# group
+# Group values as same exponent bits, which shifts mantissa
+# TODO : Set direction of grouping
+def make_groups(inp, mb, out = None, group_size = 36, direction = None, silent=True):
+    if type(out) != np.ndarray:
+        outx = np.zeros(inp.shape,dtype=inp.dtype)
+    else:
+        outx = inp
+    i_ = [None] * group_size
+    s_ = [None] * group_size
+    e_ = [None] * group_size
+    m_ = [None] * group_size
+    
+    vdx = 0
+    for idx, val in np.ndenumerate(inp):
+        v = FloatToBits(val)
+        i_[vdx] = idx
+        s_[vdx] = v >> 31
+        e_[vdx] = (v & 0x7f800000) >> 23
+        m_[vdx] = (v & 0x007fffff) >> (23 - mb)
+        vdx += 1
+        # Find the max size
+        if vdx == group_size:
+            vdx = 0
+            me = np.amax(e_)
+            for iidx in range(group_size):
+                m_[iidx] = (m_[iidx] >> (me - e_[iidx])) << (me - e_[iidx])
+                v = (s_[iidx] << 31) | (e_[iidx] << 23) | (m_[iidx] << (23 - mb))
+                outx[i_[iidx]] = BitsToFloat(v)
+                # print("{} {:8.4f} > {:8.4f}".format(me-e_[iidx],inp[i_[iidx]], outx[i_[iidx]]), end="\t")
+            """
+            if not silent:
+                print("->",end="")
+                for i in range(len(m_)):
+                    print("{}_{:012b}".format(me - e_[i],m_[i]),end=" ")
+                print()
+            """
+    
+    # handling last leftover values
+    if vdx != 0:
+        me = np.amax(e_)
+        for iidx in range(group_size):
+            m_[iidx] = (m_[iidx] >> (me - e_[iidx])) << (me - e_[iidx])
+            v = (s_[iidx] << 31) | (e_[iidx] << 23) | (m_[iidx] << (23 - mb))
+            outx[i_[iidx]] = BitsToFloat(v)
+    if type(out) != np.ndarray:
+        return outx
