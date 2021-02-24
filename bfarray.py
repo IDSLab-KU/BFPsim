@@ -36,6 +36,8 @@ mantissa_mask = [     0x0
 
 import numpy as np
 
+
+
 from bfloat import BFloat
 """
     # Representors
@@ -110,9 +112,12 @@ class BFArray(object):
         for i in range(self.size[0]):
             for j in range(self.size[1]):
                 v = floatToBits(val[i][j])
+                # print("{} {:08b}  {:023b}".format(v>>31, v >> 23 & 0xff, v & 0x7fffff))
                 self.e[i,j] = (v & 0x7f800000) >> 23
                 # TODO : You know this is not good code, es, plz fix soon
-                self.m[i,j] = ((v & 0x007fffff) >> (23 - self.mb + 1)) | 0xf0
+                self.m[i,j] = ((v & 0x007fffff) >> (23 - self.mb + 1)) | (0x1 << (self.mb - 1))
+                k = "-" if self.m[0,0] < 0 else "+"
+                # print("{} {:08b} {:012b}".format(k, self.e[i,j], abs(self.m[i,j])))
                 # print(self.e[i][j], format(self.m[i][j],"08b"))
                 if (v >> 31) & 0x1:
                     self.m[i][j] = -self.m[i][j]
@@ -125,10 +130,11 @@ class BFArray(object):
         else:
             s = "+"
         if hex:
-            return "{}{:02x}_{:02x}".format(s,self.e[ind], abs(self.m[ind]))
+            return "{}{:02x}_{}".format(s, self.e[ind], format(abs(self.m[ind]),"0{}x".format((self.mb//4))))
         else:
-            return "{}{:08b}_{:08b}".format(s,self.e[ind], abs(self.m[ind]))
-            
+            return "{}{:02x}_{}".format(s, self.e[ind], format(abs(self.m[ind]),"0{}b".format(self.mb)))
+    
+
     def get_value_float(self, ind):
         e_, m_ = self.e[ind], abs(self.m[ind])
         # Get the calculated matissa's bit
@@ -172,7 +178,8 @@ class BFArray(object):
         rm = m_.sum(axis=1)
         re = np.zeros((self.size[0], 1), dtype=np.intc)
 
-        out = BFArray((self.size[0], 1))
+        # Temporal Overrider
+        out = BFArray((self.size[0], 1), mb = self.mb)
         # Match mantissa and apply shift
         for i in range(self.size[0]):
             # Get the mantiss'a bit
@@ -183,8 +190,8 @@ class BFArray(object):
                 t = t >> 1
                 c += 1
             # Shift mantissa bits
-            out.m[i] = rm[i] >> (c - 8)
-            re[i] = e_[i][0] + (c - 16)
+            out.m[i] = rm[i] >> (c - out.mb)
+            re[i] = e_[i][0] + (c - self.mb - val.mb)
         out.e = re
         out.m = out.m
         return out
