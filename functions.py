@@ -6,6 +6,7 @@ mantissa_mask = [     0x0
                 , 0x1ffff, 0x3ffff, 0x7ffff, 0xfffff,0x1fffff,0x3fffff,0x7fffff]
 
 import numpy as np
+import torch
 
 import struct
 
@@ -15,7 +16,6 @@ def FloatToBits(f):
         return - struct.unpack('>l', s)[0] ^ 0xffffffff
     else:
         return struct.unpack('>l', s)[0]
-
 def BitsToFloat(f):
     # print("{:20d}".format(f), format(f,"032b"))
     if f>>31 == 1:
@@ -24,8 +24,7 @@ def BitsToFloat(f):
     s = struct.pack('>l', f)
     return struct.unpack('>f', s)[0]
 
-# set_mantissa
-# set to float np array to speicific mantissa bits 
+# set_mantissa : set to float np array to speicific mantissa bits 
 def set_mantissa(inp, out = None, mb = 8):
     if type(out) != np.ndarray:
         outx = np.zeros(inp.shape,dtype=inp.dtype)
@@ -42,10 +41,9 @@ def set_mantissa(inp, out = None, mb = 8):
     if type(out) != np.ndarray:
         return outx
 
-# group
-# Group values as same exponent bits, which shifts mantissa
+# make_groups : Group values as same exponent bits, which shifts mantissa
 # TODO : Set direction of grouping
-def make_groups(inp, mb, out = None, group_size = 36, direction = None, silent=True):
+def make_groups(inp, mb, out = None, group_size = 36, direction = None):
     if type(out) != np.ndarray:
         outx = np.zeros(inp.shape,dtype=inp.dtype)
     else:
@@ -89,3 +87,40 @@ def make_groups(inp, mb, out = None, group_size = 36, direction = None, silent=T
             outx[i_[iidx]] = BitsToFloat(v)
     if type(out) != np.ndarray:
         return outx
+
+
+
+
+def p(v):
+    for i in v:
+        print(format(i,"064b"), end="\n")
+    print()
+
+fp32_mask = [0,
+    0x00400000, 0x00600000, 0x00700000, 0x00780000,
+    0x007c0000, 0x007e0000, 0x007f0000, 0x007f8000,
+    0x007fc000, 0x007fe000, 0x007ff000, 0x007ff800,
+    0x007ffc00, 0x007ffe00, 0x007fff00, 0x007fff80,
+    0x007fffc0, 0x007fffe0, 0x007ffff0, 0x007ffff8, 0x007fffff]
+
+fp64_mask = [0,
+    0x0040000000000000, 0x0060000000000000, 0x0070000000000000, 0x0078000000000000,
+    0x007c000000000000, 0x007e000000000000, 0x007f000000000000, 0x007f800000000000,
+    0x007fc00000000000, 0x007fe00000000000, 0x007ff00000000000, 0x007ff80000000000,
+    0x007ffc0000000000, 0x007ffe0000000000, 0x007fff0000000000, 0x007fff8000000000]
+
+
+# set_mantissa_tensor : set to tensor or numpy array to speicific mantissa bits 
+# TODO : Set direction of grouping
+def set_mantissa_tensor(inp, mb):
+    inp_n = inp.numpy() # inp_n = inp # For debug,
+    # Convert to byte stream
+    st = inp_n.tobytes() 
+    # Set to uint32 array to easy computing
+    v = np.frombuffer(st, dtype=np.uint32) 
+    # And operation to remove mantissa
+    r_mask = np.full(v.shape, 0xff800000 | fp32_mask[mb], dtype=np.uint32)
+    r_ = np.bitwise_and(v, r_mask)
+    # revert to original np.float32 
+    r = np.frombuffer(r_, dtype=np.float32)
+    return torch.from_numpy(r.reshape(inp_n.shape))
