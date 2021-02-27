@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 
+from bfloat import BFloat
+from bfarray import BFArray
+
+from functions import make_groups_tensor
+
 # Temp relu, can be removed since relu doesn't need to be optimized
 class BlockReLU(torch.autograd.Function):
     @staticmethod
@@ -15,13 +20,18 @@ class BlockReLU(torch.autograd.Function):
         grad_input[input < 0] = 0
         return grad_input
 
+bit, group_size = 8, 36
 
 # BlockFloat Linear Function
 class BFLinearFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bias=None):
         ctx.save_for_backward(input, weight, bias)
-        input = torch.zeros(input.size())
+
+        # Setting NEW method!
+        input = make_groups_tensor(input, bit, group_size = group_size)
+        weight = make_groups_tensor(weight, bit, group_size = group_size)
+        
         output = input.mm(weight.t())
         if bias is not None:
             output += bias.unsqueeze(0).expand_as(output)
@@ -39,6 +49,8 @@ class BFLinearFunction(torch.autograd.Function):
         
         return grad_input, grad_weight, grad_bias
 
+
+import numpy as np
 # Blockfloat Linear
 class BFLinear(torch.nn.Module):
     def __init__(self, input_features, output_features, bias=True):
@@ -46,7 +58,9 @@ class BFLinear(torch.nn.Module):
         self.input_features = input_features
         self.output_features = output_features
 
+        # Weight parameters, should be grouped with few numbers
         self.weight = nn.Parameter(torch.Tensor(output_features, input_features))
+
         if bias:
             self.bias = nn.Parameter(torch.Tensor(output_features))
         else:
