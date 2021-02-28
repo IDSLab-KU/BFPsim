@@ -54,7 +54,7 @@ def ArgumentParse(print=True):
         help = "Print interval")
     args = parser.parse_args()
 
-    s += args + "\n"
+    s += str(args) + "\n"
 
     if print:
         Log.Print(s, current=False, elapsed=False)
@@ -117,12 +117,14 @@ def Train(net, args, trainloader, testloader):
     Log.Print('Finished Training')
 
 if __name__ == '__main__':
+    # handle signal
     signal.signal(signal.SIGINT, handler)
     
-    args = ArgumentParse()
-
     # Set logger preset
     Log.SetLogFile(True)
+
+    args = ArgumentParse()
+
 
     if args.dataset == "CIFAR-10":
         # Set transform
@@ -152,7 +154,7 @@ if __name__ == '__main__':
         raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
     
     # Define the network
-    if arg.model == "SimpleNet":
+    if args.model == "SimpleNet":
         net = SimpleNet()
     elif args.model == "ResNet18":
         raise NotImplementedError("Model {} not Implemented".format(args.model))
