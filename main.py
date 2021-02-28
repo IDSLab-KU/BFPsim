@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
-from net import SimpleNet
+from net import SimpleNet, Resnet18
 from log import Log
 from functions import LoadDataset
 
@@ -33,7 +33,7 @@ def ArgumentParse(print=True):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d","--dataset", type=str, default = "CIFAR-10",
         help = "Dataset to use [CIFAR-10, CIFAR-100]")
-    parser.add_argument("-m","--model", type=str, default = "SimpleNet",
+    parser.add_argument("-m","--model", type=str, default = "Resnet18",
         help = "Model to use [SimpleNet, Resnet18]")
 
     # Training setup
@@ -125,9 +125,9 @@ if __name__ == '__main__':
 
     # Define the network
     if args.model == "SimpleNet":
-        net = SimpleNet()
-    elif args.model == "ResNet18":
-        raise NotImplementedError("Model {} not Implemented".format(args.model))
+        net = SimpleNet(num_classes = len(classes))
+    elif args.model == "Resnet18":
+        net = Resnet18(num_classes = len(classes))
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
 
