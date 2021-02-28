@@ -6,7 +6,7 @@ from block import BFLinear, BFConv2d
 
 
 class SimpleNet(nn.Module):
-    def __init__(self):
+    def __init__(self, classifier = 10):
         super(SimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
@@ -16,7 +16,7 @@ class SimpleNet(nn.Module):
 
         self.fc1 = BFLinear(64 * 5 * 5, 1024)
         self.fc2 = BFLinear(1024, 1024)
-        self.fc3 = nn.Linear(1024, 10)
+        self.fc3 = nn.Linear(1024, classifier)
 
 
     def forward(self, x):

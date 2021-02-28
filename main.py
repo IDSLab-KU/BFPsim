@@ -1,14 +1,10 @@
 import torch
 import torch.optim as optim
 import torch.nn as nn
-import torch.nn.functional as F
-
-import torchvision
-import torchvision.transforms as transforms
 
 from net import SimpleNet
-
 from log import Log
+from functions import LoadDataset
 
 import signal
 import sys
@@ -59,9 +55,6 @@ def ArgumentParse(print=True):
     if print:
         Log.Print(s, current=False, elapsed=False)
     return args
-
-
-
 
 
 
@@ -122,37 +115,14 @@ if __name__ == '__main__':
     
     # Set logger preset
     Log.SetLogFile(True)
-
+    # Parse Arguments
     args = ArgumentParse()
 
+    # Load dataset
+    trainset, testset, classes = LoadDataset(args.dataset)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size_training, shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size_evaluation,shuffle=False, num_workers=2)
 
-    if args.dataset == "CIFAR-10":
-        # Set transform
-        transform = transforms.Compose(
-            [transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-        # Prepare Cifar-10 Dataset
-        trainset = torchvision.datasets.CIFAR10(root='./data', train=True,download=True, transform=transform)
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size_training,shuffle=True, num_workers=2)
-
-        testset = torchvision.datasets.CIFAR10(root='./data', train=False,download=True, transform=transform)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size_evaluation,shuffle=False, num_workers=2)
-
-        classes = ('plane', 'car', 'bird', 'cat',
-                'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-    elif args.dataset =="CIFAR-100":
-        transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-        ])
-
-        raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
-    else:
-        raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
-    
     # Define the network
     if args.model == "SimpleNet":
         net = SimpleNet()
@@ -167,8 +137,6 @@ if __name__ == '__main__':
     # Train the network
     Train(net, args, trainloader, testloader)
     
-
-
 
 
 """ save model
