@@ -15,7 +15,7 @@ def str2bool(v):
     elif v.lower() in ["false", "f", "0"]: return False
     else: raise argparse.ArgumentTypeError("Not Boolean value")
 
-exitToken = 10
+exitToken = 2
 def ExitCounter():
     global exitToken
     exitToken -= 1
@@ -38,7 +38,7 @@ def ArgumentParse(print=True):
     parser.add_argument("-b","--block", type=str2bool, default=True,
         help = "Use Blocking [True False]")
     parser.add_argument("-c","--cuda", type=str2bool, default=True,
-        help = "Using CUDA to compute on GPU [True False]"")
+        help = "Using CUDA to compute on GPU [True False]")
 
     # Training setup
     parser.add_argument("-nw","--num-workers", type=int, default = 8,
