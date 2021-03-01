@@ -57,20 +57,6 @@ class BFLinearFunction(torch.autograd.Function):
         
         return grad_input, grad_weight, grad_bias
 
-
-import numpy as np
-
-from typing import TypeVar, Union, Tuple, Optional
-T = TypeVar('T')
-_scalar_or_tuple_any_t = Union[T, Tuple[T, ...]]
-_scalar_or_tuple_1_t = Union[T, Tuple[T]]
-_scalar_or_tuple_2_t = Union[T, Tuple[T, T]]
-_scalar_or_tuple_3_t = Union[T, Tuple[T, T, T]]
-
-_size_1_t = _scalar_or_tuple_1_t[int]
-_size_2_t = _scalar_or_tuple_2_t[int]
-_size_3_t = _scalar_or_tuple_3_t[int]
-
 # Blockfloat Linear
 class BFLinear(torch.nn.Module):
     def __init__(self, input_features, output_features, bias=True):
@@ -99,59 +85,64 @@ class BFLinear(torch.nn.Module):
             self.input_features, self.output_features, self.bias is not None
         )
 
+
+import numpy as np
+
+from typing import TypeVar, Union, Tuple, Optional
+T = TypeVar('T')
+_scalar_or_tuple_any_t = Union[T, Tuple[T, ...]]
+_scalar_or_tuple_1_t = Union[T, Tuple[T]]
+_scalar_or_tuple_2_t = Union[T, Tuple[T, T]]
+_scalar_or_tuple_3_t = Union[T, Tuple[T, T, T]]
+
+_size_1_t = _scalar_or_tuple_1_t[int]
+_size_2_t = _scalar_or_tuple_2_t[int]
+_size_3_t = _scalar_or_tuple_3_t[int]
+
+
 # Blockfloat Convolution Function
 # TODO : Implement Conv2d Operation
 # https://discuss.pytorch.org/t/implementing-a-custom-convolution-using-conv2d-input-and-conv2d-weight/18556/7
 class BFConv2dFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-        ctx.save_for_backward(input, weight, bias)
-        # print("Before: ",input.shape, weight.shape)
+        # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
+        # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
+        confs = torch.from_numpy(np.array([stride, padding, dilation, groups]))
+        # Block group first to don't call function several times
         if CONF_CUDA:
             input = make_groups_tensor(input.cpu(), CONF_BIT, group_size = CONF_GROUP_SIZE).cuda()
             weight = make_groups_tensor(weight.cpu(), CONF_BIT, group_size = CONF_GROUP_SIZE).cuda()
         else:
             input = make_groups_tensor(input, CONF_BIT, group_size = CONF_GROUP_SIZE)
             weight = make_groups_tensor(weight, CONF_BIT, group_size = CONF_GROUP_SIZE)
-        # print("After: ",input.shape, weight.shape)
+        ctx.save_for_backward(input, weight, bias, confs)
         return F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
     
     @staticmethod
     def backward(ctx, grad_output):
-        x, w, b = ctx.saved_variables
-        x_grad = w_grad = None
-        if ctx.needs_input_grad[0]:
-            x_grad = torch.nn.grad.conv2d_input(x.shape, w, grad_output)
-        if ctx.needs_input_grad[1]:
-            w_grad = torch.nn.grad.conv2d_weight(x, w.shape, grad_output)
-        return x_grad, w_grad
-"""
-https://discuss.pytorch.org/t/how-to-find-the-source-code-of-conv2d-backward-function/19139/9
-    @staticmethod
-    def backward(ctx, grad_output):
-        input, weight, bias = ctx.saved_variables
-            
-        grad_input = grad_weight= grad_bias = None
+        input, weight, bias, confs = ctx.saved_variables
+        confs = confs.numpy()
+        stride, padding, dilation, groups = confs[0], confs[1], confs[2], confs[3]
+        # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
+        grad_input = grad_weight = grad_bias = None
 
         if ctx.needs_input_grad[0]:
-            grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output)
+            grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output, stride, padding, dilation, groups)
             
         if ctx.needs_input_grad[1]:
-            grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output)
+            grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
                 
-        if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0).squeeze(0)
+        # if bias is not None and ctx.needs_input_grad[2]:
+        #     grad_bias = grad_output.sum(0).squeeze(0)
 
-        if bias is not True:
-            return grad_input, grad_weight, grad_bias
-        else:
-            return grad_input, grad_weight
-"""
+        # if bias is not True:
+        #     return grad_input, grad_weight, grad_bias
+        # else:
+        return grad_input, grad_weight, None, None, None, None, None # Why 7...?
 
 # Blockfloat Convolution
 class BFConv2d(torch.nn.Module):
-    # def __init__(self, in_channels, out_channels, kernel_size, stride=1, \
-    #     padding=0, groups=1, bias=False, padding_mode='zeros'):
     def __init__(self,
                 in_channels: int,
                 out_channels: int,
@@ -187,19 +178,7 @@ class BFConv2d(torch.nn.Module):
             self.register_parameter('bias', None)
         self.reset_parameters()
 
-        """
-        self.in_channels, self.out_channels, self.kernel_size, self.stride, self.padding, self.groups = in_channels, out_channels, kernel_size,stride, padding, groups
-        # From torch/nn/modules/conv.py
-        self.weight = nn.Parameter(torch.Tensor(
-                out_channels, in_channels // groups, kernel_size, kernel_size))
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_channels))
-        else:
-            self.register_parameter('bias', None)
-        
-        self.reset_parameters()
-        """
-    
+
     def reset_parameters(self) -> None:
         # https://pytorch.org/docs/stable/nn.init.html#torch.nn.init.kaiming_uniform_
         torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
@@ -209,11 +188,8 @@ class BFConv2d(torch.nn.Module):
             torch.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input):
-        # Please edit here, too!!
-        # return BFConv2dFunction.apply(input, self.weight, self.bias, self.stride, self.padding, self.groups)
         return BFConv2dFunction.apply(input, self.weight, self.bias, self.stride,
                         self.padding, self.dilation, self.groups)
-
     def extra_repr(self):
         # From /torch/nn/modules/conv.py
         s = ('{in_channels}, {out_channels}, kernel_size={kernel_size}'
