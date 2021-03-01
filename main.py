@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
-from net import SimpleNet, Resnet18
+from net import SimpleNet, ResNet18, BFSimpleNet, BFResNet18
 from log import Log
 from functions import LoadDataset
 
@@ -35,18 +35,24 @@ def ArgumentParse(print=True):
         help = "Dataset to use [CIFAR-10, CIFAR-100]")
     parser.add_argument("-m","--model", type=str, default = "Resnet18",
         help = "Model to use [SimpleNet, Resnet18]")
+    parser.add_argument("-b","--block", type=str2bool, default=True,
+        help = "Use Blocking [True False]")
+    parser.add_argument("-c","--cuda", type=str2bool, default=True,
+        help = "Using CUDA to compute on GPU [True False]"")
 
     # Training setup
+    parser.add_argument("-nw","--num-workers", type=int, default = 8,
+        help = "Number of workers to load data")
+    """
+    parser.add_argument("-e","--training-epochs", type=int, default = 5,
+        help = "Number of epochs to train")
     parser.add_argument("-bst","--batch-size-training", type=int, default = 4,
         help = "Size of the mini-batch on training")
     parser.add_argument("-bse","--batch-size-evaluation", type=int, default = 4,
         help = "Size of the mini-batch on evaluation")
-    parser.add_argument("-e","--training-epochs", type=int, default = 5,
-        help = "Number of epochs to train")
-
-
+    """
     # Printing method
-    parser.add_argument("-pti","--print-train-interval", type=int, default = 2500,
+    parser.add_argument("-pti","--print-train-interval", type=int, default = 391,
         help = "Print interval")
     args = parser.parse_args()
 
@@ -58,12 +64,15 @@ def ArgumentParse(print=True):
 
 
 
-def Evaluate(net, testloader):
+def Evaluate(net, args, testloader):
     correct = 0
     total = 0
     with torch.no_grad():
         for data in testloader:
             images, labels = data
+            if args.cuda:
+                images = images.cuda() # Using GPU
+                labels = labels.cuda() # Using GPU
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -72,10 +81,10 @@ def Evaluate(net, testloader):
 
 
 
-def Train(net, args, trainloader, testloader):
+def Train(net, args, optimizer, criterion, trainloader, testloader):
     # Sometimes, there need to optimize optimizer and criterion
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    criterion = criterion
+    optimizer = optimizer
 
     epoch_train = args.training_epochs
 
@@ -120,14 +129,42 @@ if __name__ == '__main__':
 
     # Load dataset
     trainset, testset, classes = LoadDataset(args.dataset)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size_training, shuffle=True, num_workers=2)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size_evaluation,shuffle=False, num_workers=2)
 
-    # Define the network
+    criterion, optimizer, scheduler = None, None, None
+    # Define the network and optimize almost everything
     if args.model == "SimpleNet":
-        net = SimpleNet(num_classes = len(classes))
+        if args.block:
+            net = BFSimpleNet(num_classes = len(classes))
+        else:
+            net = SimpleNet(num_classes = len(classes))
+        if args.cuda:
+            net.to('cuda')
+            net = torch.nn.DataParallel(net) # Using GPU
+        # Sometimes, there need to optimize optimizer and criterion
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=args.num_workers)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=100,shuffle=False, num_workers=args.num_workers)
+        args.training_epochs = 5
     elif args.model == "Resnet18":
-        net = Resnet18(num_classes = len(classes))
+        # TODO : CIFAR-100 will not work
+        if args.block:
+            net = BFResNet18()
+        else:
+            net = ResNet18()
+        # https://github.com/kuangliu/pytorch-cifar/blob/master/main.py
+        if args.cuda:
+            net.to('cuda')
+            net = torch.nn.DataParallel(net) # Using GPU
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(net.parameters(), lr=0.1,
+                            momentum=0.9, weight_decay=5e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+#         scheduler = torch.optim.lr_scheduler.MultiStepLR(
+#             optimizer, milestones=[10, 20, 30, 40], gamma=0.1)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=args.num_workers)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=100,shuffle=False, num_workers=args.num_workers)
+        args.training_epochs = 200
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
 
@@ -135,8 +172,33 @@ if __name__ == '__main__':
     Log.Print("Model Summary:%s"%net,current=False, elapsed=False)
 
     # Train the network
-    Train(net, args, trainloader, testloader)
-    
+    for epoch_current in range(args.training_epochs):
+        
+
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data
+
+            if args.cuda:
+                inputs = inputs.cuda() # Using GPU
+                labels = labels.cuda() # Using GPU
+            
+            optimizer.zero_grad()
+
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+
+            optimizer.step()
+
+            running_loss += loss.item()
+            if args.print_train_interval != 0 and (i + 1) % args.print_train_interval == 0:    # print every 2000 mini-batches
+                Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
+                    (epoch_current + 1, args.training_epochs, i + 1, len(trainloader), running_loss / args.print_train_interval))
+                running_loss = 0.0
+        scheduler.step()
+        Evaluate(net, args, testloader)
+    Log.Print('Finished Training')
 
 
 """ save model
