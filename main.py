@@ -49,7 +49,7 @@ class Stat():
 
     def SaveToFile(self):
         f = open(args.log_file_location[:-4]+".stat", mode="w", newline='', encoding='utf-8')
-        f.write(">Loss\n")
+        f.write(">Average Loss on {} batches\n".format(self.loss_batches))
         for i in self.loss:
             f.write(str(i)+"\t")
         f.write("\n")
