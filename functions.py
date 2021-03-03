@@ -21,14 +21,14 @@ fp64_mask = [0,
 
 # set_mantissa_tensor : set to tensor or numpy array to speicific mantissa bits 
 # TODO : Set direction of grouping
-def set_mantissa_tensor(inp, mb):
+def set_mantissa_tensor(inp, group_mantissa):
     inp_n = inp.numpy() # inp_n = inp # For debug,
     # Convert to byte stream
     st = inp_n.tobytes() 
     # Set to uint32 array to easy computing
     v = np.frombuffer(st, dtype=np.uint32) 
     # And operation to remove mantissa
-    r_mask = np.full(v.shape, 0xff800000 | fp32_mask[mb], dtype=np.uint32)
+    r_mask = np.full(v.shape, 0xff800000 | fp32_mask[group_mantissa], dtype=np.uint32)
     r_ = np.bitwise_and(v, r_mask)
     # revert to original np.float32 
     r = np.frombuffer(r_, dtype=np.float32)
@@ -36,7 +36,7 @@ def set_mantissa_tensor(inp, mb):
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 # TODO : Set direction of grouping
-def make_groups_tensor(inp, mb, group_size = 36, direction = None):
+def make_groups_tensor(inp, group_mantissa, group_size, group_direction = None):
     inp_n = inp.numpy() # inp_n = inp # For debug,
     # Convert to byte stream
     st = inp_n.tobytes() 
@@ -60,7 +60,7 @@ def make_groups_tensor(inp, mb, group_size = 36, direction = None):
 
     # Difference of the exponent
     # -1 is for on grouping, IEEE's basic mantissa bit has to be included to the value, so...
-    e_ = mb - 1 - (m_ - e_)
+    e_ = group_mantissa - 1 - (m_ - e_)
     # Clip the negative value (I know this is not smarter way)
     e_[e_ > 0xff] = 0
     # np.clip(e_, 0, 0xff, out=e_) # Options...
