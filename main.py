@@ -28,6 +28,8 @@ def handler(signum, frame):
     sys.exit()
 
 
+
+
 def ArgumentParse(print=True):
     s = "List of the training arguments\n"
     parser = argparse.ArgumentParser()
@@ -43,6 +45,12 @@ def ArgumentParse(print=True):
     # Training setup
     parser.add_argument("-nw","--num-workers", type=int, default = 8,
         help = "Number of workers to load data")
+    parser.add_argument("-gm","--group-manitssa", type=int, default = 8,
+        help = "Group block's mantissa bit, default=8")
+    parser.add_argument("-gs","--group-size", type=int, default = 36,
+        help = "Group block's size, default=36")
+    parser.add_argument("-gd","--group-direction", type=str, default = None,
+        help = "Group block's grouping direction, Not implemented")
     """
     parser.add_argument("-e","--training-epochs", type=int, default = 5,
         help = "Number of epochs to train")
@@ -52,8 +60,8 @@ def ArgumentParse(print=True):
         help = "Size of the mini-batch on evaluation")
     """
     # Printing method
-    parser.add_argument("-pti","--print-train-interval", type=int, default = 391,
-        help = "Print interval")
+    parser.add_argument("-pti","--print-train-interval", type=int, default = 50,
+        help = "Print interval") # 128 = 391
     args = parser.parse_args()
 
     s += str(args) + "\n"
@@ -146,6 +154,8 @@ if __name__ == '__main__':
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=args.num_workers)
         testloader = torch.utils.data.DataLoader(testset, batch_size=100,shuffle=False, num_workers=args.num_workers)
         args.training_epochs = 5
+        args.print_train_interval *= 128/4
+    
     elif args.model == "Resnet18":
         # TODO : CIFAR-100 will not work
         if args.block:

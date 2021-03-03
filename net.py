@@ -11,9 +11,9 @@ class BFSimpleNet(nn.Module):
         super(BFSimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = BFConv2d(16, 32, 3, padding=0) # changed to bfconv
+        self.conv2 = BFConv2d(16, 32, 3, padding=0, bias=False) # changed to bfconv
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv3 = BFConv2d(32, 64, 3, padding=0) # changed to bfconv
+        self.conv3 = BFConv2d(32, 64, 3, padding=0, bias=False) # changed to bfconv
 
         self.fc1 = BFLinear(64 * 5 * 5, 1024)
         self.fc2 = BFLinear(1024, 1024)
@@ -39,9 +39,9 @@ class SimpleNet(nn.Module):
         super(SimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=0) # changed to bfconv
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=0, bias=False) # changed to bfconv
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv3 = nn.Conv2d(32, 64, 3, padding=0) # changed to bfconv
+        self.conv3 = nn.Conv2d(32, 64, 3, padding=0, bias=False) # changed to bfconv
 
         self.fc1 = nn.Linear(64 * 5 * 5, 1024)
         self.fc2 = nn.Linear(1024, 1024)
