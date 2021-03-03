@@ -85,46 +85,7 @@ def Evaluate(net, args, testloader):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    Log.Print('Accuracy: %f' % (correct / total))
-
-
-
-def Train(net, args, optimizer, criterion, trainloader, testloader):
-    # Sometimes, there need to optimize optimizer and criterion
-    criterion = criterion
-    optimizer = optimizer
-
-    epoch_train = args.training_epochs
-
-    for epoch_current in range(epoch_train):  # loop over the dataset multiple times
-
-        running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-
-            optimizer.step()
-
-            # Exit after few iterations to check it's working
-            # ExitCounter()
-
-            # print statistics
-            running_loss += loss.item()
-            if args.print_train_interval != 0 and (i + 1) % args.print_train_interval == 0:    # print every 2000 mini-batches
-                Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
-                    (epoch_current + 1, epoch_train, i + 1, len(trainloader), running_loss / 2500))
-                running_loss = 0.0
-                
-        Evaluate(net, args, testloader)
-    Log.Print('Finished Training')
+    Log.Print('Test Accuracy: %f' % (correct / total))
 
 if __name__ == '__main__':
     # handle signal
@@ -154,7 +115,7 @@ if __name__ == '__main__':
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=args.num_workers)
         testloader = torch.utils.data.DataLoader(testset, batch_size=100,shuffle=False, num_workers=args.num_workers)
         args.training_epochs = 5
-        args.print_train_interval *= 128/4
+        args.print_train_interval = len(trainloader)/10
     
     elif args.model == "Resnet18":
         # TODO : CIFAR-100 will not work
@@ -183,8 +144,6 @@ if __name__ == '__main__':
 
     # Train the network
     for epoch_current in range(args.training_epochs):
-        
-
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
@@ -202,11 +161,12 @@ if __name__ == '__main__':
             optimizer.step()
 
             running_loss += loss.item()
-            if args.print_train_interval != 0 and (i + 1) % args.print_train_interval == 0:    # print every 2000 mini-batches
+            if args.print_train_interval != 0 and ((i + 1) % args.print_train_interval == 0 or (i + 1) == len(trainloader)):    # print every 2000 mini-batches
                 Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
                     (epoch_current + 1, args.training_epochs, i + 1, len(trainloader), running_loss / args.print_train_interval))
                 running_loss = 0.0
-        scheduler.step()
+        if scheduler != None:
+            scheduler.step()
         Evaluate(net, args, testloader)
     Log.Print('Finished Training')
 
