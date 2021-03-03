@@ -7,16 +7,20 @@ from block import BFLinear, BFConv2d
 
 
 class BFSimpleNet(nn.Module):
-    def __init__(self, num_classes = 10):
+    def __init__(self, group_mantissa, group_size, group_direction, num_classes = 10):
         super(BFSimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = BFConv2d(16, 32, 3, padding=0, bias=False) # changed to bfconv
+        self.conv2 = BFConv2d(16, 32, 3, padding=0, bias=False,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv3 = BFConv2d(32, 64, 3, padding=0, bias=False) # changed to bfconv
+        self.conv3 = BFConv2d(32, 64, 3, padding=0, bias=False,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
 
-        self.fc1 = BFLinear(64 * 5 * 5, 1024)
-        self.fc2 = BFLinear(1024, 1024)
+        self.fc1 = BFLinear(64 * 5 * 5, 1024,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
+        self.fc2 = BFLinear(1024, 1024,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
         self.fc3 = nn.Linear(1024, num_classes)
 
 
@@ -100,18 +104,21 @@ class BFBasicBlock(nn.Module):
 
     def __init__(self, in_planes, planes, stride=1):
         super(BFBasicBlock, self).__init__()
-        self.conv1 = BFConv2d(
-            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = BFConv2d(in_planes, planes, 
+            kernel_size=3, stride=stride, padding=1, bias=False,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = BFConv2d(planes, planes, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv2 = BFConv2d(planes, planes,
+            kernel_size=3, tride=1, padding=1, bias=False,
+            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
                 BFConv2d(in_planes, self.expansion*planes,
-                          kernel_size=1, stride=stride, bias=False),
+                    kernel_size=1, stride=stride, bias=False,
+                    group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
