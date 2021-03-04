@@ -181,10 +181,7 @@ class BFConv2dFunction(torch.autograd.Function):
 
 
         # WARNING : Bias maybe buggy, remove if it is buggy
-        if bias is not None:
-            return grad_input, grad_weight, grad_bias, None, None, None, None, None, None, None, None
-        else:
-            return grad_input, grad_weight, None, None, None, None, None, None, None, None, None
+        return grad_input, grad_weight, None, None, None, None, None, None, None, None, None
 
 # Blockfloat Convolution
 class BFConv2d(torch.nn.Module):
