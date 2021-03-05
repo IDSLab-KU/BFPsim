@@ -233,14 +233,14 @@ def ResNet18(num_classes):
 def BFResNet18(bf_conf, num_classes):
     return BFResNet(BFBasicBlock, [2, 2, 2, 2], bf_conf, num_classes)
 
-def ResNet34():
+def ResNet34(num_classes):
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
-def ResNet50():
+def ResNet50(num_classes):
     return ResNet(Bottleneck, [3, 4, 6, 3])
 
-def ResNet101():
+def ResNet101(num_classes):
     return ResNet(Bottleneck, [3, 4, 23, 3])
 
-def ResNet152():
+def ResNet152(num_classes):
     return ResNet(Bottleneck, [3, 8, 36, 3])
