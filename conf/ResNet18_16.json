@@ -3,24 +3,24 @@
     "layer1":{
         "0":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
         },
         "1":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
@@ -29,29 +29,29 @@
     "layer2":{
         "0":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "shortcut":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
         },
         "1":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
@@ -60,29 +60,29 @@
     "layer3":{
         "0":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "shortcut":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
         },
         "1":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
@@ -91,29 +91,29 @@
     "layer4":{
         "0":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "shortcut":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
         },
         "1":{
             "conv1":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             },
             "conv2":{
-                "f_i_bit":8,
+                "f_i_bit":16,
                 "f_i_sz":36,
                 "f_i_dir":"2,3,0,1"
             }
