@@ -31,10 +31,11 @@ def handler(signum, frame):
 def Train():
     running_loss = 0.0
     batch_count = 0
-    ptc_target = 1.0 / args.print_train_count
+    ptc_count = 1
+    ptc_target = ptc_count / args.print_train_count
     for i, data in enumerate(args.trainloader, 0):
         inputs, labels = data
-
+        
         if args.cuda:
             inputs = inputs.cuda()
             labels = labels.cuda()
@@ -46,7 +47,6 @@ def Train():
         loss.backward()
 
         args.optimizer.step()
-
         running_loss += loss.item()
 
         # Print the running loss
@@ -58,7 +58,8 @@ def Train():
         elif args.print_train_count != 0:
             if (i+1) / len(args.trainloader) >= ptc_target:
                 pF = True
-                ptc_target += 1/args.print_train_count
+                ptc_count += 1
+                ptc_target = ptc_count/args.print_train_count
         if pF:
             Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
                 (epoch_current + 1, args.training_epochs,

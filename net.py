@@ -3,8 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from block import BFLinear, BFConv2d
-
-
+from functions import BFConf
 
 class BFSimpleNet(nn.Module):
     def __init__(self, num_classes=10, bf_conf=None, cuda=True):
@@ -12,15 +11,15 @@ class BFSimpleNet(nn.Module):
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = BFConv2d(16, 32, 3, padding=0,
-            bf_conf=bf_conf["conv2"], bias=False, cuda=cuda)
+            bf_conf=BFConf(bf_conf["conv2"]), bias=False, cuda=cuda)
         self.pool2 = nn.MaxPool2d(2, 2)
         self.conv3 = BFConv2d(32, 64, 3, padding=0,
-            bf_conf=bf_conf["conv3"], bias=False, cuda=cuda)
+            bf_conf=BFConf(bf_conf["conv3"]), bias=False, cuda=cuda)
 
         self.fc1 = BFLinear(64 * 5 * 5, 1024,
-            bf_conf=bf_conf["fc1"], cuda=cuda)
+            bf_conf=BFConf(bf_conf["fc1"]), cuda=cuda)
         self.fc2 = BFLinear(1024, 1024,
-            bf_conf=bf_conf["fc2"], cuda=cuda)
+            bf_conf=BFConf(bf_conf["fc2"]), cuda=cuda)
         self.fc3 = nn.Linear(1024, num_classes)
 
 
@@ -163,8 +162,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks,
-            group_mantissa, group_size, group_direction, num_classes):
+    def __init__(self, block, num_blocks, bf_conf, num_classes):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
@@ -172,22 +170,20 @@ class ResNet(nn.Module):
                                stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.layer1 = self._make_layer(block, 64, num_blocks[0],
-            group_mantissa, group_size, group_direction, stride=1)
+            bf_conf=bf_conf["layer1"], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1],
-            group_mantissa, group_size, group_direction, stride=2)
+            bf_conf=bf_conf["layer2"], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2],
-            group_mantissa, group_size, group_direction, stride=2)
+            bf_conf=bf_conf["layer3"], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3],
-            group_mantissa, group_size, group_direction, stride=2)
+            bf_conf=bf_conf["layer4"], stride=2)
         self.linear = nn.Linear(512*block.expansion, num_classes)
 
-    def _make_layer(self, block, planes, num_blocks,
-        group_mantissa, group_size, group_direction, stride):
+    def _make_layer(self, block, planes, num_blocks, bf_conf, stride):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes,
-                group_mantissa, group_size, group_direction, stride))
+            layers.append(block(self.in_planes, planes, bf_conf, stride))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 

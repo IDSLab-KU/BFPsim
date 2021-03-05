@@ -133,7 +133,7 @@ def LoadDataset(name):
         raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
     return trainset, testset, classes
 
-def TupleFromStr(v):
+def Str2Tuple(v):
     r = []
     v = v.replace(" ","").replace("(","").replace(")","").split(",")
     for i in v:
@@ -142,26 +142,17 @@ def TupleFromStr(v):
 
 class BFConf():
 
-    def __init__(self, *args, **kwargs):
-        if len(kwargs) == 3:
-            self.f_i_bit = self.f_w_bit = self.b_o_bit = int(kwargs["bit"])
-            self.f_i_sz = self.f_w_sz = self.b_o_sz = int(kwargs["sz"])
-            self.f_i_dir = self.f_w_dir = self.b_o_dir = TupleFromStr(kwargs["dir"])
-        elif len(args) == 3:
-            self.f_i_bit = self.f_w_bit = self.b_o_bit = int(args[0])
-            self.f_i_sz = self.f_w_sz = self.b_o_sz = int(args[1])
-            self.f_i_dir = self.f_w_dir = self.b_o_dir = TupleFromStr(args[2])
-        else:
-            self.f_i_bit = int(kwargs["f_i_bit"])
-            self.f_i_sz = int(kwargs["f_i_sz"])
-            self.f_i_dir = TupleFromStr(kwargs["f_i_dir"])
-            self.f_w_bit = int(kwargs["f_w_bit"])
-            self.f_w_sz = int(kwargs["f_w_sz"])
-            self.f_w_dir = TupleFromStr(kwargs["f_w_dir"])
-            self.b_o_bit = int(kwargs["b_o_bit"])
-            self.b_o_sz = int(kwargs["b_o_sz"])
-            self.b_o_dir = TupleFromStr(kwargs["b_o_dir"])
-
+    def __init__(self, dic):
+        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else 8
+        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else 36
+        self.f_i_dir = Str2Tuple(dic["f_i_dir"]) if "f_i_dir" in dic.keys() else (2,3,0,1)
+        self.f_w_bit = dic["f_w_bit"]            if "f_w_bit" in dic.keys() else self.f_i_bit
+        self.f_w_sz  = dic["f_w_sz"]             if "f_w_sz"  in dic.keys() else self.f_i_sz
+        self.f_w_dir = Str2Tuple(dic["f_w_dir"]) if "f_w_dir" in dic.keys() else self.f_i_dir
+        self.b_o_bit = dic["b_o_bit"]            if "b_o_bit" in dic.keys() else self.f_i_bit
+        self.b_o_sz  = dic["b_o_sz"]             if "b_o_sz"  in dic.keys() else self.f_i_sz
+        self.b_o_dir = Str2Tuple(dic["b_o_dir"]) if "b_o_dir" in dic.keys() else self.f_i_dir
+        
     def __repr__(self):
         return str(self)
     def __str__(self):
@@ -221,6 +212,7 @@ from net import SimpleNet, ResNet18, BFSimpleNet, BFResNet18
 import torch.optim as optim
 import torch.nn as nn
 import os
+import json
 
 # Parse arguments
 def ArgumentParse(logfileStr):
@@ -256,12 +248,12 @@ def ArgumentParse(logfileStr):
         help = "Print info on # of batches, 0 to disable") # 128 = 391
     parser.add_argument("--print-train-count", type=int, default = 5,
         help = "How many print on each epoch, 0 to disable") # 128 = 391
-    parser.add_argument("--stat", type=str2bool, default = True,
+    parser.add_argument("--stat", type=str2bool, default = False,
         help = "Record to stat object?")
     parser.add_argument("--stat-loss-batches", type=int, default = 0,
         help = "[OVERRIDE] Average batches to calculate running loss on stat object")
 
-    parser.add_argument("--save", type=str2bool, default = True,
+    parser.add_argument("--save", type=str2bool, default = False,
         help = "Save best model's weight")
     
     # Parse arguments
@@ -277,10 +269,17 @@ def ArgumentParse(logfileStr):
     if args.bf_layer_conf_file == "":
         print("bf layer confing file not set, original network will be trained.")
         args.bf_layer_conf = None
-    elif not os.path.exists("./conf/"+args.bf_layer_conf_file+".bfconf"):
-        raise FileNotFoundError(args.bf_layer_conf_file + ".bfconf not exists on ./conf/ directory!")
+    elif not os.path.exists("./conf/"+args.bf_layer_conf_file+".json"):
+        raise FileNotFoundError(args.bf_layer_conf_file + ".json not exists on ./conf/ directory!")
     else:
-        f = open("./conf/"+args.bf_layer_conf_file+".bfconf","r",encoding="utf-8")
+        f = open("./conf/"+args.bf_layer_conf_file+".json","r",encoding="utf-8")
+
+        args.bf_layer_conf = json.load(f)
+        if args.bf_layer_conf["name"] != args.model:
+            raise ValueError("BF layer conf is not match with model")
+        
+        print()
+        """
         netname = f.readline().replace("\n","")
         if netname != args.model:
             raise ValueError("BF layer conf is not match with model")
@@ -297,7 +296,7 @@ def ArgumentParse(logfileStr):
                 args.bf_layer_conf[line[0]] = BFConf(
                     f_i_bit=line[1], f_i_sz=line[2], f_i_dir=line[3],
                     f_w_bit=line[4], f_w_sz=line[5], f_w_dir=line[6],
-                    b_o_bit=line[7], b_o_sz=line[8], b_o_dir=line[9])
+                    b_o_bit=line[7], b_o_sz=line[8], b_o_dir=line[9])"""
     
     # Define the network and optimize almost everything
     # Simplenet, 3 convs and 3 fc layers
@@ -318,7 +317,8 @@ def ArgumentParse(logfileStr):
         args.scheduler = None
 
         # Training Epochs
-        args.training_epochs = 1
+        if args.training_epochs == 0:
+            args.training_epochs = 5
         
         # Logger, stat, etc
         args.stat_loss_batches = 1000
@@ -344,7 +344,8 @@ def ArgumentParse(logfileStr):
         args.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=200)
         
         # Training Epochs
-        args.training_epochs = 200
+        if args.training_epochs == 0:
+            args.training_epochs = 200
 
         # Logger, stat, etc
         args.stat_loss_batches = 100
