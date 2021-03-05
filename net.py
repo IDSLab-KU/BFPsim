@@ -231,7 +231,7 @@ def ResNet18(num_classes):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
 
 def BFResNet18(bf_conf, num_classes):
-    return ResNet(BFBasicBlock, [2, 2, 2, 2], bf_conf, num_classes)
+    return BFResNet(BFBasicBlock, [2, 2, 2, 2], bf_conf, num_classes)
 
 def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])
