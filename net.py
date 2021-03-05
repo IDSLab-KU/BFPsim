@@ -6,7 +6,7 @@ from block import BFLinear, BFConv2d
 from functions import BFConf
 
 class BFSimpleNet(nn.Module):
-    def __init__(self, num_classes=10, bf_conf=None, cuda=True):
+    def __init__(self, bf_conf, num_classes=10, cuda=True):
         super(BFSimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
@@ -101,24 +101,20 @@ class BasicBlock(nn.Module):
 class BFBasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes,
-        group_mantissa, group_size, group_direction, stride):
+    def __init__(self, in_planes, planes, bf_conf, stride):
         super(BFBasicBlock, self).__init__()
         self.conv1 = BFConv2d(in_planes, planes, 
-            kernel_size=3, stride=stride, padding=1, bias=False,
-            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
+            kernel_size=3, bf_conf=BFConf(bf_conf["conv1"]), stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = BFConv2d(planes, planes,
-            kernel_size=3, stride=1, padding=1, bias=False,
-            group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction)
+            kernel_size=3, bf_conf=BFConf(bf_conf["conv2"]), stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
                 BFConv2d(in_planes, self.expansion*planes,
-                    kernel_size=1, stride=stride, bias=False,
-                    group_mantissa=group_mantissa, group_size=group_size, group_direction=group_direction),
+                    kernel_size=1, bf_conf=BFConf(bf_conf["shortcut"]), stride=stride, bias=False),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
@@ -202,9 +198,8 @@ class ResNet(nn.Module):
 def ResNet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
-def BFResNet18(group_mantissa, group_size, group_direction, num_classes):
-    return ResNet(BFBasicBlock, [2, 2, 2, 2],
-        group_mantissa, group_size, group_direction, num_classes)
+def BFResNet18(bf_conf, num_classes):
+    return ResNet(BFBasicBlock, [2, 2, 2, 2], bf_conf, num_classes)
 
 def ResNet34():
     return ResNet(BasicBlock, [3, 4, 6, 3])

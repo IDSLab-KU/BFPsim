@@ -277,33 +277,13 @@ def ArgumentParse(logfileStr):
         args.bf_layer_conf = json.load(f)
         if args.bf_layer_conf["name"] != args.model:
             raise ValueError("BF layer conf is not match with model")
-        
-        print()
-        """
-        netname = f.readline().replace("\n","")
-        if netname != args.model:
-            raise ValueError("BF layer conf is not match with model")
-        args.bf_layer_conf = dict()
-        while True:
-            line = f.readline()
-            if not line: break
-            line = line.replace("\n","").split("\t")
-            if len(line) == 0:
-                continue
-            elif len(line) == 4:
-                args.bf_layer_conf[line[0]] = BFConf(line[1], line[2], line[3])
-            elif len(line) == 10:
-                args.bf_layer_conf[line[0]] = BFConf(
-                    f_i_bit=line[1], f_i_sz=line[2], f_i_dir=line[3],
-                    f_w_bit=line[4], f_w_sz=line[5], f_w_dir=line[6],
-                    b_o_bit=line[7], b_o_sz=line[8], b_o_dir=line[9])"""
     
     # Define the network and optimize almost everything
     # Simplenet, 3 convs and 3 fc layers
     if args.model == "SimpleNet":
         # Network construction
         if args.bf_layer_conf is not None:
-            args.net = BFSimpleNet(len(args.classes), args.bf_layer_conf)
+            args.net = BFSimpleNet(args.bf_layer_conf, len(args.classes))
         else:
             args.net = SimpleNet(len(args.classes))
 
@@ -328,7 +308,7 @@ def ArgumentParse(logfileStr):
     elif args.model == "Resnet18":
         # Network construction
         if args.bf_layer_conf is not None:
-            args.net = BFResNet18(len(args.classes), args.bf_layer_conf)
+            args.net = BFResNet18(args.bf_layer_conf, len(args.classes))
         else:
             args.net = ResNet18(len(args.classes))
 
