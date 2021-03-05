@@ -233,7 +233,7 @@ def ArgumentParse(logfileStr):
         help = "Using CUDA to compute on GPU [True False]")
     
     # Training setup
-    parser.add_argument("--training_epochs", type=int, default = 0,
+    parser.add_argument("--training-epochs", type=int, default = 0,
         help = "[OVERRIDE] If larger than 0, epoch is set to this value")
     parser.add_argument("--initial-lr", type=float, default = 0,
         help = "[OVERRIDE] If larger than 0, initial lr is set to this value")
