@@ -159,7 +159,7 @@ class Bottleneck(nn.Module):
 
 class BFResNet(nn.Module):
     def __init__(self, block, num_blocks, bf_conf, num_classes):
-        super(ResNet, self).__init__()
+        super(BFResNet, self).__init__()
         self.in_planes = 64
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
