@@ -105,8 +105,8 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Match shape back to input
     m_ = m_[:e_.shape[0]]
     # Difference of the exponent
-    # -1 is for on grouping, IEEE's basic mantissa bit has to be included to the value, so...
-    e_ = group_mantissa - 1 - (m_ - e_)
+    # IEEE's basic mantissa bit has to be included to the value, so...
+    e_ = group_mantissa - (m_ - e_)
     # Clip the negative value (I know this is not smarter way)
     e_ = jnp.clip(e_, 0, 0xfff) # np method : e_[e_ > 0xff] = 0
     # np.clip(e_, 0, 0xff, out=e_) # Options...
