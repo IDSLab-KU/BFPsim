@@ -90,7 +90,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Convert to jnp
     v = jnp.asarray(v)
     # Extract exponent
-    e_mask = jnp.full(v.shape, 0x7f800000, dtype=np.int32)
+    e_mask = jnp.asarray(np.full(v.shape, 0x7f800000, dtype=np.int32))
     e_ = jnp.bitwise_and(v, e_mask)
     # Get the max value
     # IDEA : send shift code to back, maybe that's faster
@@ -110,7 +110,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Clip the negative value (I know this is not smarter way)
     e_ = jnp.clip(e_, 0, 0xfff) # np method : e_[e_ > 0xff] = 0
     # np.clip(e_, 0, 0xff, out=e_) # Options...
-    r_mask = jnp.full(v.shape, 0x007fffff, dtype=np.uint32)
+    r_mask = jnp.asarray(np.full(v.shape, 0x007fffff, dtype=np.uint32))
     # Shift to make reversed mask
     r_mask = jnp.right_shift(r_mask, e_)
     # Get the reversed mask
