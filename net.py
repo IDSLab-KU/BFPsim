@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from block import BFLinear, BFConv2d
-from functions import BFConf, set_mantissa_tensor
+from functions import BFConf, set_mantissa_tensor, make_groups_tensor
 
 class BFSimpleNet(nn.Module):
     def __init__(self, bf_conf, num_classes=10, cuda=True):
@@ -18,13 +18,13 @@ class BFSimpleNet(nn.Module):
         self.conv3 = BFConv2d(32, 64, 3, padding=0,
             bf_conf=BFConf(bf_conf["conv3"]), bias=False, cuda=cuda)
         self.bn3 = nn.BatchNorm2d(64)
-        self.fc1 = BFLinear(64 * 5 * 5, 1024,
-            bf_conf=BFConf(bf_conf["fc1"]), cuda=cuda)
-        self.fc2 = BFLinear(1024, 1024,
-            bf_conf=BFConf(bf_conf["fc2"]), cuda=cuda)
         # Setting Only Convolution as BFConv
-        # self.fc1 = nn.Linear(64*5*5, 1024)
-        # self.fc2 = nn.Linear(1024, 1024)
+        # self.fc1 = BFLinear(64 * 5 * 5, 1024,
+        #     bf_conf=BFConf(bf_conf["fc1"]), cuda=cuda)
+        # self.fc2 = BFLinear(1024, 1024,
+        #     bf_conf=BFConf(bf_conf["fc2"]), cuda=cuda)
+        self.fc1 = nn.Linear(64*5*5, 1024)
+        self.fc2 = nn.Linear(1024, 1024)
         self.fc3 = nn.Linear(1024, num_classes)
 
         self.bf_conf = bf_conf
@@ -40,14 +40,15 @@ class BFSimpleNet(nn.Module):
         x = self.bn2(x)
         x = self.pool2(x)               # 32x 7x 7
         x = F.relu(self.conv3(x))       # 64x 5x 5
-        # if self.cuda:
-        #     x = set_mantissa_tensor(x.detach().cpu(), self.bf_conf["conv_out"]["bit"]).cuda()
-        # else:
-        #     x = set_mantissa_tensor(x.detach(), self.bf_conf["conv_out"]["bit"])
         x = self.bn3(x)
+        # if self.cuda:
+        #     x = set_mantissa_tensor(x.detach().cpu(), self.bf_conf["out"]["bit"]).cuda()
+        # else:
+        #     x = set_mantissa_tensor(x.detach(), self.bf_conf["out"]["bit"])
         x = x.view(-1, 64 * 5 * 5)      # 1600
         x = F.relu(self.fc1(x))         # 1024
         x = F.relu(self.fc2(x))         # 1024
+
         x = self.fc3(x)                 # 10
         return x
 
