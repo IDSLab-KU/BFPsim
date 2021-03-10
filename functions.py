@@ -29,8 +29,13 @@ def set_mantissa_tensor(inp, group_mantissa):
     st = inp_n.tobytes() 
     # Set to uint32 array to easy computing
     v = np.frombuffer(st, dtype=np.uint32) 
+    # Generate mask
+    r_mask = np.asarray(np.full(v.shape, 0x007fffff, dtype=np.uint32))
+    # Shift to make reversed mask
+    r_mask = np.right_shift(r_mask, group_mantissa)
+    # Get the reversed mask
+    r_mask = np.invert(r_mask)
     # And operation to remove mantissa
-    r_mask = np.full(v.shape, 0xff800000 | fp32_mask[group_mantissa], dtype=np.uint32)
     r_ = np.bitwise_and(v, r_mask)
     # revert to original np.float32 
     r = np.frombuffer(r_, dtype=np.float32)
@@ -62,8 +67,7 @@ def _make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Match shape back to input
     m_ = m_[:e_.shape[0]]
     # Difference of the exponent
-    # -1 is for on grouping, IEEE's basic mantissa bit has to be included to the value, so...
-    e_ = group_mantissa - 1 - (m_ - e_)
+    e_ = group_mantissa - (m_ - e_)
     # Clip the negative value (I know this is not smarter way)
     e_[e_ > 0xff] = 0
     # np.clip(e_, 0, 0xff, out=e_) # Options...
