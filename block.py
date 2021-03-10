@@ -191,7 +191,7 @@ class BFConv2dFunction(torch.autograd.Function):
         
         # WARNING : Bias maybe buggy, remove if it is buggy
         if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0).squeeze(0)
+            grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
             if cuda:
                 grad_bias = set_mantissa_tensor(grad_bias.cpu(), g_b_bit).cuda()
             else:
