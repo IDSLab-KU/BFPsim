@@ -192,28 +192,55 @@ def Str2Tuple(v):
     return tuple(r)
 
 class BFConf():
-
     def __init__(self, dic):
-        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else 8
-        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else 36
-        self.f_i_dir = Str2Tuple(dic["f_i_dir"]) if "f_i_dir" in dic.keys() else (2,3,0,1)
-        self.f_w_bit = dic["f_w_bit"]            if "f_w_bit" in dic.keys() else self.f_i_bit
-        self.f_w_sz  = dic["f_w_sz"]             if "f_w_sz"  in dic.keys() else self.f_i_sz
-        self.f_w_dir = Str2Tuple(dic["f_w_dir"]) if "f_w_dir" in dic.keys() else self.f_i_dir
-        self.b_o_bit = dic["b_o_bit"]            if "b_o_bit" in dic.keys() else self.f_i_bit
-        self.b_o_sz  = dic["b_o_sz"]             if "b_o_sz"  in dic.keys() else self.f_i_sz
-        self.b_o_dir = Str2Tuple(dic["b_o_dir"]) if "b_o_dir" in dic.keys() else self.f_i_dir
+        # weight
+        self.w_bit = dic["w_bit"]                if "w_bit" in dic.keys() else 8
+        self.w_sz  = dic["w_sz"]                 if "w_sz"  in dic.keys() else 36
+        self.w_dir = Str2Tuple(dic["w_dir"])     if "w_dir" in dic.keys() else (2,3,0,1)
+        # forward
+        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.w_bit
+        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.w_sz
+        self.f_i_dir = Str2Tuple(dic["f_i_dir"]) if "f_i_dir" in dic.keys() else self.w_dir
+        self.f_o_bit = dic["f_o_bit"]            if "f_w_bit" in dic.keys() else self.f_i_bit
+        # backward
+        self.g_o_bit = dic["g_o_bit"]            if "g_o_bit" in dic.keys() else self.w_bit
+        self.g_o_sz  = dic["g_o_sz"]             if "g_o_sz"  in dic.keys() else self.w_sz
+        self.g_o_dir = Str2Tuple(dic["g_o_dir"]) if "g_o_dir" in dic.keys() else self.w_dir
+        self.g_i_bit = dic["g_i_bit"]            if "g_i_bit" in dic.keys() else self.g_o_bit
+        self.g_w_bit = dic["g_w_bit"]            if "g_w_bit" in dic.keys() else self.g_o_bit
+        self.g_b_bit = dic["g_b_bit"]            if "g_b_bit" in dic.keys() else self.g_o_bit
         
     def __repr__(self):
         return str(self)
     def __str__(self):
-        if self.f_i_bit == self.f_w_bit and self.f_w_bit == self.b_o_bit \
-            and self.f_i_sz == self.f_w_sz and self.f_w_sz == self.b_o_sz \
-            and self.f_i_dir == self.f_w_dir and self.f_w_dir == self.b_o_dir:
-            return 'bit={}, size={}, dir={}'.format(self.f_i_bit, self.f_i_sz, self.f_i_dir)
+        s = ""
+        if self.w_bit == self.f_i_bit == self.g_o_bit \
+            and self.w_sz == self.f_i_sz == self.g_o_sz \
+            and self.w_dir == self.f_i_dir == self.g_o_dir:
+            s += 'bit={}, size={}, dir={}'.format(self.w_bit, self.w_sz, self.w_dir)
         else:
-            return 'bit={}/{}/{}, size={}/{}/{}, dir={}/{}/{}'.format(self.f_i_bit, self.f_w_bit, self.b_o_bit, self.f_i_sz, self.f_w_sz, self.b_o_sz, self.f_i_dir, self.f_w_dir, self.b_o_dir)
-    
+            s += 'w_bit={}, w_sz={}, w_dir={}'.format(self.w_bit, self.w_sz, self.w_dir)
+            if self.w_bit != self.f_i_bit:
+                s += ', f_i_bit={}'.format(self.f_i_bit)
+            if self.w_sz != self.f_i_sz:
+                s += ', f_i_sz={}'.format(self.f_i_sz)
+            if self.w_dir != self.f_i_dir:
+                s += ', f_i_dir={}'.format(self.f_i_dir)
+            if self.w_bit != self.g_o_bit:
+                s += ', g_o_bit={}'.format(self.g_o_bit)
+            if self.w_sz != self.g_o_sz:
+                s += ', g_o_sz={}'.format(self.g_o_sz)
+            if self.w_dir != self.g_o_dir:
+                s += ', g_o_dir={}'.format(self.g_o_dir)
+        if self.f_i_bit != self.f_o_bit:
+            s += ', f_o_bit={}'.format(self.f_o_bit)
+        if self.g_o_bit != self.g_i_bit:
+            s += ', g_i_bit={}'.format(self.g_i_bit)
+        if self.g_o_bit != self.g_w_bit:
+            s += ', g_w_bit={}'.format(self.g_w_bit)
+        if self.g_o_bit != self.g_b_bit:
+            s += ', g_b_bit={}'.format(self.g_b_bit)
+        return s
 
 # Argument parsing
 import argparse

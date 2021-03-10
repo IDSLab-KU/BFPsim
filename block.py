@@ -16,13 +16,12 @@ _size_1_t = _scalar_or_tuple_1_t[int]
 _size_2_t = _scalar_or_tuple_2_t[int]
 _size_3_t = _scalar_or_tuple_3_t[int]
 
-from functions import make_groups_tensor, BFConf
+from functions import make_groups_tensor, BFConf, set_mantissa_tensor
 
 DEFAULT_GROUP_MANTISSA = 8
 DEFAULT_GROUP_SIZE = 36
 DEFAULT_GROUP_DIRECTION = None
 DEFAULT_CUDA = True
-
 
 # Temp relu, can be removed since relu doesn't need to be optimized
 class BlockReLU(torch.autograd.Function):
@@ -127,41 +126,53 @@ class BFConv2dFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bf_conf, bias=None, stride=1, padding=0, dilation=1, groups=1, cuda=DEFAULT_CUDA):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
-        # Block input and weight's values to unify mantissa
+
+        # Grouping input and weight
         if cuda:
             input = make_groups_tensor(input.cpu(), bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir).cuda()
-            weight = make_groups_tensor(weight.cpu(), bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir).cuda()
+            weight = make_groups_tensor(weight.cpu(), bf_conf.w_bit, bf_conf.w_sz, bf_conf.w_dir).cuda()
         else:
             input = make_groups_tensor(input, bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir)
-            weight = make_groups_tensor(weight, bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir)
+            weight = make_groups_tensor(weight, bf_conf.w_bit, bf_conf.w_sz, bf_conf.w_dir)
 
         # Save arguments to context to use on backward
         # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
-        # if group_direction == None:
-        #     group_direction = 0
         cuda = 1 if cuda else 0
         confs = torch.from_numpy(np.array([stride, padding, dilation, groups, cuda]))
-        ctx.save_for_backward(input, weight, bias, confs)
+        bf_confs = torch.from_numpy(np.array([
+            bf_conf.g_o_bit, bf_conf.g_o_sz,
+            bf_conf.g_o_dir[0], bf_conf.g_o_dir[1], bf_conf.g_o_dir[2], bf_conf.g_o_dir[3],
+            bf_conf.g_i_bit, bf_conf.g_w_bit, bf_conf.g_b_bit]))
+        ctx.save_for_backward(input, weight, bias, confs, bf_confs)
 
         # Compute Convolution
-        return F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
+        output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
+        
+        # Set mantissa because result of computation is preseted bits
+        if cuda:
+            output = set_mantissa_tensor(output.cpu(), bf_conf.f_o_bit).cuda()
+        else:
+            output = set_mantissa_tensor(output, bf_conf.f_o_bit)
+        
+        return output
     
     @staticmethod
     def backward(ctx, grad_output):
-        # Load saved tensors
-        input, weight, bias, confs = ctx.saved_variables
-        confs = confs.numpy()
-        # stride, padding, dilation, groups, group_mantissa, group_size, group_direction, cuda = confs[0], confs[1], confs[2], confs[3], confs[4], confs[5], confs[6], confs[7]
-        stride, padding, dilation, groups, cuda = confs[0], confs[1], confs[2], confs[3], confs[4]
-
-        # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
+        # Load saved tensors and configs
+        input, weight, bias, confs, bf_confs = ctx.saved_variables
+        confs, bf_confs = confs.numpy(), bf_confs.numpy()
+        stride, padding, dilation, groups, cuda = confs
+        g_o_dir = [0,0,0,0]
+        g_o_bit, g_o_sz, g_o_dir[0], g_o_dir[1], g_o_dir[2], g_o_dir[3], g_i_bit, g_w_bit, g_b_bit = bf_confs
+        g_o_dir = tuple(g_o_dir)
         cuda = True if cuda > 0 else False
+        # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
         
-        # Gradient Grouping
+        # Output Gradient Grouping
         if cuda:
-            grad_output = make_groups_tensor(grad_output.cpu(), 8, group_size = 36, group_direction = (2,3,0,1)).cuda()
+            grad_output = make_groups_tensor(grad_output.cpu(), g_o_bit, g_o_sz, g_o_dir).cuda()
         else:
-            grad_output = make_groups_tensor(grad_output, 8, group_size = 36, group_direction = (2,3,0,1))
+            grad_output = make_groups_tensor(grad_output, 8, g_o_bit, g_o_sz, g_o_dir)
 
         # Calculate Gradient
         grad_input = grad_weight = grad_bias = None
@@ -169,9 +180,23 @@ class BFConv2dFunction(torch.autograd.Function):
             grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output, stride, padding, dilation, groups)           
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
+
+        # Set mantissa because result of computation is preseted bits
+        if cuda:
+            grad_input = set_mantissa_tensor(grad_input.cpu(), g_i_bit).cuda()
+            grad_weight = set_mantissa_tensor(grad_weight.cpu(), g_w_bit).cuda()
+        else:
+            grad_input = set_mantissa_tensor(grad_input, g_i_bit)
+            grad_weight = set_mantissa_tensor(grad_weight, g_w_bit)
+        
         # WARNING : Bias maybe buggy, remove if it is buggy
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(0).squeeze(0)
+            if cuda:
+                grad_bias = set_mantissa_tensor(grad_bias.cpu(), g_b_bit).cuda()
+            else:
+                grad_bias = set_mantissa_tensor(grad_bias, g_b_bit)
+
         return grad_input, grad_weight, None, grad_bias, None, None, None, None, None
 
 # Blockfloat Convolution
@@ -229,6 +254,7 @@ class BFConv2d(torch.nn.Module):
         return BFConv2dFunction.apply(input, self.weight, self.bf_conf,
                 self.bias, self.stride, self.padding, self.dilation,
                 self.groups, self.cuda)
+    
     def extra_repr(self):
         # From /torch/nn/modules/conv.py
         s = ('{in_channels}, {out_channels}, kernel_size={kernel_size}'
