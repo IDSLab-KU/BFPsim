@@ -2,6 +2,21 @@
 
 # Block float values
 
+This repository simulates neural network with grouping float values to same mantissa bits.
+
+Please see the Paper(not ready) for more specific results.
+
+Also, this repository's code can train a network with custom floating point mantissa bits.
+
+# Files
+
+Contents are not ready...
+
+# Usage
+
+Documents are not ready...
+
+# Issues
 
 ## JAX Memory allocation issue
 [JAX](https://github.com/google/jax) is Autograd and XLA, brought together for high-performance machine learning research.
@@ -22,7 +37,9 @@ export XLA_PYTHON_CLIENT_PREALLOCATE=false
 
 to avoid allocating memory to jax too much.
 
-## Requirements
+# Requirements
 torch >= 1.7.1
+
 torchvision >= 0.5.0
+
 jax >= 0.2.9
