@@ -66,6 +66,8 @@ def ArgumentParse(logfileStr):
     # Block setup
 
     # Printing / Logger / Stat
+    parser.add_argument("--log", type=str2bool, default = True,
+        help = "Record to log object?")
     parser.add_argument("--print-train-batch", type=int, default = 0,
         help = "Print info on # of batches, 0 to disable") # 128 = 391
     parser.add_argument("--print-train-count", type=int, default = 5,
@@ -250,10 +252,15 @@ if __name__ == '__main__':
     # handle signal
     signal.signal(signal.SIGINT, handler)
     
-    # Set logger preset
+    # Set logger preset to generate log file location
     Log.SetLogFile(True)
     # Parse Arguments and set
     args = ArgumentParse(Log.logFileLocation)
+
+    if args.log:
+        Log.SetLogFile(True)
+    else:
+        Log.SetLogFile(False)
     
     # Print the model summary and arguments
     
