@@ -2,8 +2,6 @@
 import numpy as np
 import torch
 
-import jax.numpy as jnp
-
 import torchvision
 import torchvision.transforms as transforms
 
@@ -43,7 +41,7 @@ def set_mantissa_tensor(inp, group_mantissa):
 
 # _make_group_tensor : Group values as same exponent bits, which shifts mantissa
 # TODO : Set direction of grouping
-def _make_groups_tensor(inp, group_mantissa, group_size, group_direction):
+def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     inp_n = inp.numpy() # inp_n = inp # For debug,
     # Transpose to replace direction
     inp_n = np.transpose(inp_n, group_direction) # (2,3,0,1)=kernel_input_output
@@ -80,51 +78,6 @@ def _make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # revert to original np.float32 
     r = np.frombuffer(r_, dtype=np.float32)
     return torch.from_numpy(np.transpose(r.reshape(inp_n.shape),group_direction))
-
-# make_group_tensor : Group values as same exponent bits, which shifts mantissa
-# TODO : Set direction of grouping
-def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
-    inp_n = inp.numpy() # inp_n = inp # For debug,
-    # Transpose to replace direction
-    inp_n = np.transpose(inp_n, group_direction) # (2,3,0,1)=kernel_input_output
-    # Convert to byte stream
-    st = inp_n.tobytes() 
-    # Set to uint32 array to easy computing
-    v = np.frombuffer(st, dtype=np.uint32)
-    # Convert to jnp
-    v = jnp.asarray(v)
-    # Extract exponent
-    e_mask = jnp.asarray(np.full(v.shape, 0x7f800000, dtype=np.int32))
-    e_ = jnp.bitwise_and(v, e_mask)
-    # Get the max value
-    # IDEA : send shift code to back, maybe that's faster
-    e_ = jnp.right_shift(e_, 23)
-    # Match shape to divisible to group size
-    m_ = jnp.append(e_, jnp.zeros(group_size - e_.shape[0] % group_size, dtype=np.int32))
-    m_ = jnp.reshape(m_, (group_size, -1))
-    # get the max value of each blocks
-    m_ = jnp.amax(m_, axis=0)
-    # Revert back to original size
-    m_ = jnp.repeat(m_, group_size)
-    # Match shape back to input
-    m_ = m_[:e_.shape[0]]
-    # Difference of the exponent
-    # IEEE's basic mantissa bit has to be included to the value, so...
-    e_ = group_mantissa - (m_ - e_)
-    # Clip the negative value (I know this is not smarter way)
-    e_ = jnp.clip(e_, 0, 0xfff) # np method : e_[e_ > 0xff] = 0
-    # np.clip(e_, 0, 0xff, out=e_) # Options...
-    r_mask = jnp.asarray(np.full(v.shape, 0x007fffff, dtype=np.uint32))
-    # Shift to make reversed mask
-    r_mask = jnp.right_shift(r_mask, e_)
-    # Get the reversed mask
-    r_mask = jnp.invert(r_mask)
-    r_ = jnp.bitwise_and(v, r_mask)
-    r_ = np.asarray(r_)
-    # revert to original np.float32 
-    r = np.frombuffer(r_, dtype=np.float32)
-    r = np.transpose(r.reshape(inp_n.shape),group_direction)
-    return torch.from_numpy(r)
 
 # LoadDataset : Load dataset, cifar-10 or cifar-100
 def LoadDataset(name):
