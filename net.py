@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from block import BFLinear, BFConv2d
-from functions import BFConf, set_mantissa_tensor, make_groups_tensor
+from functions import BFConf
 
 class BFSimpleNet(nn.Module):
     def __init__(self, bf_conf, num_classes=10, cuda=True):
@@ -41,10 +41,6 @@ class BFSimpleNet(nn.Module):
         x = self.pool2(x)               # 32x 7x 7
         x = F.relu(self.conv3(x))       # 64x 5x 5
         x = self.bn3(x)
-        # if self.cuda:
-        #     x = set_mantissa_tensor(x.detach().cpu(), self.bf_conf["out"]["bit"]).cuda()
-        # else:
-        #     x = set_mantissa_tensor(x.detach(), self.bf_conf["out"]["bit"])
         x = x.view(-1, 64 * 5 * 5)      # 1600
         x = F.relu(self.fc1(x))         # 1024
         x = F.relu(self.fc2(x))         # 1024

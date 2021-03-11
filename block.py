@@ -16,11 +16,9 @@ _size_1_t = _scalar_or_tuple_1_t[int]
 _size_2_t = _scalar_or_tuple_2_t[int]
 _size_3_t = _scalar_or_tuple_3_t[int]
 
-from functions import make_groups_tensor, BFConf, set_mantissa_tensor
+from blockfunc import make_groups_tensor, set_mantissa_tensor
+from functions import BFConf
 
-DEFAULT_GROUP_MANTISSA = 8
-DEFAULT_GROUP_SIZE = 36
-DEFAULT_GROUP_DIRECTION = None
 DEFAULT_CUDA = True
 
 # Temp relu, can be removed since relu doesn't need to be optimized
