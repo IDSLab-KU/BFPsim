@@ -19,6 +19,8 @@ Documents are not ready...
 # Issues
 
 ## JAX Memory allocation issue
+**Currently, we are not using JAX because functions need to be optimized better**
+
 [JAX](https://github.com/google/jax) is Autograd and XLA, brought together for high-performance machine learning research.
 
 This project uses jax to increase computation speed. Since this project uses jax with pytorch, using jax's basic config of memory allocation has high possibility to run out of memory.
@@ -41,5 +43,3 @@ to avoid allocating memory to jax too much.
 torch >= 1.7.1
 
 torchvision >= 0.5.0
-
-jax >= 0.2.9
