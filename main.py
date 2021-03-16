@@ -285,9 +285,3 @@ if __name__ == '__main__':
     if args.save:
         PATH = args.log_file_location[:-4] + ".model"
         torch.save(args.net.state_dict(), PATH)
-
-
-""" save model
-PATH = './cifar_net.pth'
-torch.save(net.state_dict(), PATH)
-"""
