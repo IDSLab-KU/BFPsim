@@ -76,12 +76,15 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     m_ = np.repeat(m_, group_size)
     # Match shape back to input
     m_ = m_[:e_.shape[0]]
-    # Difference of the exponent
-    e_ = group_mantissa - (m_ - e_)
-    # Clip the negative value (I know this is not smarter way)
-    e_[e_ > 0xff] = 0
-    # np.clip(e_, 0, 0xff, out=e_) # Options...
+    # Difference of the exponent, -1 is applied because for more accurate hardware-wise simulation
+    # On hardware, mantissa bits have to store the 1 from the IEEE Standard
+    e_ = group_mantissa - (m_ - e_) - 1
     r_mask = np.full(v.shape, 0x007fffff, dtype=np.uint32)
+    # When mantissa have to shift more than precision bits, total value have to be zero.
+    r_mask[e_ > 0xff] = 0xffffffff
+    # Clip the negative value
+    # Maybe more smarter way...? -> np.clip(e_, 0, 0xff, out=e_)
+    e_[e_ > 0xff] = 0
     # Shift to make reversed mask
     np.right_shift(r_mask, e_, out=r_mask)
     # Get the reversed mask
