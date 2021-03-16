@@ -42,6 +42,21 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     inp_n = inp.numpy() # inp_n = inp # For debug,
     # Transpose to replace direction
     inp_n = np.transpose(inp_n, group_direction) # (2,3,0,1)=kernel_input_output
+    # After transposing, change array if first two dims are not 3x3
+    # Save original dimention for later use
+    orig_shape = inp_n.shape
+    # Code modified from https://stackoverflow.com/questions/42297115/numpy-split-cube-into-cubes/42298440#42298440
+    if inp_n.shape[0] % 3 != 0:
+        # Pad Array to have more values
+        inp_n = np.pad(inp_n, ((0,3-inp_n.shape[0]%3),(0,3-inp_n.shape[1]%3),(0,0),(0,0)))
+        # Save padded size, which is used later
+        padded_shape = inp_n.shape
+        # Reshape to corresponding size to manipulate easier
+        inp_n = inp_n.reshape([inp_n.shape[0]//3, 3, inp_n.shape[1]//3, 3, inp_n.shape[2], 1, inp_n.shape[3], 1])
+        # Transpose to have 3x3 structure is preserved
+        inp_n = inp_n.transpose([4,6,0,2,1,3,5,7])
+        # Reshape array to (nx3x3x1x1)
+        inp_n = inp_n.reshape(-1, 3, 3, 1, 1)
     # Convert to byte stream
     st = inp_n.tobytes() 
     # Set to uint32 array to easy computing
@@ -74,4 +89,16 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     r_ = np.bitwise_and(v, r_mask)
     # revert to original np.float32 
     r = np.frombuffer(r_, dtype=np.float32)
-    return torch.from_numpy(np.transpose(r.reshape(inp_n.shape),group_direction))
+    # revert back to original shape
+    r = r.reshape(inp_n.shape)
+    # Revert back change array if first two dims are not 3x3
+    if orig_shape[0] %3 != 0:
+        # Reshape into 3x3 size
+        r = r.reshape([orig_shape[2], orig_shape[3], orig_shape[0]//3+1, orig_shape[1]//3+1, 3, 3, 1, 1])
+        # Transpose to right order
+        r = r.transpose([2,4,3,5,0,6,1,7])
+        # Revert back to transposed shape
+        r = r.reshape(padded_shape)
+        # Cut the array
+        r = r[:(orig_shape[0]%3)-3,:(orig_shape[1]%3)-3,:,:]
+    return torch.from_numpy(np.transpose(r,group_direction))
