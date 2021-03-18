@@ -67,21 +67,30 @@ def Str2Tuple(v):
         r.append(int(i))
     return tuple(r)
 
+
+DIR_DICT = {
+    "WI" :  0,
+    "WO" :  1,
+    "FX" : 10,
+    "FY" : 11,
+    "FC" : 12
+}
+
 class BFConf():
     def __init__(self, dic):
         # weight
         self.w_bit = dic["w_bit"]                if "w_bit" in dic.keys() else 8
         self.w_sz  = dic["w_sz"]                 if "w_sz"  in dic.keys() else 36
-        self.w_dir = Str2Tuple(dic["w_dir"])     if "w_dir" in dic.keys() else (2,3,0,1)
+        self.w_dir = DIR_DICT[dic["w_dir"]]      if "w_dir" in dic.keys() else DIR_DICT["WI"]
         # forward
         self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.w_bit
         self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.w_sz
-        self.f_i_dir = Str2Tuple(dic["f_i_dir"]) if "f_i_dir" in dic.keys() else self.w_dir
+        self.f_i_dir = DIR_DICT[dic["f_i_dir"]]  if "f_i_dir" in dic.keys() else DIR_DICT["FC"]
         self.f_o_bit = dic["f_o_bit"]            if "f_w_bit" in dic.keys() else self.f_i_bit
         # backward
         self.g_o_bit = dic["g_o_bit"]            if "g_o_bit" in dic.keys() else self.w_bit
         self.g_o_sz  = dic["g_o_sz"]             if "g_o_sz"  in dic.keys() else self.w_sz
-        self.g_o_dir = Str2Tuple(dic["g_o_dir"]) if "g_o_dir" in dic.keys() else self.w_dir
+        self.g_o_dir = DIR_DICT[dic["g_o_dir"]]  if "g_o_dir" in dic.keys() else DIR_DICT["FX"]
         self.g_i_bit = dic["g_i_bit"]            if "g_i_bit" in dic.keys() else self.g_o_bit
         self.g_w_bit = dic["g_w_bit"]            if "g_w_bit" in dic.keys() else self.g_o_bit
         self.g_b_bit = dic["g_b_bit"]            if "g_b_bit" in dic.keys() else self.g_o_bit
