@@ -4,25 +4,21 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         }
     },
@@ -30,30 +26,25 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         }
     },
@@ -61,30 +52,25 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         }
     },
@@ -92,30 +78,25 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36,
-                "f_w_dir":"WI"
+                "f_w_sz":36
             }
         }
     }

@@ -2,22 +2,18 @@
     "name":"SimpleNet",
     "conv2":{
         "f_w_bit":8,
-        "f_w_sz":36,
-        "f_w_dir":"WI"
+        "f_w_sz":36
     },
     "conv3":{
         "f_w_bit":8,
-        "f_w_sz":36,
-        "f_w_dir":"WI"
+        "f_w_sz":36
     },
     "fc1":{
         "f_w_bit":8,
-        "f_w_sz":36,
-        "f_w_dir":"WI"
+        "f_w_sz":36
     },
     "fc2":{
         "f_w_bit":8,
-        "f_w_sz":36,
-        "f_w_dir":"WI"
+        "f_w_sz":36
     }
 }
