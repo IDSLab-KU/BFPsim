@@ -47,7 +47,6 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     inp_n = inp.numpy()
     # Save original shape
     inp_shape = inp_n.shape
-
     # STEP 1 : Pre-process array to match with group size
     # Pad Array to do the grouping correctly
     g_kernel = int(group_size / CONF_SZ / CONF_SZ)
@@ -64,16 +63,16 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # FX, FY, FC Mode have to reshape array to dimension of 8 to manipulate more easily
     #   Code modified from https://stackoverflow.com/questions/42297115/numpy-split-cube-into-cubes/42298440#42298440
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
-        inp_m = np.transpose(inp_n, (2,3,0,1))
+        inp_n = np.transpose(inp_n, (2,3,0,1))
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
         inp_n = np.transpose(inp_n, (2,3,1,0))
-    elif group_direction == 2: # FX Mode
+    elif group_direction == 10: # FX Mode
         inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//CONF_SZ, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
         inp_n = inp_n.transpose((0,2,4,6,5,7,1,3))
-    elif group_direction == 3: # FY Mode
+    elif group_direction == 11: # FY Mode
         inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]/CONF_SZ3, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
         inp_n = inp_n.transpose((0,2,6,4,5,7,1,3))
-    elif group_direction == 4:
+    elif group_direction == 12:
         inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//CONF_SZ, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
         inp_n = inp_n.transpose((0,4,6,2,5,7,1,3))
     else:
@@ -125,13 +124,13 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
         r = np.transpose(r, (2,3,0,1))
     elif group_direction == 1: # WO
         r = np.transpose(r, (3,2,0,1))
-    elif group_direction == 2: # FX
+    elif group_direction == 10: # FX
         r = r.transpose((0,6,1,7,2,4,3,5))
         r = r.reshape(inp_p_shape)
-    elif group_direction == 3: # FY Mode
+    elif group_direction == 11: # FY Mode
         r = r.transpose((0,6,1,7,3,4,2,5))
         r = r.reshape(inp_p_shape)
-    elif group_direction == 4:
+    elif group_direction == 12:
         r = r.transpose((0,6,3,7,1,4,2,5))
         r = r.reshape(inp_p_shape)
     # Revert padding
