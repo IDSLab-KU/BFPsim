@@ -48,8 +48,8 @@ def ArgumentParse(logfileStr):
         help = "Number of workers to load data")
 
     # Model setup
-    parser.add_argument("-m","--model", type=str, default = "Resnet18",
-        help = "Model to use [SimpleNet, Resnet18]")
+    parser.add_argument("-m","--model", type=str, default = "ResNet18",
+        help = "Model to use [SimpleNet, ResNet18]")
         
     parser.add_argument("-bf", "--bf-layer-conf-file", type=str, default="",
         help = "Config of the bf setup, if not set, original network will be trained")
@@ -131,7 +131,7 @@ def ArgumentParse(logfileStr):
         # args.print_train_batch = 2500
 
     # Resnet18, 3 convs and 3 fc layers
-    elif args.model == "Resnet18":
+    elif args.model == "ResNet18":
         # Network construction
         if args.bf_layer_conf is not None:
             args.net = BFResNet18(args.bf_layer_conf, len(args.classes))
