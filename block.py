@@ -160,14 +160,10 @@ class BFConv2dFunction(torch.autograd.Function):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
 
         # Grouping input and weight
-        if cuda:
-            input, weight = input.cpu(), weight.cpu()
         if bf_conf.f_i:
             input = make_groups_tensor(input, bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir)
         if bf_conf.f_w:
             weight = make_groups_tensor(weight, bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir)
-        if cuda:
-            input, weight = input.cuda(), weight.cuda()
 
         # Save arguments to context to use on backward
         # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
@@ -184,12 +180,8 @@ class BFConv2dFunction(torch.autograd.Function):
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
         
         # Grouping output
-        if cuda:
-            output = output.cpu()
         if bf_conf.f_o:
             output = make_groups_tensor(output, bf_conf.f_o_bit, bf_conf.f_o_sz, bf_conf.f_o_dir)
-        if cuda:
-            output = output.cuda()
 
         return output
     
@@ -207,12 +199,8 @@ class BFConv2dFunction(torch.autograd.Function):
         # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
         
         # output gradient grouping
-        if cuda:
-            grad_output = grad_output.cpu()
         if b_o:
             grad_output = make_groups_tensor(grad_output, b_o_bit, b_o_sz, b_o_dir)
-        if cuda:
-            grad_output = grad_output.cuda()
 
         # Calculate Gradient
         grad_input = grad_weight = grad_bias = None
@@ -222,14 +210,10 @@ class BFConv2dFunction(torch.autograd.Function):
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
 
         # Grouping input and weight
-        if cuda:
-            grad_input, grad_weight = grad_input.cpu(), grad_weight.cpu()
         if b_i:
             grad_input = make_groups_tensor(grad_input, b_i_bit, b_i_sz, b_i_dir)
         if b_w:
             grad_weight = make_groups_tensor(grad_weight, b_w_bit, b_w_sz, b_w_dir)
-        if cuda:
-            grad_input, grad_weight = grad_input.cuda(), grad_weight.cuda()
         
         # WARNING : Bias maybe buggy, remove if it is buggy
         if bias is not None and ctx.needs_input_grad[2]:

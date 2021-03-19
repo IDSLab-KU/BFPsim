@@ -44,7 +44,10 @@ CONF_SZ = 3
 # _make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Convert tensor to numpy array
-    inp_n = inp.numpy()
+    if inp.is_cuda:
+        inp_n = inp.cpu().numpy()
+    else:
+        inp_n = inp.numpy()
     # Save original shape
     inp_shape = inp_n.shape
     # STEP 1 : Pre-process array to match with group size
@@ -137,4 +140,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     if inp_p_shape != inp_shape:
         r = r[:inp_shape[0],:inp_shape[1],:inp_shape[2],:inp_shape[3]]
 
-    return torch.from_numpy(r)
+    if inp.is_cuda:
+        return torch.from_numpy(r).cuda()
+    else:
+        return torch.from_numpy(r)
