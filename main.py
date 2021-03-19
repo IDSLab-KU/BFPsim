@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 
 from log import Log
-from functions import LoadDataset, Str2Tuple, BFConf, Stat, str2bool
+from functions import LoadDataset, BFConf, Stat, str2bool
 from net import SimpleNet, ResNet18, BFSimpleNet, BFResNet18
 
 import signal
@@ -19,11 +19,13 @@ def ExitCounter():
 args = None
 
 def handler(signum, frame):
-    print("Quit by user signal, saving stat object file...")
+    print("Quit by user signal")
     if args.stat != None:
+        print("Saving stat object file...")
         args.stat.SaveToFile()
     
     if args.save:
+        print("Saving model file...")
         PATH = args.log_file_location[:-4] + ".model"
         torch.save(args.net.state_dict(), PATH)
     sys.exit()

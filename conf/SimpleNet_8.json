@@ -1,23 +1,23 @@
 {
     "name":"SimpleNet",
     "conv2":{
-        "w_bit":8,
-        "w_sz":36,
-        "w_dir":"2,3,0,1"
+        "f_w_bit":8,
+        "f_w_sz":36,
+        "f_w_dir":"WI"
     },
     "conv3":{
-        "w_bit":8,
-        "w_sz":36,
-        "w_dir":"2,3,0,1"
+        "f_w_bit":8,
+        "f_w_sz":36,
+        "f_w_dir":"WI"
     },
     "fc1":{
-        "w_bit":8,
-        "w_sz":36,
-        "w_dir":"0,1"
+        "f_w_bit":8,
+        "f_w_sz":36,
+        "f_w_dir":"WI"
     },
     "fc2":{
-        "w_bit":8,
-        "w_sz":36,
-        "w_dir":"0,1"
+        "f_w_bit":8,
+        "f_w_sz":36,
+        "f_w_dir":"WI"
     }
 }

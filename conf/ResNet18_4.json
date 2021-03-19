@@ -3,119 +3,119 @@
     "layer1":{
         "0":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         },
         "1":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         }
     },
     "layer2":{
         "0":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "shortcut":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         },
         "1":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         }
     },
     "layer3":{
         "0":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "shortcut":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         },
         "1":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         }
     },
     "layer4":{
         "0":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "shortcut":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         },
         "1":{
             "conv1":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             },
             "conv2":{
-                "w_bit":4,
-                "w_sz":36,
-                "w_dir":"2,3,0,1"
+                "f_w_bit":4,
+                "f_w_sz":36,
+                "f_w_dir":"WI"
             }
         }
     }

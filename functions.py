@@ -60,12 +60,18 @@ def LoadDataset(name):
         raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
     return trainset, testset, classes
 
-def Str2Tuple(v):
+def str2tuple(v):
     r = []
     v = v.replace(" ","").replace("(","").replace(")","").split(",")
     for i in v:
         r.append(int(i))
     return tuple(r)
+
+def str2bool(v):
+    if v.lower() in ["true", "t", "1"]: return True
+    elif v.lower() in ["false", "f", "0"]: return False
+    else: raise argparse.ArgumentTypeError("Not Boolean value")
+
 
 
 DIR_DICT = {
@@ -76,61 +82,91 @@ DIR_DICT = {
     "FC" : 12
 }
 
+def DirKey(v):
+    for key in DIR_DICT:
+        if DIR_DICT[key] == v:
+            return key
+
 class BFConf():
     def __init__(self, dic):
-        # weight
-        self.w_bit = dic["w_bit"]                if "w_bit" in dic.keys() else 8
-        self.w_sz  = dic["w_sz"]                 if "w_sz"  in dic.keys() else 36
-        self.w_dir = DIR_DICT[dic["w_dir"]]      if "w_dir" in dic.keys() else DIR_DICT["WI"]
-        # forward
-        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.w_bit
-        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.w_sz
+        # Foward - Weight
+        self.f_w     = str2bool(dic["f_w"])      if "f_w"     in dic.keys() else True
+        self.f_w_bit = dic["f_w_bit"]            if "f_w_bit" in dic.keys() else 8
+        self.f_w_sz  = dic["f_w_sz"]             if "f_w_sz"  in dic.keys() else 36
+        self.f_w_dir = DIR_DICT[dic["f_w_dir"]]  if "f_w_dir" in dic.keys() else DIR_DICT["WI"]
+
+        # Forward - Input
+        self.f_i     = str2bool(dic["f_i"])      if "f_i"     in dic.keys() else True
+        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.f_w_bit
+        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.f_w_sz
         self.f_i_dir = DIR_DICT[dic["f_i_dir"]]  if "f_i_dir" in dic.keys() else DIR_DICT["FC"]
-        self.f_o_bit = dic["f_o_bit"]            if "f_w_bit" in dic.keys() else self.f_i_bit
-        # backward
-        self.g_o_bit = dic["g_o_bit"]            if "g_o_bit" in dic.keys() else self.w_bit
-        self.g_o_sz  = dic["g_o_sz"]             if "g_o_sz"  in dic.keys() else self.w_sz
-        self.g_o_dir = DIR_DICT[dic["g_o_dir"]]  if "g_o_dir" in dic.keys() else DIR_DICT["FX"]
-        self.g_i_bit = dic["g_i_bit"]            if "g_i_bit" in dic.keys() else self.g_o_bit
-        self.g_w_bit = dic["g_w_bit"]            if "g_w_bit" in dic.keys() else self.g_o_bit
-        self.g_b_bit = dic["g_b_bit"]            if "g_b_bit" in dic.keys() else self.g_o_bit
+
+        # Forward - Output
+        self.f_o     = str2bool(dic["f_o"])      if "f_o"     in dic.keys() else True
+        self.f_o_bit = dic["f_o_bit"]            if "f_o_bit" in dic.keys() else self.f_w_bit
+        self.f_o_sz  = dic["f_o_sz"]             if "f_o_sz"  in dic.keys() else self.f_w_sz
+        self.f_o_dir = DIR_DICT[dic["f_o_dir"]]  if "f_o_dir" in dic.keys() else DIR_DICT["FC"]
+
+        # Backward - Weight
+        self.b_w     = str2bool(dic["b_w"])      if "b_w"     in dic.keys() else True
+        self.b_w_bit = dic["b_w_bit"]            if "b_w_bit" in dic.keys() else self.f_w_bit
+        self.b_w_sz  = dic["b_w_sz"]             if "b_w_sz"  in dic.keys() else self.f_w_sz
+        self.b_w_dir = DIR_DICT[dic["b_w_dir"]]  if "b_w_dir" in dic.keys() else DIR_DICT["WO"]
+
+        # Backward - Input
+        self.b_i     = str2bool(dic["b_i"])      if "b_i"     in dic.keys() else True
+        self.b_i_bit = dic["b_i_bit"]            if "b_i_bit" in dic.keys() else self.f_i_bit
+        self.b_i_sz  = dic["b_i_sz"]             if "b_i_sz"  in dic.keys() else self.f_i_sz
+        self.b_i_dir = DIR_DICT[dic["b_i_dir"]]  if "b_i_dir" in dic.keys() else DIR_DICT["FX"]
+
+        # Backward - Output
+        self.b_o     = str2bool(dic["b_o"])      if "b_o"     in dic.keys() else True
+        self.b_o_bit = dic["b_o_bit"]            if "b_o_bit" in dic.keys() else self.f_o_bit
+        self.b_o_sz  = dic["b_o_sz"]             if "b_o_sz"  in dic.keys() else self.f_o_sz
+        self.b_o_dir = DIR_DICT[dic["b_o_dir"]]  if "b_o_dir" in dic.keys() else DIR_DICT["FX"]
+
         
     def __repr__(self):
         return str(self)
     def __str__(self):
-        s = ""
-        if self.w_bit == self.f_i_bit == self.g_o_bit \
-            and self.w_sz == self.f_i_sz == self.g_o_sz \
-            and self.w_dir == self.f_i_dir == self.g_o_dir:
-            s += 'bit={}, size={}, dir={}'.format(self.w_bit, self.w_sz, self.w_dir)
+        s = "["
+        s += "FW/" if self.f_w else "  /" 
+        s += "FI/" if self.f_i else "  /" 
+        s += "FO/" if self.f_o else "  /" 
+        s += "BW/" if self.b_w else "  /" 
+        s += "BI/" if self.b_i else "  /" 
+        s += "BW]" if self.b_w else "  ]"
+        s += ",bit="
+        if self.f_w_bit == self.f_i_bit == self.f_o_bit == self.b_w_bit == self.b_i_bit == self.b_o_bit:
+            s += '{},'.format(self.f_w_bit)
         else:
-            s += 'w_bit={}, w_sz={}, w_dir={}'.format(self.w_bit, self.w_sz, self.w_dir)
-            if self.w_bit != self.f_i_bit:
-                s += ', f_i_bit={}'.format(self.f_i_bit)
-            if self.w_sz != self.f_i_sz:
-                s += ', f_i_sz={}'.format(self.f_i_sz)
-            if self.w_dir != self.f_i_dir:
-                s += ', f_i_dir={}'.format(self.f_i_dir)
-            if self.w_bit != self.g_o_bit:
-                s += ', g_o_bit={}'.format(self.g_o_bit)
-            if self.w_sz != self.g_o_sz:
-                s += ', g_o_sz={}'.format(self.g_o_sz)
-            if self.w_dir != self.g_o_dir:
-                s += ', g_o_dir={}'.format(self.g_o_dir)
-        if self.f_i_bit != self.f_o_bit:
-            s += ', f_o_bit={}'.format(self.f_o_bit)
-        if self.g_o_bit != self.g_i_bit:
-            s += ', g_i_bit={}'.format(self.g_i_bit)
-        if self.g_o_bit != self.g_w_bit:
-            s += ', g_w_bit={}'.format(self.g_w_bit)
-        if self.g_o_bit != self.g_b_bit:
-            s += ', g_b_bit={}'.format(self.g_b_bit)
+            s += "{}/".format(self.f_w_bit) if self.f_w else "_/" 
+            s += "{}/".format(self.f_i_bit) if self.f_i else "_/" 
+            s += "{}/".format(self.f_o_bit) if self.f_o else "_/" 
+            s += "{}/".format(self.b_w_bit) if self.b_w else "_/" 
+            s += "{}/".format(self.b_i_bit) if self.b_i else "_/" 
+            s += "{}".format(self.b_o_bit)  if self.b_w else "_]"
+        s += ",sz="
+        if self.f_w_sz == self.f_i_sz == self.f_o_sz == self.b_w_sz == self.b_i_sz == self.b_o_sz:
+            s += '{},'.format(self.f_w_sz)
+        else:
+            s += "{}/".format(self.f_w_sz) if self.f_w else "_/" 
+            s += "{}/".format(self.f_i_sz) if self.f_i else "_/" 
+            s += "{}/".format(self.f_o_sz) if self.f_o else "_/" 
+            s += "{}/".format(self.b_w_sz) if self.b_w else "_/" 
+            s += "{}/".format(self.b_i_sz) if self.b_i else "_/" 
+            s += "{}".format(self.b_o_sz)  if self.b_w else "_]"
+        s += ",dir=["
+        if self.f_w_dir == self.f_i_dir == self.f_o_dir == self.b_w_dir == self.b_i_dir == self.b_o_dir:
+            s += '{}'.format(DirKey(self.f_w_dir))
+        else:
+            s += "{}/".format(DirKey(self.f_w_dir)) if self.f_w else "_/" 
+            s += "{}/".format(DirKey(self.f_i_dir)) if self.f_i else "_/" 
+            s += "{}/".format(DirKey(self.f_o_dir)) if self.f_o else "_/" 
+            s += "{}/".format(DirKey(self.b_w_dir)) if self.b_w else "_/" 
+            s += "{}/".format(DirKey(self.b_i_dir)) if self.b_i else "_/" 
+            s += "{}]".format(DirKey(self.b_o_dir))  if self.b_w else "_]"
         return s
-
-def str2bool(v):
-    if v.lower() in ["true", "t", "1"]: return True
-    elif v.lower() in ["false", "f", "0"]: return False
-    else: raise argparse.ArgumentTypeError("Not Boolean value")
 
 class Stat():
     def __init__(self, args):
