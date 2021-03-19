@@ -90,37 +90,37 @@ def DirKey(v):
 class BFConf():
     def __init__(self, dic):
         # Foward - Weight
-        self.f_w     = str2bool(dic["f_w"])      if "f_w"     in dic.keys() else True
+        self.f_w     = dic["f_w"]                if "f_w"     in dic.keys() else True
         self.f_w_bit = dic["f_w_bit"]            if "f_w_bit" in dic.keys() else 8
         self.f_w_sz  = dic["f_w_sz"]             if "f_w_sz"  in dic.keys() else 36
         self.f_w_dir = DIR_DICT[dic["f_w_dir"]]  if "f_w_dir" in dic.keys() else DIR_DICT["WI"]
 
         # Forward - Input
-        self.f_i     = str2bool(dic["f_i"])      if "f_i"     in dic.keys() else True
+        self.f_i     = dic["f_i"]                if "f_i"     in dic.keys() else True
         self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.f_w_bit
         self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.f_w_sz
         self.f_i_dir = DIR_DICT[dic["f_i_dir"]]  if "f_i_dir" in dic.keys() else DIR_DICT["FC"]
 
         # Forward - Output
-        self.f_o     = str2bool(dic["f_o"])      if "f_o"     in dic.keys() else True
+        self.f_o     = dic["f_o"]                if "f_o"     in dic.keys() else True
         self.f_o_bit = dic["f_o_bit"]            if "f_o_bit" in dic.keys() else self.f_w_bit
         self.f_o_sz  = dic["f_o_sz"]             if "f_o_sz"  in dic.keys() else self.f_w_sz
         self.f_o_dir = DIR_DICT[dic["f_o_dir"]]  if "f_o_dir" in dic.keys() else DIR_DICT["FC"]
 
         # Backward - Weight
-        self.b_w     = str2bool(dic["b_w"])      if "b_w"     in dic.keys() else True
+        self.b_w     = dic["b_w"]                if "b_w"     in dic.keys() else True
         self.b_w_bit = dic["b_w_bit"]            if "b_w_bit" in dic.keys() else self.f_w_bit
         self.b_w_sz  = dic["b_w_sz"]             if "b_w_sz"  in dic.keys() else self.f_w_sz
         self.b_w_dir = DIR_DICT[dic["b_w_dir"]]  if "b_w_dir" in dic.keys() else DIR_DICT["WO"]
 
         # Backward - Input
-        self.b_i     = str2bool(dic["b_i"])      if "b_i"     in dic.keys() else True
+        self.b_i     = dic["b_i"]                if "b_i"     in dic.keys() else True
         self.b_i_bit = dic["b_i_bit"]            if "b_i_bit" in dic.keys() else self.f_i_bit
         self.b_i_sz  = dic["b_i_sz"]             if "b_i_sz"  in dic.keys() else self.f_i_sz
         self.b_i_dir = DIR_DICT[dic["b_i_dir"]]  if "b_i_dir" in dic.keys() else DIR_DICT["FX"]
 
         # Backward - Output
-        self.b_o     = str2bool(dic["b_o"])      if "b_o"     in dic.keys() else True
+        self.b_o     = dic["b_o"]                if "b_o"     in dic.keys() else True
         self.b_o_bit = dic["b_o_bit"]            if "b_o_bit" in dic.keys() else self.f_o_bit
         self.b_o_sz  = dic["b_o_sz"]             if "b_o_sz"  in dic.keys() else self.f_o_sz
         self.b_o_dir = DIR_DICT[dic["b_o_dir"]]  if "b_o_dir" in dic.keys() else DIR_DICT["FX"]
