@@ -95,13 +95,11 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # IDEA : send shift code to back, maybe that's faster
     np.right_shift(e_, 23, out=e_)
     # Reshape arrat to group size to get max values
-    m_ = np.reshape(e_, (group_size, -1))
+    m_ = np.reshape(e_, (-1, group_size))
     # get the max value of each blocks
-    m_ = np.amax(m_, axis=0)
+    m_ = np.amax(m_, axis=1)
     # Revert back to original size
     m_ = np.repeat(m_, group_size)
-    # Match shape back to input
-    m_ = m_[:e_.shape[0]]
     # Difference of the exponent, -1 is applied because for more accurate hardware-wise simulation
     # On hardware, mantissa bits have to store the 1 from the IEEE Standard
     e_ = group_mantissa - (m_ - e_) - 1
