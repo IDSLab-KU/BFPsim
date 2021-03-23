@@ -116,16 +116,20 @@ class Logger:
         if self.messages or f:
             self.Print(msg,current=False,elapsed=False,col='k',bg='bc',file=False)
 
-    def Print(self, msg, level = 0, current = True, elapsed = True, col='', bg='', end = '\n', file = True, flush = False):
+    def Print(self, msg, level = 0, current = None, elapsed = None, col='', bg='', end = '\n', file = True, flush = False):
         if level <= self.printLevel:
             t = ""
             if self.MSPrecision == 0:
                 d = -7
             else:
                 d = self.MSPrecision - 6
-            if current or (not current and self.printCurrentTime):
+            if current == None:
+                current = self.printCurrentTime
+            if elapsed == None:
+                elapsed = self.printElapsedTime
+            if current and ((not current) and self.printCurrentTime):
                 t += str(datetime.now())[5:][:d]
-            if elapsed or (not elapsed and self.printElapsedTime):
+            if elapsed and ((not elapsed) and self.printElapsedTime):
                 t += "[" + self.GetElapsedTime()[:d] + "]"
             if current or elapsed:
                 t += ":"
