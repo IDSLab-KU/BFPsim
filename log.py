@@ -127,9 +127,9 @@ class Logger:
                 current = self.printCurrentTime
             if elapsed == None:
                 elapsed = self.printElapsedTime
-            if current and ((not current) and self.printCurrentTime):
+            if current:
                 t += str(datetime.now())[5:][:d]
-            if elapsed and ((not elapsed) and self.printElapsedTime):
+            if elapsed:
                 t += "[" + self.GetElapsedTime()[:d] + "]"
             if current or elapsed:
                 t += ":"
