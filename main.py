@@ -20,17 +20,16 @@ args = None
 
 def handler(signum, frame):
     print("Quit by user signal")
-    if args.stat != None:
-        print("Saving stat object file...")
-        args.stat.SaveToFile()
-    
-    if args.save:
-        print("Saving model file...")
-        PATH = args.log_file_location[:-4] + ".model"
-        torch.save(args.net.state_dict(), PATH)
+    if args != None:
+        if args.stat is not None:
+            Log.Print("Saving stat object file...")
+            args.stat.SaveToFile()
+        
+        if args.save:
+            Log.Print("Saving model file...")
+            PATH = args.log_file_location[:-4] + ".model"
+            torch.save(args.net.state_dict(), PATH)
     sys.exit()
-
-
 
 import os
 import json
@@ -41,6 +40,12 @@ import argparse
 # Parse arguments
 def ArgumentParse(logfileStr):
     parser = argparse.ArgumentParser()
+
+    # Base mode select
+    parser.add_argument("--mode", type=str, default = "train",
+        help = "Dataset to use [train, zero-test]")
+
+    """Train mode"""
     # Data loader
     parser.add_argument("-d","--dataset", type=str, default = "CIFAR-10",
         help = "Dataset to use [CIFAR-10, CIFAR-100]")
@@ -66,7 +71,6 @@ def ArgumentParse(logfileStr):
 
 
     # Block setup
-
     # Printing / Logger / Stat
     parser.add_argument("--log", type=str2bool, default = True,
         help = "Record to log object?")
@@ -82,6 +86,10 @@ def ArgumentParse(logfileStr):
     parser.add_argument("--save", type=str2bool, default = False,
         help = "Save best model's weight")
     
+    """Zero test mode"""
+
+    parser.add_argument("--save-file", type=str, default = "",
+        help = "Saved checkpoint to load model")
     # Parse arguments
     args = parser.parse_args()
 
@@ -158,18 +166,17 @@ def ArgumentParse(logfileStr):
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
 
+    # Move model to gpu if gpu is available
+    if args.cuda:
+        args.net.to('cuda')
+        # Temporally disabled because of JAX
+        # args.net = torch.nn.DataParallel(args.net) 
 
     # Testloader and Trainloader
     args.trainloader = torch.utils.data.DataLoader(args.trainset,
         batch_size=args.batch_size_train, shuffle=True, num_workers=args.num_workers)
     args.testloader = torch.utils.data.DataLoader(args.testset,
         batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers)
-
-    # Move model to gpu if gpu is available
-    if args.cuda:
-        args.net.to('cuda')
-        # Temporally disabled because of JAX
-        # args.net = torch.nn.DataParallel(args.net) 
 
     # Count of the mini-batches
     args.batch_count = len(args.trainloader)
@@ -182,9 +189,7 @@ def ArgumentParse(logfileStr):
 
     return args
 
-
-
-def Train():
+def Train(epoch_current):
     running_loss = 0.0
     batch_count = 0
     ptc_count = 1
@@ -250,6 +255,43 @@ def Evaluate():
     if args.stat is not None:
         args.stat.AddAccuracy(correct / total)
 
+# Train the network and evaluate
+def TrainNetwork():
+    for epoch_current in range(args.training_epochs):
+        Train(epoch_current)
+        Evaluate()
+    Log.Print('Finished Training')
+
+    if args.stat is not None:
+        Log.Print("Saving stat object file...")
+        args.stat.SaveToFile()
+
+    if args.save:
+        Log.Print("Saving model file...")
+        PATH = args.log_file_location[:-4] + ".model"
+        torch.save(args.net.state_dict(), PATH)
+
+
+from blockfunc import GetZeroSettingError
+
+def ZeroTest():
+    # model = BFResNet18(args.bf_layer_conf_file, 10)
+    # model.load_state_dict(args.save_file)
+    # args.net.load_state_dict(args.save_file)
+    # for key, value in model.items():
+    #     print(key)
+    args.net.load_state_dict(torch.load(args.save_file))
+    Log.SetPrintCurrentTime(False)
+    Log.SetPrintElapsedTime(False)
+    for name, param in args.net.named_parameters():
+        if "conv" in name and "weight" in name:
+            Log.Print("{}, {}".format(name, param.size()))
+            
+            d = GetZeroSettingError(param.detach(), 8, 36, 0)
+            Log.Print("[{:7.3f}%]{:8d}/{:8d}, {}".format(d[-1]/(d.sum())*100,d[-1],d.sum(),d))
+    # print(args.net)
+
+
 if __name__ == '__main__':
     # handle signal
     signal.signal(signal.SIGINT, handler)
@@ -259,31 +301,22 @@ if __name__ == '__main__':
     # Parse Arguments and set
     args = ArgumentParse(Log.logFileLocation)
 
-    if args.log:
-        Log.SetLogFile(True)
-    else:
-        Log.SetLogFile(False)
+    Log.SetLogFile(True if args.log else False)
     
     # Print the model summary and arguments
-    
-    for arg in vars(args):
-        if arg in ["trainloader", "testloader", "bf_layer_conf", "classes", "testset", "trainset", "stat", "stat_loss_batches", "batch_count", "cuda", "log_file_location"]:
-            continue
-        elif getattr(args,arg) == 0 and arg in ["initial_lr", "momentum", "print_train_batch", "print_train_count"]:
-            continue
-        else:
-            Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
     # Log.Print("List of the program arguments\n" + str(args) + "\n", current=False, elapsed=False)
 
-    # Train the network
-    for epoch_current in range(args.training_epochs):
-        Train()
-        Evaluate()
-    Log.Print('Finished Training')
-
-    if args.stat is not None:
-        args.stat.SaveToFile()
-
-    if args.save:
-        PATH = args.log_file_location[:-4] + ".model"
-        torch.save(args.net.state_dict(), PATH)
+    if args.mode == "train":
+        for arg in vars(args):
+            if arg in ["trainloader", "testloader", "bf_layer_conf", "classes", "testset", "trainset", "stat_loss_batches", "batch_count", "cuda", "log_file_location"]:
+                continue
+            elif getattr(args,arg) == 0 and arg in ["initial_lr", "momentum", "print_train_batch", "print_train_count"]:
+                continue
+            else:
+                Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
+        TrainNetwork()
+    elif args.mode == "zero-test":
+        Log.Print("Program executed on zero-test mode.", current=False, elapsed=False)
+        Log.Print("Loaded saved file:{}".format(args.save_file), current=False, elapsed=False)
+        ZeroTest()
+        
