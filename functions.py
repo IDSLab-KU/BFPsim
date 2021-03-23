@@ -201,3 +201,39 @@ class Stat():
         for i in self.accuracy:
             f.write(str(i)+"\t")
         f.write("\n")
+
+
+
+import numpy as np
+from matplotlib import pyplot as plt
+
+def SaveStackedGraph(xlabels, data, mode="percentage", title="", save=""):
+    if mode == "percentage":
+        percent = data / data.sum(axis=0).astype(float) * 100
+    else:
+        percent = data
+    
+    # Set figure
+    fig = plt.figure(figsize=(10,4))
+    ax = fig.add_subplot(111)
+    x = np.arange(data.shape[1])
+    # Set the colors
+    colors = ['#f00']
+    for i in range(data.shape[0]):
+        colors.append("{}".format(0.5 - 0.5 * float(i) / float(data.shape[0])))
+    ax.stackplot(x, percent, colors=colors)
+    ax.set_title(title)
+    # Set labels
+    if mode == "percentage":
+        ax.set_ylabel('Percent (%)')
+    else:
+        ax.set_ylabel('Count')
+    plt.xlabel("", labelpad=30)
+    # plt.tight_layout(pad=6.0)
+
+    # Set X labels
+    plt.xticks(x,xlabels, rotation=45)
+    fig.autofmt_xdate()
+    ax.margins(0, 0) # Set margins to avoid "whitespace"
+
+    plt.savefig("./figures/"+save + ".png")
