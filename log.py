@@ -55,8 +55,8 @@ class Logger:
         self.logFileLocation = None
         self.logFilePointer = None
         self.logValid = False
-        self.printCurrentTime = False
-        self.printElapsedTime = False
+        self.printCurrentTime = True
+        self.printElapsedTime = True
         self.MSPrecision = 3
         self.printLevel = 0
         self.messages = True
