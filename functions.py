@@ -235,5 +235,7 @@ def SaveStackedGraph(xlabels, data, mode="percentage", title="", save=""):
     plt.xticks(x,xlabels, rotation=45)
     fig.autofmt_xdate()
     ax.margins(0, 0) # Set margins to avoid "whitespace"
-
+    
+    if not os.path.exists("./figures"):
+        os.makedirs("./figures")
     plt.savefig("./figures/"+save + ".png")
