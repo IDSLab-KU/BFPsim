@@ -90,8 +90,12 @@ def ArgumentParse(logfileStr):
 
     parser.add_argument("--save-file", type=str, default = "",
         help = "Saved checkpoint to load model")
-    parser.add_argument("--graph-mode", type=str, default="percentage",
-        help = "graphing mode [percentage, count]")
+    parser.add_argument("--zt-bf", type=str2bool, default = False,
+        help = "[Zero test] If saved file is BF network, set this to true")
+    parser.add_argument("--zt-graph-mode", type=str, default="percentage",
+        help = "[Zero test] graphing mode [none, percentage, count]")
+    parser.add_argument("--zt-print-mode", type=str, default = "sum",
+        help = "[Zero test] Print mode [none, sum, format, all]")
     # Parse arguments
     args = parser.parse_args()
 
@@ -280,23 +284,37 @@ from functions import SaveStackedGraph
 
 def ZeroTest():
 
-    args.net.load_state_dict(torch.load(args.save_file),strict=False)
     Log.SetPrintCurrentTime(False)
     Log.SetPrintElapsedTime(False)
+
+    parameters = torch.load(args.save_file).items()
     
     layer_count = 0
     layer_list = []
     layer_list_short = []
-    for name, param in args.net.named_parameters():
+    Log.Print("List of weight data's name")
+    for name, param in parameters:
         n = name.split(".")
-        # TODO : maybe only works on Resnet, this should edited when new model is added
-        if "layer" in n[0] and "conv" in n[2] and "weight" in n[3]:
+        # Normal model name convention
+        if args.model == "ResNet18" and args.zt_bf == False:
+            condition = "layer" in n[1] and "conv" in n[3] and "weight" in n[4]
+            if condition:
+                short_name = n[1]+"_"+n[2]+"_"+n[3]
+        elif args.model == "ResNet18" and args.zt_bf == True:
+            condition = "layer" in n[0] and "conv" in n[2] and "weight" in n[3]
+            if condition:
+                short_name = n[0]+"_"+n[1]+"_"+n[2]
+        else:
+            raise NotImplementedError("model and layer conf not implemented")
+
+        if condition:
             Log.Print("{}({})".format(name, param.size()))
             layer_list.append(name)
-            layer_list_short.append(n[0]+"_"+n[1]+"_"+n[2])
+            layer_list_short.append(short_name)
             layer_count += 1
         
-    
+    Log.Print("")
+
     # for bits in [4]:
     #     for g_size in [36]:
     for bits in [4, 5, 6, 7, 8]:
@@ -305,25 +323,28 @@ def ZeroTest():
             Log.Print("Mantissa bits {}, Group size {}".format(bits, g_size))
             res = np.zeros(bits+1, dtype=np.int32)
             ind = 0
-            for name, param in args.net.named_parameters():
+            for name, param in parameters:
                 if name in layer_list:
                     d = GetZeroSettingError(param.detach(), bits, g_size, 0)
                     res += d
                     stat_data[ind] = d
                     ind += 1
-                    ##  To save on convenient format
-                    # for i in d:
-                    #     Log.Print("{}".format(i),end="\t")
-                    # Log.Print("")
-                    ## To Print well
-                    #  Log.Print("[{:7.3f}%]{:8d}/{:8d}, {}".format(d[-1]/(d.sum())*100,d[-1],d.sum(),d))
+
+                    if args.zt_print_mode == "format":
+                        for i in d:
+                            Log.Print("{}".format(i),end="\t")
+                        Log.Print("")
+                    if args.zt_print_mode == "all":
+                        Log.Print("[{:7.3f}%]{:8d}/{:8d}, {}".format(d[-1]/(d.sum())*100,d[-1],d.sum(),d))
             # Save figures
-            SaveStackedGraph(layer_list_short, np.flip(stat_data.transpose(),axis=0),
-                    mode=args.graph_mode,
-                    title="{}, Bit={}, Group={}".format(args.model, bits, g_size),
-                    save="{}_{}_{}".format(args.model, bits, g_size))
-            Log.Print("[{:7.3f}%]{:10d}/{:10d}, {}".format(res[-1]/(res.sum())*100,res[-1],res.sum(),res))            
-            Log.Print("")
+            if args.zt_graph_mode != "none":
+                SaveStackedGraph(layer_list_short, np.flip(stat_data.transpose(),axis=0),
+                        mode=args.zt_graph_mode,
+                        title="{}, Bit={}, Group={}".format(args.model, bits, g_size),
+                        save="{}_{}_{}".format(args.model, bits, g_size))
+            if args.zt_print_mode in ["sum", "format", "all"]:
+                Log.Print("[{:7.3f}%]{:10d}/{:10d}, {}".format(res[-1]/(res.sum())*100,res[-1],res.sum(),res))            
+                Log.Print("")
     # print(args.net)
 
 
@@ -352,6 +373,8 @@ if __name__ == '__main__':
         TrainNetwork()
     elif args.mode == "zero-test":
         Log.Print("Program executed on zero-test mode.", current=False, elapsed=False)
-        Log.Print("Loaded saved file:{}".format(args.save_file), current=False, elapsed=False)
+        Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
+        Log.Print("Graph mode: {}".format(args.zt_graph_mode), current=False, elapsed=False)
+        Log.Print("Print mode: {}".format(args.zt_print_mode), current=False, elapsed=False)
         ZeroTest()
         

@@ -14,4 +14,4 @@
 
 
 # Running zero-test simulation
-docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py --save-file ResNet18_8.model --mode zero-test -bf ResNet18_8 # --log False
+docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py --save-file ResNet18.model --mode zero-test --zt-bf False # --log False

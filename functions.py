@@ -2,6 +2,9 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+import os
+import numpy as np
+
 # LoadDataset : Load dataset, cifar-10 or cifar-100
 def LoadDataset(name):
     if name == "CIFAR-10":
@@ -203,8 +206,6 @@ class Stat():
         f.write("\n")
 
 
-
-import numpy as np
 from matplotlib import pyplot as plt
 
 def SaveStackedGraph(xlabels, data, mode="percentage", title="", save=""):
