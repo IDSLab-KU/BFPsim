@@ -169,11 +169,16 @@ class BFConv2dFunction(torch.autograd.Function):
         # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
         cuda = 1 if cuda else 0
         confs = torch.from_numpy(np.array([stride, padding, dilation, groups, cuda]))
+        b_w = 1 if bf_conf.b_w else 0
+        b_og = 1 if bf_conf.b_w else 0
+        b_ig = 1 if bf_conf.b_w else 0
+        b_wg = 1 if bf_conf.b_w else 0
+        
         bf_confs = torch.from_numpy(np.array([
-            bf_conf.b_o, bf_conf.b_o_bit, bf_conf.b_o_sz, bf_conf.b_o_dir,
-            bf_conf.b_i, bf_conf.b_i_bit, bf_conf.b_i_sz, bf_conf.b_i_dir,
-            bf_conf.b_w, bf_conf.b_w_bit, bf_conf.b_w_sz, bf_conf.b_w_dir,
-            bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.b_w_dir]))
+            b_w, bf_conf.b_w_bit, bf_conf.b_w_sz, bf_conf.b_w_dir,
+            b_og, bf_conf.b_og_bit, bf_conf.b_og_sz, bf_conf.b_og_dir,
+            b_ig, bf_conf.b_ig_bit, bf_conf.b_ig_sz, bf_conf.b_ig_dir,
+            b_wg, bf_conf.b_wg_bit, bf_conf.b_wg_sz, bf_conf.b_wg_dir]))
         ctx.save_for_backward(input, weight, bias, confs, bf_confs)
 
         # Compute Convolution
@@ -191,17 +196,20 @@ class BFConv2dFunction(torch.autograd.Function):
         input, weight, bias, confs, bf_confs = ctx.saved_variables
         confs, bf_confs = confs.numpy(), bf_confs.numpy()
         stride, padding, dilation, groups, cuda = confs
-        b_o, b_o_bit, b_o_sz, b_o_dir, b_i, b_i_bit, b_i_sz, b_i_dir, b_w, b_w_bit, b_w_sz, b_w_dir, f_w_bit, f_w_sz, b_w_dir = bf_confs
+        b_w, b_w_bit, b_w_sz, b_w_dir, b_og, b_og_bit, b_og_sz, b_og_dir, b_ig, b_ig_bit, b_ig_sz, b_ig_dir, b_wg, b_wg_bit, b_wg_sz, b_wg_dir = bf_confs
         cuda = True if cuda > 0 else False
-        b_o = True if b_o > 0 else False
-        b_i = True if b_i > 0 else False
+        b_og = True if b_og > 0 else False
+        b_ig = True if b_ig > 0 else False
+        b_wg = True if b_wg > 0 else False
         b_w = True if b_w > 0 else False
         # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
         
         # output gradient grouping
-        if b_o:
-            grad_output = make_groups_tensor(grad_output, b_o_bit, b_o_sz, b_o_dir)
-
+        if b_og:
+            grad_output = make_groups_tensor(grad_output, b_og_bit, b_og_sz, b_og_dir)
+        if b_w:
+            weight = make_groups_tensor(weight, b_w_bit, b_w_sz, b_w_dir)
+        
         # Calculate Gradient
         grad_input = grad_weight = grad_bias = None
         if ctx.needs_input_grad[0]:
@@ -210,10 +218,10 @@ class BFConv2dFunction(torch.autograd.Function):
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
 
         # Grouping input and weight
-        if b_i:
-            grad_input = make_groups_tensor(grad_input, b_i_bit, b_i_sz, b_i_dir)
-        if b_w:
-            grad_weight = make_groups_tensor(grad_weight, b_w_bit, b_w_sz, b_w_dir)
+        if b_ig:
+            grad_input = make_groups_tensor(grad_input, b_ig_bit, b_ig_sz, b_ig_dir)
+        if b_wg:
+            grad_weight = make_groups_tensor(grad_weight, b_wg_bit, b_wg_sz, b_wg_dir)
         
         # WARNING : Bias maybe buggy, remove if it is buggy
         if bias is not None and ctx.needs_input_grad[2]:

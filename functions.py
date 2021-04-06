@@ -116,17 +116,23 @@ class BFConf():
         self.b_w_sz  = dic["b_w_sz"]             if "b_w_sz"  in dic.keys() else self.f_w_sz
         self.b_w_dir = DIR_DICT[dic["b_w_dir"]]  if "b_w_dir" in dic.keys() else DIR_DICT["WO"]
 
-        # Backward - Input
-        self.b_i     = dic["b_i"]                if "b_i"     in dic.keys() else True
-        self.b_i_bit = dic["b_i_bit"]            if "b_i_bit" in dic.keys() else self.f_i_bit
-        self.b_i_sz  = dic["b_i_sz"]             if "b_i_sz"  in dic.keys() else self.f_i_sz
-        self.b_i_dir = DIR_DICT[dic["b_i_dir"]]  if "b_i_dir" in dic.keys() else DIR_DICT["FX"]
+        # Backward - Weight Gradient
+        self.b_wg     = dic["b_wg"]                if "b_wg"     in dic.keys() else True
+        self.b_wg_bit = dic["b_wg_bit"]            if "b_wg_bit" in dic.keys() else self.f_w_bit
+        self.b_wg_sz  = dic["b_wg_sz"]             if "b_wg_sz"  in dic.keys() else self.f_w_sz
+        self.b_wg_dir = DIR_DICT[dic["b_wg_dir"]]  if "b_wg_dir" in dic.keys() else DIR_DICT["WO"]
 
-        # Backward - Output
-        self.b_o     = dic["b_o"]                if "b_o"     in dic.keys() else True
-        self.b_o_bit = dic["b_o_bit"]            if "b_o_bit" in dic.keys() else self.f_o_bit
-        self.b_o_sz  = dic["b_o_sz"]             if "b_o_sz"  in dic.keys() else self.f_o_sz
-        self.b_o_dir = DIR_DICT[dic["b_o_dir"]]  if "b_o_dir" in dic.keys() else DIR_DICT["FX"]
+        # Backward - Input Gradient
+        self.b_ig     = dic["b_ig"]                if "b_ig"     in dic.keys() else True
+        self.b_ig_bit = dic["b_ig_bit"]            if "b_ig_bit" in dic.keys() else self.f_i_bit
+        self.b_ig_sz  = dic["b_ig_sz"]             if "b_ig_sz"  in dic.keys() else self.f_i_sz
+        self.b_ig_dir = DIR_DICT[dic["b_ig_dir"]]  if "b_ig_dir" in dic.keys() else DIR_DICT["FC"]
+
+        # Backward - Output Gradient
+        self.b_og     = dic["b_og"]                if "b_og"     in dic.keys() else True
+        self.b_og_bit = dic["b_og_bit"]            if "b_og_bit" in dic.keys() else self.f_o_bit
+        self.b_og_sz  = dic["b_og_sz"]             if "b_og_sz"  in dic.keys() else self.f_o_sz
+        self.b_og_dir = DIR_DICT[dic["b_og_dir"]]  if "b_og_dir" in dic.keys() else DIR_DICT["FC"]
 
         
     def __repr__(self):
@@ -137,38 +143,42 @@ class BFConf():
         s += "FI/" if self.f_i else "  /" 
         s += "FO/" if self.f_o else "  /" 
         s += "BW/" if self.b_w else "  /" 
-        s += "BI/" if self.b_i else "  /" 
-        s += "BW]" if self.b_w else "  ]"
+        s += "WG/" if self.b_wg else "  /" 
+        s += "IG/" if self.b_ig else "  /" 
+        s += "OG]" if self.b_og else "  ]"
         s += ",bit="
-        if self.f_w_bit == self.f_i_bit == self.f_o_bit == self.b_w_bit == self.b_i_bit == self.b_o_bit:
+        if self.f_w_bit == self.f_i_bit == self.f_o_bit == self.b_w_bit == self.b_wg_bit == self.b_ig_bit == self.b_og_bit:
             s += '{},'.format(self.f_w_bit)
         else:
             s += "{}/".format(self.f_w_bit) if self.f_w else "_/" 
             s += "{}/".format(self.f_i_bit) if self.f_i else "_/" 
             s += "{}/".format(self.f_o_bit) if self.f_o else "_/" 
             s += "{}/".format(self.b_w_bit) if self.b_w else "_/" 
-            s += "{}/".format(self.b_i_bit) if self.b_i else "_/" 
-            s += "{}".format(self.b_o_bit)  if self.b_w else "_]"
+            s += "{}/".format(self.b_wg_bit) if self.b_wg else "_/" 
+            s += "{}/".format(self.b_ig_bit) if self.b_ig else "_/" 
+            s += "{}".format(self.b_og_bit)  if self.b_wg else "_]"
         s += ",sz="
-        if self.f_w_sz == self.f_i_sz == self.f_o_sz == self.b_w_sz == self.b_i_sz == self.b_o_sz:
+        if self.f_w_sz == self.f_i_sz == self.f_o_sz == self.b_w_sz == self.b_wg_sz == self.b_ig_sz == self.b_og_sz:
             s += '{},'.format(self.f_w_sz)
         else:
             s += "{}/".format(self.f_w_sz) if self.f_w else "_/" 
             s += "{}/".format(self.f_i_sz) if self.f_i else "_/" 
             s += "{}/".format(self.f_o_sz) if self.f_o else "_/" 
             s += "{}/".format(self.b_w_sz) if self.b_w else "_/" 
-            s += "{}/".format(self.b_i_sz) if self.b_i else "_/" 
-            s += "{}".format(self.b_o_sz)  if self.b_w else "_]"
+            s += "{}/".format(self.b_wg_sz) if self.b_wg else "_/" 
+            s += "{}/".format(self.b_ig_sz) if self.b_ig else "_/" 
+            s += "{}".format(self.b_og_sz)  if self.b_wg else "_]"
         s += ",dir=["
-        if self.f_w_dir == self.f_i_dir == self.f_o_dir == self.b_w_dir == self.b_i_dir == self.b_o_dir:
+        if self.f_w_dir == self.f_i_dir == self.f_o_dir == self.b_w_dir == self.b_wg_dir == self.b_ig_dir == self.b_og_dir:
             s += '{}'.format(DirKey(self.f_w_dir))
         else:
             s += "{}/".format(DirKey(self.f_w_dir)) if self.f_w else "_/" 
             s += "{}/".format(DirKey(self.f_i_dir)) if self.f_i else "_/" 
             s += "{}/".format(DirKey(self.f_o_dir)) if self.f_o else "_/" 
             s += "{}/".format(DirKey(self.b_w_dir)) if self.b_w else "_/" 
-            s += "{}/".format(DirKey(self.b_i_dir)) if self.b_i else "_/" 
-            s += "{}]".format(DirKey(self.b_o_dir))  if self.b_w else "_]"
+            s += "{}/".format(DirKey(self.b_wg_dir)) if self.b_wg else "_/" 
+            s += "{}/".format(DirKey(self.b_ig_dir)) if self.b_ig else "_/" 
+            s += "{}]".format(DirKey(self.b_og_dir))  if self.b_wg else "_]"
         return s
 
 class Stat():
