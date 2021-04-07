@@ -16,6 +16,9 @@ def ExitCounter():
     if exitToken == 0:
         sys.exit()
 
+import os
+import json
+import argparse
 args = None
 
 def handler(signum, frame):
@@ -31,11 +34,7 @@ def handler(signum, frame):
             torch.save(args.net.state_dict(), PATH)
     sys.exit()
 
-import os
-import json
 
-# Argument parsing
-import argparse
 
 # Parse arguments
 def ArgumentParse(logfileStr):
@@ -68,6 +67,8 @@ def ArgumentParse(logfileStr):
         help = "[OVERRIDE] If larger than 0, initial lr is set to this value")
     parser.add_argument("--momentum", type=float, default = 0,
         help = "[OVERRIDE] If larger than 0, momentum is set to this value")
+    parser.add_argument("--train-accuracy", type=str2bool, default = True,
+        help = "If true, prints train accuracy")
 
 
     # Block setup
@@ -259,13 +260,34 @@ def Evaluate():
     
     Log.Print('Test Accuracy: %f' % (correct / total))
     if args.stat is not None:
-        args.stat.AddAccuracy(correct / total)
+        args.stat.AddTestAccuracy(correct / total)
+
+
+def EvaluateTrain():
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in args.trainloader:
+            images, labels = data
+            if args.cuda:
+                images = images.cuda() # Using GPU
+                labels = labels.cuda() # Using GPU
+            outputs = args.net(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    
+    Log.Print('Train Accuracy: %f' % (correct / total))
+    if args.stat is not None:
+        args.stat.AddTrainAccuracy(correct / total)
 
 # Train the network and evaluate
 def TrainNetwork():
     for epoch_current in range(args.training_epochs):
         Train(epoch_current)
         Evaluate()
+        if args.train_accuracy:
+            EvaluateTrain()
     Log.Print('Finished Training')
 
     if args.stat is not None:
