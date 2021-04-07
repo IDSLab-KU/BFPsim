@@ -82,10 +82,12 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
         raise ValueError("group_direction not supported")
     # Save modified shape
     inp_m_shape = inp_n.shape
-
-    # STEP 2 : make groups and adjust mantissa
+    # Flatten
+    inp_n = np.reshape(inp_n, (np.product(inp_n.shape),))
     # Convert to byte stream
     st = inp_n.tobytes() 
+
+    # STEP 2 : make groups and adjust mantissa
     # Set to uint32 array to easy computing
     v = np.frombuffer(st, dtype=np.uint32) 
     # Extract exponent
@@ -99,7 +101,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # get the max value of each blocks
     m_ = np.amax(m_, axis=1)
     # Revert back to original size
-    m_ = np.repeat(m_, group_size)
+    m_ = np.tile(m_, group_size)
     # Difference of the exponent, -1 is applied because for more accurate hardware-wise simulation
     # On hardware, mantissa bits have to store the 1 from the IEEE Standard
     e_ = group_mantissa - (m_ - e_) - 1
@@ -186,7 +188,7 @@ def GetZeroSettingError(inp, group_mantissa, group_size, group_direction):
         raise ValueError("group_direction not supported")
     # Save modified shape
     inp_m_shape = inp_n.shape
-
+    inp_n = np.reshape(inp_n, (np.product(inp_n.shape),))
     # STEP 2 : make groups and adjust mantissa
     # Convert to byte stream
     st = inp_n.tobytes() 
@@ -203,7 +205,7 @@ def GetZeroSettingError(inp, group_mantissa, group_size, group_direction):
     # get the max value of each blocks
     m_ = np.amax(m_, axis=1)
     # Revert back to original size
-    m_ = np.repeat(m_, group_size)
+    m_ = np.tile(m_, group_size)
     # Match shape back to input
     # Difference of the exponent, -1 is applied because for more accurate hardware-wise simulation
     # On hardware, mantissa bits have to store the 1 from the IEEE Standard
