@@ -214,7 +214,7 @@ class BFConv2dFunction(torch.autograd.Function):
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
             # TODO : Bias Grouping
-            
+        
         return grad_input, grad_weight, grad_bias, None, None, None, None, None
 
 # Blockfloat Convolution

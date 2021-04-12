@@ -1,32 +1,32 @@
 {
     "name":"AlexNet",
     "conv1_":{
-        "f_w_bit":4,
-        "f_w_sz":36,
+        "f_w_bit":8,
+        "f_w_sz":54,
         "f_o":false,
         "b_ig":false
     },
     "conv2":{
-        "f_w_bit":4,
-        "f_w_sz":36,
+        "f_w_bit":8,
+        "f_w_sz":54,
         "f_o":false,
         "b_ig":false
     },
     "conv3":{
-        "f_w_bit":4,
-        "f_w_sz":36,
+        "f_w_bit":8,
+        "f_w_sz":54,
         "f_o":false,
         "b_ig":false
     },
     "conv4":{
-        "f_w_bit":4,
-        "f_w_sz":36,
+        "f_w_bit":8,
+        "f_w_sz":54,
         "f_o":false,
         "b_ig":false
     },
     "conv5":{
-        "f_w_bit":4,
-        "f_w_sz":36,
+        "f_w_bit":8,
+        "f_w_sz":54,
         "f_o":false,
         "b_ig":false
     }

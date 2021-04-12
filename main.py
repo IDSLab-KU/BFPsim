@@ -132,7 +132,7 @@ def ArgumentParse(logfileStr):
     if args.model == "AlexNet":
         args.net = AlexNet(args.bf_layer_conf, len(args.classes))
         if args.print_train_count == -1:
-            args.print_train_count = 1 # Reduced print rate
+            args.print_train_count = 5 # Reduced print rate
     # Resnet18, 3 convs and 3 fc layers
     elif args.model == "ResNet18":
         args.net = ResNet18(args.bf_layer_conf, len(args.classes))
