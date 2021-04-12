@@ -148,7 +148,7 @@ class BFConf():
         s += "OG]" if self.b_og else "  ]"
         s += ",bit="
         if self.f_w_bit == self.f_i_bit == self.f_o_bit == self.b_w_bit == self.b_wg_bit == self.b_ig_bit == self.b_og_bit:
-            s += '{},'.format(self.f_w_bit)
+            s += '{}'.format(self.f_w_bit)
         else:
             s += "{}/".format(self.f_w_bit) if self.f_w else "_/" 
             s += "{}/".format(self.f_i_bit) if self.f_i else "_/" 
@@ -159,7 +159,7 @@ class BFConf():
             s += "{}".format(self.b_og_bit)  if self.b_wg else "_]"
         s += ",sz="
         if self.f_w_sz == self.f_i_sz == self.f_o_sz == self.b_w_sz == self.b_wg_sz == self.b_ig_sz == self.b_og_sz:
-            s += '{},'.format(self.f_w_sz)
+            s += '{}'.format(self.f_w_sz)
         else:
             s += "{}/".format(self.f_w_sz) if self.f_w else "_/" 
             s += "{}/".format(self.f_i_sz) if self.f_i else "_/" 
@@ -259,3 +259,15 @@ def SaveStackedGraph(xlabels, data, mode="percentage", title="", save=""):
     if not os.path.exists("./figures"):
         os.makedirs("./figures")
     plt.savefig("./figures/"+save + ".png")
+
+
+from log import Log
+
+from block import BFLinear, BFConv2d
+
+def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride=1, padding=0, padding_mode="zeros", dilation=1, groups=1, bias=True):
+    if name in bf_conf:
+        return BFConv2d(in_channels, out_channels, kernel_size, BFConf(bf_conf[name]), stride, padding, dilation, groups, bias, padding_mode)
+    else:
+        Log.Print("WARNING(SetConv2dLayer): Name %s not in config file. Returning normal nn.Conv2d"%name, col='m', current=False, elapsed=False)
+        return torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)

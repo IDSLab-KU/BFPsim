@@ -4,7 +4,12 @@ import torch.nn as nn
 
 from log import Log
 from functions import LoadDataset, BFConf, Stat, str2bool
-from net import SimpleNet, ResNet18, BFSimpleNet, BFResNet18
+
+from model.AlexNet import AlexNet
+from model.ResNet import ResNet18
+from model.DenseNet import DenseNetCifar
+from model.MobileNetv1 import MobileNetv1
+from model.VGG import VGG
 
 import signal
 import sys
@@ -53,7 +58,7 @@ def ArgumentParse(logfileStr):
 
     # Model setup
     parser.add_argument("-m","--model", type=str, default = "ResNet18",
-        help = "Model to use [SimpleNet, ResNet18]")
+        help = "Model to use [AlexNet, ResNet18, MobileNetv1, DenseNetCifar]")
         
     parser.add_argument("-bf", "--bf-layer-conf-file", type=str, default="",
         help = "Config of the bf setup, if not set, original network will be trained")
@@ -67,8 +72,8 @@ def ArgumentParse(logfileStr):
         help = "[OVERRIDE] If larger than 0, initial lr is set to this value")
     parser.add_argument("--momentum", type=float, default = 0,
         help = "[OVERRIDE] If larger than 0, momentum is set to this value")
-    parser.add_argument("--train-accuracy", type=str2bool, default = True,
-        help = "If true, prints train accuracy")
+    parser.add_argument("--train-accuracy", type=str2bool, default = False,
+        help = "If True, prints train accuracy (slower)")
 
 
     # Block setup
@@ -77,7 +82,7 @@ def ArgumentParse(logfileStr):
         help = "Record to log object?")
     parser.add_argument("--print-train-batch", type=int, default = 0,
         help = "Print info on # of batches, 0 to disable") # 128 = 391
-    parser.add_argument("--print-train-count", type=int, default = 5,
+    parser.add_argument("--print-train-count", type=int, default = -1,
         help = "How many print on each epoch, 0 to disable") # 128 = 391
     parser.add_argument("--stat", type=str2bool, default = False,
         help = "Record to stat object?")
@@ -108,8 +113,9 @@ def ArgumentParse(logfileStr):
 
     # Parse bf layer conf from file
     if args.bf_layer_conf_file == "":
-        print("bf layer confing file not set, original network will be trained.")
-        args.bf_layer_conf = None
+        Log.Print("bf layer config file not set, original network will be trained.", current=False, elapsed=False)
+        Log.Print("Ignore any additional warnings around setting layers", current=False, elapsed=False)
+        args.bf_layer_conf = dict()
     elif not os.path.exists("./conf/"+args.bf_layer_conf_file+".json"):
         raise FileNotFoundError(args.bf_layer_conf_file + ".json not exists on ./conf/ directory!")
     else:
@@ -119,59 +125,38 @@ def ArgumentParse(logfileStr):
         if args.bf_layer_conf["name"] != args.model:
             raise ValueError("BF layer conf is not match with model")
     
+
+        
     # Define the network and optimize almost everything
-    # Simplenet, 3 convs and 3 fc layers
-    if args.model == "SimpleNet":
-        # Network construction
-        if args.bf_layer_conf is not None:
-            args.net = BFSimpleNet(args.bf_layer_conf, len(args.classes))
-        else:
-            args.net = SimpleNet(len(args.classes))
-
-        # Trainloader and Testloader
-        args.batch_size_train = 4
-        args.batch_size_test = 100
-        
-        # Critertion, optimizer, scheduler
-        args.criterion = nn.CrossEntropyLoss()
-        args.optimizer = optim.SGD(args.net.parameters(), lr=0.001, momentum=0.9)
-        args.scheduler = None
-
-        # Training Epochs
-        if args.training_epochs == 0:
-            args.training_epochs = 5
-        
-        # Logger, stat, etc
-        args.stat_loss_batches = 1000
-        # args.print_train_batch = 2500
-
+    # AlexNet, 5 convs and 3 fc layers
+    if args.model == "AlexNet":
+        args.net = AlexNet(args.bf_layer_conf, len(args.classes))
+        if args.print_train_count == -1:
+            args.print_train_count = 1 # Reduced print rate
     # Resnet18, 3 convs and 3 fc layers
     elif args.model == "ResNet18":
-        # Network construction
-        if args.bf_layer_conf is not None:
-            args.net = BFResNet18(args.bf_layer_conf, len(args.classes))
-        else:
-            args.net = ResNet18(len(args.classes))
-
-        # Trainloader and Testloader
-        args.batch_size_train = 128
-        args.batch_size_test = 100
-        
-        # https://github.com/kuangliu/pytorch-cifar/blob/master/main.py
-        # Critertion, optimizer, scheduler
-        args.criterion = nn.CrossEntropyLoss()
-        args.optimizer = optim.SGD(args.net.parameters(), lr=0.1,
-                            momentum=0.9, weight_decay=5e-4)
-        args.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=200)
-        
-        # Training Epochs
-        if args.training_epochs == 0:
-            args.training_epochs = 200
-
-        # Logger, stat, etc
-        args.stat_loss_batches = 100
+        args.net = ResNet18(args.bf_layer_conf, len(args.classes))
+        if args.print_train_count == -1:
+            args.print_train_count = 5
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
+
+    # Trainloader and Testloader
+    args.batch_size_train = 128
+    args.batch_size_test = 100
+    
+    # Critertion, optimizer, scheduler
+    args.criterion = nn.CrossEntropyLoss()
+    args.optimizer = optim.SGD(args.net.parameters(), lr=0.1,
+                        momentum=0.9, weight_decay=5e-4)
+    args.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=200)
+
+    # Training Epochs
+    if args.training_epochs == 0:
+        args.training_epochs = 200
+    
+    # Logger, stat, etc
+    args.stat_loss_batches = 100
 
     # Move model to gpu if gpu is available
     if args.cuda:

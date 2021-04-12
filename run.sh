@@ -1,6 +1,12 @@
 
 
 
+# Etc
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/_testbench.py
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m AlexNet -bf AlexNet_4
+docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ResNet18 -bf ResNet18_8
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m AlexNet
+
 # Execute using docker
 # docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app pytorch/pytorch:1.6.0-cuda10.1-cudnn7-runtime python3 -u /app/_test.py
 
@@ -16,7 +22,7 @@
 
 # ResNet18 with others
 # docker run --rm --cpus="4" --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ResNet18 --stat True --save True --training-epochs 50
-docker run --rm --cpus="4" --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ResNet18 --bf ResNet18_8_54_X --stat True --save True --training-epochs 50
+# docker run --rm --cpus="4" --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ResNet18 --bf ResNet18_8_54_X --stat True --save True --training-epochs 50
 # docker run --rm --cpus="4" --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ResNet18 --bf ResNet18_16_54_X --stat True --save True --training-epochs 50
 
 # Running zero-test simulation

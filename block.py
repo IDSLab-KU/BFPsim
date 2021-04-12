@@ -38,9 +38,9 @@ class BlockReLU(torch.autograd.Function):
 # BlockFloat Linear Function
 class BFLinearFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bf_conf, bias, cuda=DEFAULT_CUDA):    
+    def forward(ctx, input, weight, bf_conf, bias):    
         # Grouping input and weight
-        if cuda:
+        if DEFAULT_CUDA:
             input = make_groups_tensor(input.cpu(), bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir).cuda()
             weight = make_groups_tensor(weight.cpu(), bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir).cuda()
         else:
@@ -48,13 +48,11 @@ class BFLinearFunction(torch.autograd.Function):
             weight = make_groups_tensor(weight, bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir)
 
         # Save context to use on backward
-        cuda = 1 if cuda else 0
-        confs = torch.from_numpy(np.array([cuda]))
         bf_confs = torch.from_numpy(np.array([
             bf_conf.g_o_bit, bf_conf.g_o_sz,
             bf_conf.g_o_dir[0], bf_conf.g_o_dir[1],
             bf_conf.g_i_bit, bf_conf.g_w_bit, bf_conf.g_b_bit]))
-        ctx.save_for_backward(input, weight, bias, confs, bf_confs)
+        ctx.save_for_backward(input, weight, bias, bf_confs)
         
         # Compute FC and return
         output = input.mm(weight.t())
@@ -62,7 +60,7 @@ class BFLinearFunction(torch.autograd.Function):
             output += bias.unsqueeze(0).expand_as(output)
 
         # Set mantissa because result of computation is preseted bits
-        if cuda:
+        if DEFAULT_CUDA:
             output = set_mantissa_tensor(output.cpu(), bf_conf.f_o_bit).cuda()
         else:
             output = set_mantissa_tensor(output, bf_conf.f_o_bit)
@@ -72,16 +70,14 @@ class BFLinearFunction(torch.autograd.Function):
     def backward(ctx, grad_output):
         # Load saved tensors
         # input, weight, bias, confs = ctx.saved_tensors
-        input, weight, bias, confs, bf_confs = ctx.saved_tensors
-        confs, bf_confs = confs.numpy(), bf_confs.numpy()
-        cuda = confs[0]
+        input, weight, bias, bf_confs = ctx.saved_tensors
+        bf_confs = bf_confs.numpy()
         g_o_dir = [0,0]
         g_o_bit, g_o_sz, g_o_dir[0], g_o_dir[1], g_i_bit, g_w_bit, g_b_bit = bf_confs
         g_o_dir = tuple(g_o_dir)
-        cuda = True if cuda > 1 else False
 
         # Output Gradient Grouping
-        if cuda:
+        if DEFAULT_CUDA:
             grad_output = make_groups_tensor(grad_output.cpu(), g_o_bit, g_o_sz, g_o_dir).cuda()
         else:
             grad_output = make_groups_tensor(grad_output, 8, g_o_bit, g_o_sz, g_o_dir)
@@ -92,7 +88,7 @@ class BFLinearFunction(torch.autograd.Function):
         grad_weight = grad_output.t().mm(input)
 
         # Set mantissa because result of computation is preseted bits
-        if cuda:
+        if DEFAULT_CUDA:
             grad_input = set_mantissa_tensor(grad_input.cpu(), g_i_bit).cuda()
             grad_weight = set_mantissa_tensor(grad_weight.cpu(), g_w_bit).cuda()
         else:
@@ -102,7 +98,7 @@ class BFLinearFunction(torch.autograd.Function):
 
         if bias is not None:
             grad_bias = grad_output.sum(0)
-            if cuda:
+            if DEFAULT_CUDA:
                 grad_bias = set_mantissa_tensor(grad_bias.cpu(), g_b_bit).cuda()
             else:
                 grad_bias = set_mantissa_tensor(grad_bias, g_b_bit)
@@ -114,14 +110,11 @@ class BFLinear(torch.nn.Module):
     def __init__(self,
                 input_features: int,
                 output_features: int,
-                bf_conf: BFConf,
-                bias: bool = True,
-                cuda: bool = DEFAULT_CUDA):
+                bf_conf: BFConf):
         super(BFLinear, self).__init__()
         self.input_features = input_features
         self.output_features = output_features
         self.bf_conf = bf_conf
-        self.cuda = cuda
 
         # Weight parameters, should be grouped with few numbers
         self.weight = nn.Parameter(torch.Tensor(output_features, input_features))
@@ -137,13 +130,11 @@ class BFLinear(torch.nn.Module):
             self.bias.data.uniform_(-0.1, 0.1)
     
     def forward(self, input):
-        return BFLinearFunction.apply(input, self.weight, self.bf_conf, self.bias, self.cuda)
+        return BFLinearFunction.apply(input, self.weight, self.bf_conf, self.bias)
     
     def extra_repr(self):
         s = ('{input_features}, {output_features}')
         s += ', bf_conf=({bf_conf})'
-        if self.cuda is False:
-            s += ', cuda=False'
         if self.bias is None:
             s += ', bias=False'
         else:
@@ -156,9 +147,8 @@ class BFLinear(torch.nn.Module):
 # https://discuss.pytorch.org/t/implementing-a-custom-convolution-using-conv2d-input-and-conv2d-weight/18556/7
 class BFConv2dFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bf_conf, bias=None, stride=1, padding=0, dilation=1, groups=1, cuda=DEFAULT_CUDA):
+    def forward(ctx, input, weight, bias=None, bf_conf, stride=1, padding=0, dilation=1, groups=1):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
-
         # Grouping input and weight
         if bf_conf.f_i:
             input = make_groups_tensor(input, bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir)
@@ -167,8 +157,7 @@ class BFConv2dFunction(torch.autograd.Function):
 
         # Save arguments to context to use on backward
         # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
-        cuda = 1 if cuda else 0
-        confs = torch.from_numpy(np.array([stride, padding, dilation, groups, cuda]))
+        confs = torch.from_numpy(np.array([stride, padding, dilation, groups]))
         b_w = 1 if bf_conf.b_w else 0
         b_og = 1 if bf_conf.b_w else 0
         b_ig = 1 if bf_conf.b_w else 0
@@ -179,7 +168,7 @@ class BFConv2dFunction(torch.autograd.Function):
             b_og, bf_conf.b_og_bit, bf_conf.b_og_sz, bf_conf.b_og_dir,
             b_ig, bf_conf.b_ig_bit, bf_conf.b_ig_sz, bf_conf.b_ig_dir,
             b_wg, bf_conf.b_wg_bit, bf_conf.b_wg_sz, bf_conf.b_wg_dir]))
-        ctx.save_for_backward(input, weight, bias, confs, bf_confs)
+        ctx.save_for_backward(input, weight, bias, bf_confs)
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
@@ -187,17 +176,17 @@ class BFConv2dFunction(torch.autograd.Function):
         # Grouping output
         if bf_conf.f_o:
             output = make_groups_tensor(output, bf_conf.f_o_bit, bf_conf.f_o_sz, bf_conf.f_o_dir)
-
+        print(output.shape)
         return output
     
     @staticmethod
     def backward(ctx, grad_output):
+        print("grad_output", grad_output.shape)
         # Load saved tensors and configs
         input, weight, bias, confs, bf_confs = ctx.saved_variables
         confs, bf_confs = confs.numpy(), bf_confs.numpy()
-        stride, padding, dilation, groups, cuda = confs
+        stride, padding, dilation, groups = confs
         b_w, b_w_bit, b_w_sz, b_w_dir, b_og, b_og_bit, b_og_sz, b_og_dir, b_ig, b_ig_bit, b_ig_sz, b_ig_dir, b_wg, b_wg_bit, b_wg_sz, b_wg_dir = bf_confs
-        cuda = True if cuda > 0 else False
         b_og = True if b_og > 0 else False
         b_ig = True if b_ig > 0 else False
         b_wg = True if b_wg > 0 else False
@@ -227,8 +216,8 @@ class BFConv2dFunction(torch.autograd.Function):
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
             # TODO : Bias Grouping
-
-        return grad_input, grad_weight, None, grad_bias, None, None, None, None, None
+            grad_bias = None
+        return grad_input, grad_weight, None, grad_bias, None, None, None, None
 
 # Blockfloat Convolution
 class BFConv2d(torch.nn.Module):
@@ -242,8 +231,7 @@ class BFConv2d(torch.nn.Module):
                 dilation: _size_2_t = 1,
                 groups: int = 1,
                 bias: bool = True,
-                padding_mode: str = 'zeros',
-                cuda=DEFAULT_CUDA):
+                padding_mode: str = 'zeros'):
         super(BFConv2d, self).__init__()
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -262,7 +250,6 @@ class BFConv2d(torch.nn.Module):
         self.dilation = dilation
         self.groups = groups
         self.padding_mode = padding_mode
-        self.cuda = cuda
 
         self.weight = nn.Parameter(torch.Tensor(
             out_channels, in_channels // groups, kernel_size, kernel_size))
@@ -284,7 +271,7 @@ class BFConv2d(torch.nn.Module):
     def forward(self, input):
         return BFConv2dFunction.apply(input, self.weight, self.bf_conf,
                 self.bias, self.stride, self.padding, self.dilation,
-                self.groups, self.cuda)
+                self.groups)
     
     def extra_repr(self):
         # From /torch/nn/modules/conv.py
@@ -297,8 +284,6 @@ class BFConv2d(torch.nn.Module):
         if self.groups != 1:
             s += ', groups={groups}'
         s += ', bf_conf=({bf_conf})'
-        if self.cuda is False:
-            s += ', cuda=False'
         if self.bias is None:
             s += ', bias=False'
         else:
