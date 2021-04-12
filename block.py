@@ -147,7 +147,7 @@ class BFLinear(torch.nn.Module):
 # https://discuss.pytorch.org/t/implementing-a-custom-convolution-using-conv2d-input-and-conv2d-weight/18556/7
 class BFConv2dFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bias=None, bf_conf, stride=1, padding=0, dilation=1, groups=1):
+    def forward(ctx, input, weight, bias=None, bf_conf=None, stride=1, padding=0, dilation=1, groups=1):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
         # Grouping input and weight
         if bf_conf.f_i:
@@ -168,7 +168,7 @@ class BFConv2dFunction(torch.autograd.Function):
             b_og, bf_conf.b_og_bit, bf_conf.b_og_sz, bf_conf.b_og_dir,
             b_ig, bf_conf.b_ig_bit, bf_conf.b_ig_sz, bf_conf.b_ig_dir,
             b_wg, bf_conf.b_wg_bit, bf_conf.b_wg_sz, bf_conf.b_wg_dir]))
-        ctx.save_for_backward(input, weight, bias, bf_confs)
+        ctx.save_for_backward(input, weight, bias, confs, bf_confs)
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
@@ -176,12 +176,10 @@ class BFConv2dFunction(torch.autograd.Function):
         # Grouping output
         if bf_conf.f_o:
             output = make_groups_tensor(output, bf_conf.f_o_bit, bf_conf.f_o_sz, bf_conf.f_o_dir)
-        print(output.shape)
         return output
     
     @staticmethod
     def backward(ctx, grad_output):
-        print("grad_output", grad_output.shape)
         # Load saved tensors and configs
         input, weight, bias, confs, bf_confs = ctx.saved_variables
         confs, bf_confs = confs.numpy(), bf_confs.numpy()
@@ -216,8 +214,8 @@ class BFConv2dFunction(torch.autograd.Function):
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
             # TODO : Bias Grouping
-            grad_bias = None
-        return grad_input, grad_weight, None, grad_bias, None, None, None, None
+            
+        return grad_input, grad_weight, grad_bias, None, None, None, None, None
 
 # Blockfloat Convolution
 class BFConv2d(torch.nn.Module):
@@ -269,9 +267,7 @@ class BFConv2d(torch.nn.Module):
             torch.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input):
-        return BFConv2dFunction.apply(input, self.weight, self.bf_conf,
-                self.bias, self.stride, self.padding, self.dilation,
-                self.groups)
+        return BFConv2dFunction.apply(input, self.weight, self.bias, self.bf_conf, self.stride, self.padding, self.dilation, self.groups)
     
     def extra_repr(self):
         # From /torch/nn/modules/conv.py
