@@ -243,11 +243,11 @@ class BFConv2d(torch.nn.Module):
 
         self.weight = nn.Parameter(torch.Tensor(
             out_channels, in_channels // groups, kernel_size, kernel_size))
-        self.bias = nn.Parameter(torch.Tensor(out_channels))
-        # if bias:
-        #     self.bias = nn.Parameter(torch.Tensor(out_channels))
-        # else:
-        #     self.register_parameter('bias', None)
+        # self.bias = nn.Parameter(torch.Tensor(out_channels))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
         self.reset_parameters()
 
 
