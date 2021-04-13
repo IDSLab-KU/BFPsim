@@ -1,24 +1,38 @@
 {
     "name":"ResNet18",
+    "conv1_":{
+        "f_w_bit":4,
+        "f_w_sz":36,
+        "f_o":false,
+        "b_ig":false
+    },
     "layer1":{
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         }
     },
@@ -26,25 +40,35 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         }
     },
@@ -52,25 +76,35 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         }
     },
@@ -78,25 +112,34 @@
         "0":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "shortcut":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             }
         },
         "1":{
             "conv1":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "f_o":false,
+                "b_ig":false
             },
             "conv2":{
                 "f_w_bit":4,
-                "f_w_sz":36
+                "f_w_sz":36,
+                "b_ig":false
             }
         }
     }
