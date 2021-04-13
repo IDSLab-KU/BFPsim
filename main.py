@@ -82,12 +82,16 @@ def ArgumentParse():
 
     # Block setup
     # Printing / Logger / Stat
+    parser.add_argument("--save-name", type=str, default = "",
+        help = "Name of the save file")
+
     parser.add_argument("--log", type=str2bool, default = True,
         help = "Record to log object?")
     parser.add_argument("--print-train-batch", type=int, default = 0,
         help = "Print info on # of batches, 0 to disable") # 128 = 391
     parser.add_argument("--print-train-count", type=int, default = -1,
         help = "How many print on each epoch, 0 to disable") # 128 = 391
+
     parser.add_argument("--stat", type=str2bool, default = False,
         help = "Record to stat object?")
     parser.add_argument("--stat-loss-batches", type=int, default = 0,
@@ -112,7 +116,8 @@ def ArgumentParse():
     args = parser.parse_args()
 
     # Save log file location
-    args.save_name = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_")
+    if args.save_name == "":
+        args.save_name = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_")
     """ should create folders by user, not docker.
     It's okay if docker is executed with user mode, which with argument --user "$(id -u):$(id -g)"
     execute preload.sh file to pre-create directories
