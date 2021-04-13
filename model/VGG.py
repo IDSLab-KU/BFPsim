@@ -16,10 +16,10 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name):
+    def __init__(self, bf_conf, out_channels, vgg_name):
         super(VGG, self).__init__()
-        self.features = self._make_layers(cfg[vgg_name])
-        self.classifier = nn.Linear(512, 10)
+        self.features = self._make_layers(bf_conf, cfg[vgg_name])
+        self.classifier = nn.Linear(512, out_channels)
 
     def forward(self, x):
         out = self.features(x)
@@ -27,29 +27,31 @@ class VGG(nn.Module):
         out = self.classifier(out)
         return out
 
-    def _make_layers(self, cfg):
+    def _make_layers(self, bf_conf, cfg):
         layers = []
         in_channels = 3
-        for x in cfg:
+        for i, x in enumerate(cfg):
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
-                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
-                           nn.BatchNorm2d(x),
-                           nn.ReLU(inplace=True)]
+                layers += [
+                        # nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                        SetConv2dLayer(str(i), bf_conf, in_channels, x, kernel_size=3, padding=1),
+                        nn.BatchNorm2d(x),
+                        nn.ReLU(inplace=True)]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)
 
 
-def VGG11():
-    return VGG('VGG11')
+def VGG11(bf_conf, out_channels):
+    return VGG(bf_conf, out_channels, 'VGG11')
 
-def VGG13():
-    return VGG('VGG13')
+def VGG13(bf_conf, out_channels):
+    return VGG(bf_conf, out_channels, 'VGG13')
 
-def VGG16():
-    return VGG('VGG16')
+def VGG16(bf_conf, out_channels):
+    return VGG(bf_conf, out_channels, 'VGG16')
 
-def VGG19():
-    return VGG('VGG19')
+def VGG19(bf_conf, out_channels):
+    return VGG(bf_conf, out_channels, 'VGG19')
