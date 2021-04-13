@@ -47,7 +47,8 @@ class DenseNet(nn.Module):
         self.growth_rate = growth_rate
 
         num_planes = 2*growth_rate
-        self.conv1 = nn.Conv2d(3, num_planes, kernel_size=3, padding=1, bias=False)
+        # self.conv1 = nn.Conv2d(3, num_planes, kernel_size=3, padding=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, num_planes, kernel_size=3, padding=1, bias=False)
 
         self.dense1 = self._make_dense_layers(bf_conf, "dense1", block, num_planes, nblocks[0])
         num_planes += nblocks[0]*growth_rate
@@ -96,16 +97,16 @@ class DenseNet(nn.Module):
         return out
 
 def DenseNet121(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=32, out_channels)
+    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=32, num_classes=out_channels)
 
 def DenseNet169(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,32,32], growth_rate=32, out_channels)
+    return DenseNet(bf_conf, Bottleneck, [6,12,32,32], growth_rate=32, num_classes=out_channels)
 
 def DenseNet201(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,48,32], growth_rate=32, out_channels)
+    return DenseNet(bf_conf, Bottleneck, [6,12,48,32], growth_rate=32, num_classes=out_channels)
 
 def DenseNet161(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,36,24], growth_rate=48, out_channels)
+    return DenseNet(bf_conf, Bottleneck, [6,12,36,24], growth_rate=48, num_classes=out_channels)
 
 def DenseNetCifar(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=12, out_channels)
+    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=12, num_classes=out_channels)
