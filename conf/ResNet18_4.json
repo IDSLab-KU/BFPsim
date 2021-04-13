@@ -1,6 +1,6 @@
 {
     "name":"ResNet18",
-    "conv1_":{
+    "conv1":{
         "f_w_bit":4,
         "f_w_sz":36,
         "f_o":false,
