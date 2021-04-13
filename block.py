@@ -172,10 +172,10 @@ class BFConv2dFunction(torch.autograd.Function):
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
-        
         # Grouping output
         if bf_conf.f_o:
             output = make_groups_tensor(output, bf_conf.f_o_bit, bf_conf.f_o_sz, bf_conf.f_o_dir)
+
         return output
     
     @staticmethod

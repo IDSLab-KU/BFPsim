@@ -71,7 +71,11 @@ class Logger:
                 self.logFileLocation = "./logs/%s.log"%(str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_"))
             else:
                 self.logFileLocation = t
-            
+    
+    def CreateLogFile(self):
+        self.logFilePointer = open(self.logFileLocation, mode="w", newline='', encoding='utf-8')
+        self.Message("Logger: Creating log file on %s."%self.logFileLocation)
+
     def SetPrintLevel(self, v):
         assert isinstance(v, int), "Logger: Inputed value is not int"
         self.printLevel = v
@@ -116,7 +120,7 @@ class Logger:
         if self.messages or f:
             self.Print(msg,current=False,elapsed=False,col='k',bg='bc',file=False)
 
-    def Print(self, msg, level = 0, current = None, elapsed = None, col='', bg='', end = '\n', file = True, flush = False):
+    def Print(self, msg, level = 0, current = None, elapsed = None, col='', bg='', end = '\n', file = None, flush = False):
         if level <= self.printLevel:
             t = ""
             if self.MSPrecision == 0:
@@ -127,16 +131,18 @@ class Logger:
                 current = self.printCurrentTime
             if elapsed == None:
                 elapsed = self.printElapsedTime
+            if file == None:
+                file = self.isLogFile
+
             if current:
                 t += str(datetime.now())[5:][:d]
             if elapsed:
                 t += "[" + self.GetElapsedTime()[:d] + "]"
             if current or elapsed:
                 t += ":"
-            if self.isLogFile and file: # Log file doesn't record colors
+            if file: # Log file doesn't record colors
                 if self.logFilePointer == None:
-                    self.logFilePointer = open(self.logFileLocation, mode="w", newline='', encoding='utf-8')
-                    self.Message("Logger: Creating log file on %s."%self.logFileLocation)
+                    self.CreateLogFile()
                 self.logFilePointer.write(t + msg + end)
 
             if col != '':

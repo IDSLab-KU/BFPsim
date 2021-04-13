@@ -189,7 +189,7 @@ class Stat():
         self.running_loss = 0.0
         self.loss_count = 0
         self.loss_batches = args.stat_loss_batches
-        self.file_location = args.log_file_location[:-4] + ".stat"
+        self.file_location = args.stat_location
 
     def AddLoss(self, v):
         self.running_loss += v
@@ -209,7 +209,7 @@ class Stat():
         if self.loss_count != 0:
             self.loss.append(self.running_loss / self.loss_batches)
         
-        f = open(self.file_location, mode="w", newline='', encoding='utf-8')
+        f = open(self.file_location, mode="w+", newline='', encoding='utf-8')
         f.write(">Average Loss per {} batches\n".format(self.loss_batches))
         for i in self.loss:
             f.write(str(i)+"\t")

@@ -24,7 +24,15 @@ def ExitCounter():
 import os
 import json
 import argparse
+from datetime import datetime
 args = None
+
+
+def SaveModel(suffix):
+    PATH = "%s_%s.model"%(args.save_prefix,suffix)
+    Log.Print("Saving model file as %s"%PATH)
+    torch.save(args.net.state_dict(), PATH)
+
 
 def handler(signum, frame):
     print("Quit by user signal")
@@ -34,15 +42,11 @@ def handler(signum, frame):
             args.stat.SaveToFile()
         
         if args.save:
-            Log.Print("Saving model file...")
-            PATH = args.log_file_location[:-4] + ".model"
-            torch.save(args.net.state_dict(), PATH)
+            SaveModel("canceled")
     sys.exit()
 
-
-
 # Parse arguments
-def ArgumentParse(logfileStr):
+def ArgumentParse():
     parser = argparse.ArgumentParser()
 
     # Base mode select
@@ -91,6 +95,8 @@ def ArgumentParse(logfileStr):
 
     parser.add_argument("--save", type=str2bool, default = False,
         help = "Save best model's weight")
+    parser.add_argument("--save-interval", type=int, default = 0,
+        help = "Save interval, 0:last, rest:interval")
     
     """Zero test mode"""
 
@@ -106,8 +112,27 @@ def ArgumentParse(logfileStr):
     args = parser.parse_args()
 
     # Save log file location
-    args.log_file_location = logfileStr
-    
+    args.save_name = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_")
+    """ should create folders by user, not docker.
+    It's okay if docker is executed with user mode, which with argument --user "$(id -u):$(id -g)"
+    execute preload.sh file to pre-create directories
+    if not os.path.exists("./logs"):
+        os.makedirs("./logs")
+    if not os.path.exists("./saves"):
+        os.makedirs("./saves")
+    if not os.path.exists("./stats"):
+        os.makedirs("./stats")
+    """
+    args.log_location = "./logs/" + args.save_name + ".log"
+    # args.save_prefix = "./logs/" + args.save_name
+    # args.stat_location = "./logs/" + args.save_name + ".stat"
+    args.save_prefix = "./saves/" + args.save_name
+    args.stat_location = "./stats/" + args.save_name + ".stat"
+    if args.log:
+        Log.SetLogFile(True, args.log_location)
+    else:
+        Log.SetLogFile(False)
+        
     # Load train data
     args.trainset, args.testset, args.classes = LoadDataset(args.dataset)
 
@@ -273,6 +298,11 @@ def TrainNetwork():
         Evaluate()
         if args.train_accuracy:
             EvaluateTrain()
+            
+        if args.save:
+            if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
+                SaveModel("%03d"%(epoch_current+1))
+    
     Log.Print('Finished Training')
 
     if args.stat is not None:
@@ -280,9 +310,7 @@ def TrainNetwork():
         args.stat.SaveToFile()
 
     if args.save:
-        Log.Print("Saving model file...")
-        PATH = args.log_file_location[:-4] + ".model"
-        torch.save(args.net.state_dict(), PATH)
+        SaveModel("finish")
 
 
 from blockfunc import GetZeroSettingError
@@ -355,17 +383,14 @@ def ZeroTest():
     # print(args.net)
 
 
+
 if __name__ == '__main__':
     # handle signal
     signal.signal(signal.SIGINT, handler)
     
-    # Set logger preset to generate log file location
-    Log.SetLogFile(True)
     # Parse Arguments and set
-    args = ArgumentParse(Log.logFileLocation)
+    args = ArgumentParse()
 
-    Log.SetLogFile(True if args.log else False)
-    
     # Print the model summary and arguments
     # Log.Print("List of the program arguments\n" + str(args) + "\n", current=False, elapsed=False)
 
