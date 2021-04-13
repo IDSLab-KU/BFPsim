@@ -40,7 +40,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1):
+    def __init__(self, bf_conf, in_planes, planes, stride=1):
         super(Bottleneck, self).__init__()
         
         # self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
