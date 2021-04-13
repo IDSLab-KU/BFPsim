@@ -155,20 +155,13 @@ class BFConv2dFunction(torch.autograd.Function):
         if bf_conf.f_w:
             weight = make_groups_tensor(weight, bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir)
 
-        # Save arguments to context to use on backward
-        # WARNING : if stride, padding, dilation etc is array, this will not work properly!!!!
-        confs = torch.from_numpy(np.array([stride, padding, dilation, groups]))
-        b_w = 1 if bf_conf.b_w else 0
-        b_og = 1 if bf_conf.b_w else 0
-        b_ig = 1 if bf_conf.b_w else 0
-        b_wg = 1 if bf_conf.b_w else 0
-        
-        bf_confs = torch.from_numpy(np.array([
-            b_w, bf_conf.b_w_bit, bf_conf.b_w_sz, bf_conf.b_w_dir,
-            b_og, bf_conf.b_og_bit, bf_conf.b_og_sz, bf_conf.b_og_dir,
-            b_ig, bf_conf.b_ig_bit, bf_conf.b_ig_sz, bf_conf.b_ig_dir,
-            b_wg, bf_conf.b_wg_bit, bf_conf.b_wg_sz, bf_conf.b_wg_dir]))
-        ctx.save_for_backward(input, weight, bias, confs, bf_confs)
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.groups = groups
+        ctx.bf_conf = bf_conf
+
+        ctx.save_for_backward(input, weight, bias)
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
@@ -181,21 +174,20 @@ class BFConv2dFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         # Load saved tensors and configs
-        input, weight, bias, confs, bf_confs = ctx.saved_variables
-        confs, bf_confs = confs.numpy(), bf_confs.numpy()
-        stride, padding, dilation, groups = confs
-        b_w, b_w_bit, b_w_sz, b_w_dir, b_og, b_og_bit, b_og_sz, b_og_dir, b_ig, b_ig_bit, b_ig_sz, b_ig_dir, b_wg, b_wg_bit, b_wg_sz, b_wg_dir = bf_confs
-        b_og = True if b_og > 0 else False
-        b_ig = True if b_ig > 0 else False
-        b_wg = True if b_wg > 0 else False
-        b_w = True if b_w > 0 else False
+        input, weight, bias = ctx.saved_variables
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        groups = ctx.groups
+        bf_conf = ctx.bf_conf
+
         # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
         
         # output gradient grouping
-        if b_og:
-            grad_output = make_groups_tensor(grad_output, b_og_bit, b_og_sz, b_og_dir)
-        if b_w:
-            weight = make_groups_tensor(weight, b_w_bit, b_w_sz, b_w_dir)
+        if bf_conf.b_og:
+            grad_output = make_groups_tensor(grad_output, bf_conf.b_og_bit, bf_conf.b_og_sz, bf_conf.b_og_dir)
+        if bf_conf.b_w:
+            weight = make_groups_tensor(weight, bf_conf.b_w_bit, bf_conf.b_w_sz, bf_conf.b_w_dir)
         
         # Calculate Gradient
         grad_input = grad_weight = grad_bias = None
@@ -205,10 +197,10 @@ class BFConv2dFunction(torch.autograd.Function):
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
 
         # Grouping input and weight
-        if b_ig:
-            grad_input = make_groups_tensor(grad_input, b_ig_bit, b_ig_sz, b_ig_dir)
-        if b_wg:
-            grad_weight = make_groups_tensor(grad_weight, b_wg_bit, b_wg_sz, b_wg_dir)
+        if bf_conf.b_ig:
+            grad_input = make_groups_tensor(grad_input, bf_conf.b_ig_bit, bf_conf.b_ig_sz, bf_conf.b_ig_dir)
+        if bf_conf.b_wg:
+            grad_weight = make_groups_tensor(grad_weight, bf_conf.b_wg_bit, bf_conf.b_wg_sz, bf_conf.b_wg_dir)
         
         # WARNING : Bias maybe buggy, remove if it is buggy
         if bias is not None and ctx.needs_input_grad[2]:
@@ -251,10 +243,11 @@ class BFConv2d(torch.nn.Module):
 
         self.weight = nn.Parameter(torch.Tensor(
             out_channels, in_channels // groups, kernel_size, kernel_size))
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_channels))
-        else:
-            self.register_parameter('bias', None)
+        self.bias = nn.Parameter(torch.Tensor(out_channels))
+        # if bias:
+        #     self.bias = nn.Parameter(torch.Tensor(out_channels))
+        # else:
+        #     self.register_parameter('bias', None)
         self.reset_parameters()
 
 
