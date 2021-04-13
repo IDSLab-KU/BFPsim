@@ -168,8 +168,8 @@ def ArgumentParse():
         args.net = VGG16(args.bf_layer_conf, len(args.classes))
     elif args.model == "MobileNetv1":
         args.net = MobileNetv1(args.bf_layer_conf, len(args.classes))
-    elif args.model == "DenseNet":
-        args.net = DenseNet(args.bf_layer_conf, len(args.classes))
+    elif args.model == "DenseNetCifar":
+        args.net = DenseNetCifar(args.bf_layer_conf, len(args.classes))
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
 
