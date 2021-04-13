@@ -9,7 +9,7 @@ from model.AlexNet import AlexNet
 from model.ResNet import ResNet18
 from model.DenseNet import DenseNetCifar
 from model.MobileNetv1 import MobileNetv1
-from model.VGG import VGG
+from model.VGG import VGG16
 
 import signal
 import sys
@@ -151,18 +151,20 @@ def ArgumentParse():
             raise ValueError("BF layer conf is not match with model")
     
 
+    if args.print_train_count == -1:
+        args.print_train_count = 5 # Reduced print rate
         
     # Define the network and optimize almost everything
-    # AlexNet, 5 convs and 3 fc layers
     if args.model == "AlexNet":
         args.net = AlexNet(args.bf_layer_conf, len(args.classes))
-        if args.print_train_count == -1:
-            args.print_train_count = 5 # Reduced print rate
-    # Resnet18, 3 convs and 3 fc layers
     elif args.model == "ResNet18":
         args.net = ResNet18(args.bf_layer_conf, len(args.classes))
-        if args.print_train_count == -1:
-            args.print_train_count = 5
+    elif args.model == "VGG16":
+        args.net = VGG16(args.bf_layer_conf, len(args.classes))
+    elif args.model == "MobileNetv1":
+        args.net = MobileNetv1(args.bf_layer_conf, len(args.classes))
+    elif args.model == "DenseNet":
+        args.net = DenseNet(args.bf_layer_conf, len(args.classes))
     else:
         raise NotImplementedError("Model {} not Implemented".format(args.model))
 
