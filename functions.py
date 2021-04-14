@@ -271,3 +271,8 @@ def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride
     else:
         Log.Print("WARNING(SetConv2dLayer): Name %s not in config file. Returning normal nn.Conv2d"%name, col='m', current=False, elapsed=False)
         return torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
+
+def SaveModel(args, suffix):
+    PATH = "%s_%s.model"%(args.save_prefix,suffix)
+    Log.Print("Saving model file as %s"%PATH)
+    torch.save(args.net.state_dict(), PATH)

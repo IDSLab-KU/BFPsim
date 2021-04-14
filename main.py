@@ -3,7 +3,8 @@ import torch.optim as optim
 import torch.nn as nn
 
 from log import Log
-from functions import LoadDataset, BFConf, Stat, str2bool
+from functions import LoadDataset, BFConf, Stat, str2bool, SaveModel
+from train import TrainNetwork
 from utils import ZeroTest, SaveData
 
 from model.AlexNet import AlexNet
@@ -28,13 +29,6 @@ import argparse
 from datetime import datetime
 args = None
 
-
-def SaveModel(suffix):
-    PATH = "%s_%s.model"%(args.save_prefix,suffix)
-    Log.Print("Saving model file as %s"%PATH)
-    torch.save(args.net.state_dict(), PATH)
-
-
 def handler(signum, frame):
     print("Quit by user signal")
     if args != None:
@@ -43,7 +37,7 @@ def handler(signum, frame):
             args.stat.SaveToFile()
         
         if args.save:
-            SaveModel("canceled")
+            SaveModel(args, "canceled")
     sys.exit()
 
 # Parse arguments
@@ -214,113 +208,6 @@ def ArgumentParse():
 
     return args
 
-def Train(epoch_current):
-    running_loss = 0.0
-    batch_count = 0
-    ptc_count = 1
-    ptc_target = ptc_count / args.print_train_count
-    for i, data in enumerate(args.trainloader, 0):
-        inputs, labels = data
-        
-        if args.cuda:
-            inputs = inputs.cuda()
-            labels = labels.cuda()
-        
-        args.optimizer.zero_grad()
-
-        outputs = args.net(inputs)
-        loss = args.criterion(outputs, labels)
-        loss.backward()
-
-        args.optimizer.step()
-        running_loss += loss.item()
-
-        # Print the running loss
-        pF = False
-        batch_count += 1
-        if args.print_train_batch != 0:
-            if (i + 1) % args.print_train_batch == 0 or (i + 1) == len(args.trainloader):
-                pF = True
-        elif args.print_train_count != 0:
-            if (i+1) / len(args.trainloader) >= ptc_target:
-                pF = True
-                ptc_count += 1
-                ptc_target = ptc_count/args.print_train_count
-        if pF:
-            Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
-                (epoch_current + 1, args.training_epochs,
-                i + 1, len(args.trainloader),
-                running_loss / batch_count))
-            running_loss = 0.0
-            batch_count = 0
-
-        # Record to stat
-        if args.stat is not None:
-            args.stat.AddLoss(loss.item())
-
-    if args.scheduler != None:
-        args.scheduler.step()
-
-
-def Evaluate():
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in args.testloader:
-            images, labels = data
-            if args.cuda:
-                images = images.cuda() # Using GPU
-                labels = labels.cuda() # Using GPU
-            outputs = args.net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    
-    Log.Print('Test Accuracy: %f' % (correct / total))
-    if args.stat is not None:
-        args.stat.AddTestAccuracy(correct / total)
-
-
-def EvaluateTrain():
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in args.trainloader:
-            images, labels = data
-            if args.cuda:
-                images = images.cuda() # Using GPU
-                labels = labels.cuda() # Using GPU
-            outputs = args.net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    
-    Log.Print('Train Accuracy: %f' % (correct / total))
-    if args.stat is not None:
-        args.stat.AddTrainAccuracy(correct / total)
-
-# Train the network and evaluate
-def TrainNetwork():
-    for epoch_current in range(args.training_epochs):
-        Train(epoch_current)
-        Evaluate()
-        if args.train_accuracy:
-            EvaluateTrain()
-            
-        if args.save:
-            if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
-                SaveModel("%03d"%(epoch_current+1))
-    
-    Log.Print('Finished Training')
-
-    if args.stat is not None:
-        Log.Print("Saving stat object file...")
-        args.stat.SaveToFile()
-
-    if args.save:
-        SaveModel("finish")
-
-
 if __name__ == '__main__':
     # handle signal
     signal.signal(signal.SIGINT, handler)
@@ -339,7 +226,7 @@ if __name__ == '__main__':
                 continue
             else:
                 Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
-        TrainNetwork()
+        TrainNetwork(args)
     elif args.mode == "zero-test":
         Log.Print("Program executed on zero-test mode.", current=False, elapsed=False)
         Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
