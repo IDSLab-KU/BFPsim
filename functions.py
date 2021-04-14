@@ -60,7 +60,7 @@ def LoadDataset(name):
                 'bicycle', 'bus', 'motorcycle', 'pickup_truck', 'train',
                 'lawn_mower', 'rocket', 'streetcar', 'tank', 'tractor']
     else:
-        raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
+        raise NotImplementedError("Dataset {} not Implemented".format(name))
     return trainset, testset, classes
 
 def str2tuple(v):
