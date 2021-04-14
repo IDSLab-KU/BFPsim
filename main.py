@@ -56,7 +56,7 @@ def ArgumentParse():
     """Train mode"""
     # Data loader
     parser.add_argument("-d","--dataset", type=str, default = "CIFAR-10",
-        help = "Dataset to use [CIFAR-10, CIFAR-100]")
+        help = "Dataset to use [CIFAR10, CIFAR100]")
     parser.add_argument("-nw","--num-workers", type=int, default = 4,
         help = "Number of workers to load data")
 
