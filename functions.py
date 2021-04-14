@@ -7,7 +7,7 @@ import numpy as np
 
 # LoadDataset : Load dataset, cifar-10 or cifar-100
 def LoadDataset(name):
-    if name == "CIFAR-10":
+    if name == "CIFAR10":
         # Set transform
         transform_train = transforms.Compose(
             [transforms.RandomCrop(32, padding=4),
@@ -29,14 +29,14 @@ def LoadDataset(name):
         classes = ('plane', 'car', 'bird', 'cat',
                 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-    elif name == "CIFAR-100":
+    elif name == "CIFAR100":
         transform = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
         ])
-        trainset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
+        trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
         testset =  torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
         
         classes = ['beaver', 'dolphin', 'otter', 'seal', 'whale',
