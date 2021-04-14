@@ -32,15 +32,15 @@ class MobileNetv1(nn.Module):
     # (128,2) means conv planes=128, conv stride=2, by default conv stride=1
     cfg = [64, (128,2), 128, (256,2), 256, (512,2), 512, 512, 512, 512, 512, (1024,2), 1024]
 
-    def __init__(self, num_classes=10):
-        super(MobileNet, self).__init__()
+    def __init__(self, bf_conf, num_classes=10):
+        super(MobileNetv1, self).__init__()
         # self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False)
         self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, 32, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
-        self.layers = self._make_layers(in_planes=32)
+        self.layers = self._make_layers(bf_conf, in_planes=32)
         self.linear = nn.Linear(1024, num_classes)
 
-    def _make_layers(self, in_planes):
+    def _make_layers(self, bf_conf, in_planes):
         layers = []
         for i, x in enumerate(self.cfg):
             out_planes = x if isinstance(x, int) else x[0]
