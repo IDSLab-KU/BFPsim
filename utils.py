@@ -1,12 +1,8 @@
 # utils.py
 
 import torch
-import torch.optim as optim
-import torch.nn as nn
 
 from log import Log
-from functions import BFConf, Stat, str2bool
-
 
 from blockfunc import GetZeroSettingError
 import numpy as np
