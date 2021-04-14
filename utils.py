@@ -3,7 +3,6 @@
 import torch
 
 from log import Log
-
 from blockfunc import GetZeroSettingError
 import numpy as np
 from functions import SaveStackedGraph

@@ -97,10 +97,13 @@ def ArgumentParse():
     parser.add_argument("--save-interval", type=int, default = 0,
         help = "Save interval, 0:last, rest:interval")
     
-    """Zero test mode"""
-
+    """Data save / Zero test mode"""
     parser.add_argument("--save-file", type=str, default = "",
         help = "Saved checkpoint to load model")
+
+    """Data save mode"""
+    
+    """Zero test mode"""
     parser.add_argument("--zt-bf", type=str2bool, default = False,
         help = "[Zero test] If saved file is BF network, set this to true")
     parser.add_argument("--zt-graph-mode", type=str, default="percentage",
