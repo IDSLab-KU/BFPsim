@@ -10,9 +10,25 @@ from functions import SaveStackedGraph
 
 
 def SaveData(args):
-    pass
+    Log.SetPrintCurrentTime(False)
+    Log.SetPrintElapsedTime(False)
+    
+    args.net.load_state_dict(torch.load(args.save_file))
+    # Forward for 1 mini batches
+    for i, data in enumerate(args.trainloader, 0):
+        inputs, labels = data
+        
+        if args.cuda:
+            inputs = inputs.cuda()
+            labels = labels.cuda()
+        
+        args.optimizer.zero_grad()
 
-
+        outputs = args.net(inputs)
+        # loss = args.criterion(outputs, labels)
+        # loss.backward()
+        break
+    Log.Print("Saved Complete!")
 
 def ZeroTest(args):
 
