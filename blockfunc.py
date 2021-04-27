@@ -40,6 +40,50 @@ def set_mantissa_tensor(inp, group_mantissa):
 # This is set as constant because of expandability
 CONF_SZ = 3
 
+from numba import jit, cuda
+# jit function to improve speed
+@jit(nopython=True)
+def _make_groups(v, group_mantissa, group_size):
+    r_ = v.copy()
+    for i in range(v.shape[0] // group_size):
+        M = 0
+        for ii in range(group_size):
+            if M < (v[i*group_size+ii] >> 23) & 0xff:
+                M = (v[i*group_size+ii] >> 23) & 0xff
+        for ii in range(group_size):
+            if (M - (v[i*group_size+ii] >> 23) & 0xff) <= group_mantissa - 1:
+                r_[i*group_size+ii] = v[i*group_size+ii] & (0xffffffff << (23 - group_mantissa + 1 + (M - (v[i*group_size+ii] >> 23) & 0xff)))
+            else:
+                r_[i*group_size+ii] = 0x00000000
+    return r_
+
+@cuda.jit
+def make_groups_gpu(arr, group_mantissa, group_size):
+    # Thread id in a 1D block
+    tx = cuda.threadIdx.x
+    # Block id in a 1D grid
+    ty = cuda.blockIdx.x
+    # Block width, i.e. number of threads per block
+    bw = cuda.blockDim.x
+    # Max value of one block
+    gi = tx + ty * bw
+    if gi < arr.size // group_size:
+        M = 0
+        # Get max mantissa
+        for ii in range(group_size):
+            e = (arr[gi*group_size+ii] >> 23) & 0xff
+            if M < e:
+                M = e
+        # Assign float values
+        for ii in range(group_size):
+            arri = gi*group_size+ii
+            e = (arr[arri] >> 23) & 0xff
+            if M - e <= group_mantissa - 1:
+                arr[arri] = arr[arri] & (0xffffffff << (24 - group_mantissa + M - e))
+                pass
+            else:
+                arr[arri] = 0
+
 
 # _make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
@@ -86,40 +130,21 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     inp_n = np.reshape(inp_n, (np.product(inp_n.shape),))
     # Convert to byte stream
     st = inp_n.tobytes() 
-
-    # STEP 2 : make groups and adjust mantissa
     # Set to uint32 array to easy computing
     v = np.frombuffer(st, dtype=np.uint32) 
-    # Extract exponent
-    e_mask = np.full(v.shape, 0x7f800000, dtype=np.uint32)
-    e_ = np.bitwise_and(v, e_mask)
-    # Get the max value
-    # IDEA : send shift code to back, maybe that's faster
-    np.right_shift(e_, 23, out=e_)
-    # Reshape arrat to group size to get max values
-    m_ = np.reshape(e_, (-1, group_size))
-    # get the max value of each blocks
-    m_ = np.amax(m_, axis=1)
-    # Revert back to original size
-    m_ = np.tile(m_, group_size)
-    # Difference of the exponent, -1 is applied because for more accurate hardware-wise simulation
-    # On hardware, mantissa bits have to store the 1 from the IEEE Standard
-    e_ = group_mantissa - (m_ - e_) - 1
-    r_mask = np.full(v.shape, 0x007fffff, dtype=np.uint32)
-    # When mantissa have to shift more than precision bits, total value is zero on hardware.
-    r_mask[e_ > 0xff] = 0xffffffff
-    # Clip the negative value, Maybe more smarter way...? -> np.clip(e_, 0, 0xff, out=e_)
-    e_[e_ > 0xff] = 0
-    # Shift to make reversed mask
-    np.right_shift(r_mask, e_, out=r_mask)
-    # Get the reversed mask
-    np.invert(r_mask, out=r_mask)
-    # appling mask to data
-    r_ = np.bitwise_and(v, r_mask)
 
+    r_ = cuda.to_device(v)
+    # STEP 2 : gpu computation
+    threadsperblock = 128
+    blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
+    make_groups_gpu[blockspergrid, threadsperblock](r_, group_mantissa, group_size)
+    r__ = r_.copy_to_host()
+
+    # STEP 2 : make groups and adjust mantissa
+    # r_ = _make_groups(v, group_mantissa, group_size)
     # STEP 3 : reverting array
     # revert to original np.float32 
-    r = np.frombuffer(r_, dtype=np.float32)
+    r = np.frombuffer(r__, dtype=np.float32)
     # revert back to original shape
     r = r.reshape(inp_m_shape)
     # Transpose and reshape back to original array
