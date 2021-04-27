@@ -84,6 +84,7 @@ def make_groups_gpu(arr, group_mantissa, group_size):
             else:
                 arr[arri] = 0
 
+threadsperblock = 128
 
 # _make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
@@ -133,15 +134,15 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # Set to uint32 array to easy computing
     v = np.frombuffer(st, dtype=np.uint32) 
 
-    r_ = cuda.to_device(v)
     # STEP 2 : gpu computation
-    threadsperblock = 128
+    r_ = cuda.to_device(v)
     blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
     make_groups_gpu[blockspergrid, threadsperblock](r_, group_mantissa, group_size)
     r__ = r_.copy_to_host()
+    
+    # Previous STEP 2 : make groups and adjust mantissa
+    # r__ = _make_groups(v, group_mantissa, group_size)
 
-    # STEP 2 : make groups and adjust mantissa
-    # r_ = _make_groups(v, group_mantissa, group_size)
     # STEP 3 : reverting array
     # revert to original np.float32 
     r = np.frombuffer(r__, dtype=np.float32)
