@@ -12,7 +12,8 @@
 
 
 # Execute numba test
-docker run --rm --gpus '"device=2"' --workdir /app -v "$(pwd)":/app ff60c1c32cb7 python3 -u /app/main.py -m AlexNet -bf AlexNet_16 --dataset CIFAR10
+# docker run --rm --gpus '"device=2"' --workdir /app -v "$(pwd)":/app ff60c1c32cb7 python3 -u /app/main.py -m AlexNet -bf AlexNet_16 --dataset CIFAR10
+docker run --rm --gpus '"device=2"' --workdir /app -v "$(pwd)":/app ff60c1c32cb7 python3 -u /app/main.py -m ResNet18 -bf ResNet18_16 --dataset CIFAR10
 
 
 # Execute
