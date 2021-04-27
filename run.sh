@@ -5,7 +5,7 @@
 # docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m VGG16 -bf VGG16_8
 
 # zero-test mode
-docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py --mode zero-test --save-file ./saves/ResNet18_CIFAR10_FP32_finish.model --log False
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py --mode zero-test --save-file ./saves/ResNet18_CIFAR10_FP32_finish.model --log False
 
 # data-save mode
 # docker run --rm --gpus '"device=1"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py --mode save-data --save-file ./logs/BatchNormAnalysis/20210413_065950_010.model --model ResNet18
@@ -14,9 +14,9 @@ docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367
 # MODEL=DenseNetCifar
 MODEL=ResNet18
 DATASET=CIFAR10
-BIT=M1
+BIT=M2
 # docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
 
 # for MODEL in AlexNet ResNet18 DenseNetCifar MobileNetv1 VGG16
 # do
