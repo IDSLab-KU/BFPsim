@@ -4,5 +4,6 @@ logs/
 stats/
 saves/
 figures/
+Archive/
 _*.py
 *.model
