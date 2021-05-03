@@ -5,5 +5,7 @@ stats/
 saves/
 figures/
 Archive/
+Results/
 _*.py
 *.model
+concat.sh
