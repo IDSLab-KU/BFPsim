@@ -18,21 +18,21 @@
 
 # Execute
 # MODEL=DenseNetCifar
-MODEL=ResNet18
+MODEL=MobileNetv1
 DATASET=CIFAR10
-BIT=M2
+BIT=4L
 
 # Save with savefile name
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
-# docker run --rm --gpus '"device=2"' --workdir /app -v "$(pwd)":/app ff60c1c32cb7 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+# docker run --rm --gpus '"device=0"' --cpus="4" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
+docker run --rm --gpus '"device=3"' --cpus="4" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
 
 # for MODEL in AlexNet ResNet18 DenseNetCifar MobileNetv1 VGG16
 # do
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
 # for BIT in 4 8 16
 # do
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
-# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app 4bd4764d9367 python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+# docker run --rm --gpus '"device=0"' --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
 # done
 # done
