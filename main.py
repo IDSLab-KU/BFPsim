@@ -240,5 +240,11 @@ if __name__ == '__main__':
         Log.Print("Program executed on save-data mode.", current=False, elapsed=False)
         Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
         SaveData(args)
+    elif args.mode == "model":
+        for name, param in args.net.named_parameters():
+            if param.requires_grad:
+                Log.Print(name, current=False, elapsed=False)
+            # Log.Print(parameter, current=False, elapsed=False)
+        # Log.Print("==", current=False, elapsed=False)
     else:
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
