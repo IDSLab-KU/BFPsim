@@ -1,13 +1,15 @@
 import torch
+import torch.optim as optim
 
 from log import Log
-from functions import SaveModel
+from functions import SaveModel, GetNetwork
 
 def Train(args, epoch_current):
     running_loss = 0.0
     batch_count = 0
     ptc_count = 1
     ptc_target = ptc_count / args.print_train_count
+
     for i, data in enumerate(args.trainloader, 0):
         inputs, labels = data
         
@@ -65,7 +67,7 @@ def Evaluate(args):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     
-    Log.Print('Test Accuracy: %f' % (correct / total))
+    Log.Print('Test Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
     if args.stat is not None:
         args.stat.AddTestAccuracy(correct / total)
 
@@ -84,13 +86,43 @@ def EvaluateTrain(args):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     
-    Log.Print('Train Accuracy: %f' % (correct / total))
+    Log.Print('Train Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
     if args.stat is not None:
         args.stat.AddTrainAccuracy(correct / total)
 
 # Train the network and evaluate
 def TrainNetwork(args):
+    checkpointIndex = 0 # Index of the checkpoint
+
     for epoch_current in range(args.training_epochs):
+
+        # Change and transfer model
+        if len(args.checkpoints) > checkpointIndex+1 and epoch_current == args.checkpoints[checkpointIndex+1]:
+            checkpointIndex += 1
+            Log.Print('Changing model bf configs')
+            net_ = args.net
+            optimizer_ = args.optimizer
+            scheduler = args.scheduler
+
+            args.net = GetNetwork(args.model, args.bf_layer_confs[checkpointIndex], args.classes)
+            # Convert state dicts
+            args.net.load_state_dict(net_.state_dict())
+            # Create new optimizer and emulate step
+            args.optimizer = optim.SGD(args.net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+            args.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=200)
+            for i in range(args.checkpoints[checkpointIndex]):
+                args.optimizer.step()
+                args.scheduler.step()
+
+
+            if args.cuda:
+                args.net.to('cuda')
+            
+            # args.optimizer.load_state_dict(optimizer_.state_dict)
+            # args.scheduler.load_state_dict(scheduler_.state_dict)
+            # Delete for memory management
+            # net_.__del__(self)
+
         Train(args, epoch_current)
         Evaluate(args)
         if args.train_accuracy:
@@ -99,6 +131,7 @@ def TrainNetwork(args):
         if args.save:
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
+
     
     Log.Print('Finished Training')
 

@@ -9,7 +9,7 @@ from functions import SaveStackedGraph
 
 
 
-def SaveData(args):
+def SaveNetworkWeights(args):
     Log.SetPrintCurrentTime(False)
     Log.SetPrintElapsedTime(False)
     
@@ -22,7 +22,7 @@ def SaveData(args):
             inputs = inputs.cuda()
             labels = labels.cuda()
         
-        args.optimizer.zero_grad()
+        # args.optimizer.zero_grad()
 
         outputs = args.net(inputs)
         # loss = args.criterion(outputs, labels)
@@ -30,7 +30,7 @@ def SaveData(args):
         break
     Log.Print("Saved Complete!")
 
-def ZeroTestAnalyze(args, bits, g_size):
+def ZSEAnalyze_(args, bits, g_size):
     parameters = torch.load(args.save_file).items()
     stat_data = np.zeros((args.layer_count, bits+1),dtype=np.int32)
     Log.Print("Mantissa bits {}, Group size {}".format(bits, g_size))
@@ -60,7 +60,7 @@ def ZeroTestAnalyze(args, bits, g_size):
         Log.Print("")
 
 
-def ZeroTest(args):
+def ZSEAnalyze(args):
     Log.SetPrintCurrentTime(False)
     Log.SetPrintElapsedTime(False)
 
@@ -96,12 +96,12 @@ def ZeroTest(args):
     #     for g_size in [36]:
     # for bits in [4, 5, 6, 7, 8]:
     #     for g_size in [36, 54, 72]:
-    ZeroTestAnalyze(args, 4, 36)
-    ZeroTestAnalyze(args, 4, 144)
-    ZeroTestAnalyze(args, 8, 54)
-    ZeroTestAnalyze(args, 8, 216)
-    ZeroTestAnalyze(args, 16, 54)
-    ZeroTestAnalyze(args, 16, 216)
-    # ZeroTestAnalyze(args, 23, 9)
-    # ZeroTestAnalyze(args, 23, 216)
+    ZSEAnalyze_(args, 4, 36)
+    ZSEAnalyze_(args, 4, 144)
+    ZSEAnalyze_(args, 8, 54)
+    ZSEAnalyze_(args, 8, 216)
+    ZSEAnalyze_(args, 16, 54)
+    ZSEAnalyze_(args, 16, 216)
+    # ZSEAnalyze_(args, 23, 9)
+    # ZSEAnalyze_(args, 23, 216)
     # print(args.net)

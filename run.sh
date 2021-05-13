@@ -15,6 +15,9 @@
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m AlexNet -bf AlexNet_16 --dataset CIFAR10
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ResNet18 -bf ResNet18_16 --dataset CIFAR10
 
+docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc AlexNet_00 --log True --stat True
+
+# docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode temp -m ResNet18 -bf ResNet18_4 --log False 
 
 # Execute
 # MODEL=DenseNetCifar
@@ -26,7 +29,7 @@ CPUS=4
 
 # Save with savefile name
 # docker run --rm --gpus '"device=0"' --cpus="${CPUS}" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_FP32
-docker run --rm --gpus '"device=3"' --cpus="${CPUS}" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
+# docker run --rm --gpus '"device=3"' --cpus="${CPUS}" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ${MODEL} -bf ${MODEL}_${BIT} --dataset ${DATASET} --save True --stat True --save-name ${MODEL}_${DATASET}_${BIT}bit
 
 # for MODEL in AlexNet ResNet18 DenseNetCifar MobileNetv1 VGG16
 # do
