@@ -126,6 +126,16 @@ def ArgumentParse():
 
     # Save log file location
     
+    # Load train config file
+    if args.train_config_file == "":
+        Log.Print("Train config not set, simple mode activated.", current=False, elapsed=False)
+        args.train_config = None
+    elif not os.path.exists("./conf_train/"+args.train_config_file+".json"):
+        raise FileNotFoundError(args.train_config_file + ".json not exists on ./conf_train/ directory!")
+    else:
+        with open("./conf_train/"+args.train_config_file+".json", "r", encoding="utf-8") as f:
+            args.train_config = json.load(f)
+
     if args.train_config != None and "model" in args.train_config:
         args.save_name = args.train_config["save-name"]
     elif args.save_name == "":
@@ -148,16 +158,6 @@ def ArgumentParse():
     else:
         Log.SetLogFile(False)
     
-    # Load train config file
-    if args.train_config_file == "":
-        Log.Print("Train config not set, simple mode activated.", current=False, elapsed=False)
-        args.train_config = None
-    elif not os.path.exists("./conf_train/"+args.train_config_file+".json"):
-        raise FileNotFoundError(args.train_config_file + ".json not exists on ./conf_train/ directory!")
-    else:
-        with open("./conf_train/"+args.train_config_file+".json", "r", encoding="utf-8") as f:
-            args.train_config = json.load(f)
-
     # Load train data
     args.trainset, args.testset, args.classes = LoadDataset(args.dataset)
 
