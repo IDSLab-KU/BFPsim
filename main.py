@@ -90,7 +90,7 @@ def ArgumentParse():
     # Block setup
     # Printing / Logger / Stat
     parser.add_argument("--save-name", type=str, default = "",
-        help = "Name of the save file")
+        help = "[TC] Name of the save file")
 
     parser.add_argument("--log", type=str2bool, default = True,
         help = "Record to log object?")
@@ -125,7 +125,10 @@ def ArgumentParse():
     args = parser.parse_args()
 
     # Save log file location
-    if args.save_name == "":
+    
+    if args.train_config != None and "model" in args.train_config:
+        args.save_name = args.train_config["save-name"]
+    elif args.save_name == "":
         args.save_name = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_")
     # Create directories
     if not os.path.exists("./logs"):
