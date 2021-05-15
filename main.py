@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 
 from log import Log
-from functions import LoadDataset, BFConf, Stat, str2bool, SaveModel, GetNetwork
+from functions import LoadDataset, BFConf, Stat, str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
 from train import TrainNetwork
 from utils import ZSEAnalyze, SaveNetworkWeights
 
@@ -37,8 +37,8 @@ def handler(signum, frame):
 
 def GetBFLayerConfig(file, model):
     if file == "":
-        Log.Print("bf layer config file not set, original network will be trained.", current=False, elapsed=False)
-        Log.Print("Ignore any additional warnings around setting layers", current=False, elapsed=False)
+        # Log.Print("bf layer config file not set, FP32 network config is selected.", current=False, elapsed=False)
+        # Log.Print("Ignore any additional warnings around setting layers", current=False, elapsed=False)
         conf = dict()
     elif not os.path.exists("./conf_net/"+file+".json"):
         raise FileNotFoundError(file + ".json not exists on ./conf_net/ directory!")
@@ -204,9 +204,15 @@ def ArgumentParse():
     
     # Critertion, optimizer, scheduler
     args.criterion = nn.CrossEntropyLoss()
-    args.optimizer = optim.SGD(args.net.parameters(), lr=0.1,
-                        momentum=0.9, weight_decay=5e-4)
-    args.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=200)
+
+
+    if args.train_config != None and "optimizer-dict" in args.train_config:
+        if "0" in args.train_config["optimizer-dict"]:
+            args.optimizer, args.scheduler = GetOptimizerScheduler(args.net, args.train_config["optimizer-dict"]["0"])
+        else:
+            args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)            
+    else:
+        args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)
 
     # Training Epochs    
     if args.train_config != None and "training-epochs" in args.train_config:

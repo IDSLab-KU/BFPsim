@@ -15,7 +15,8 @@
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m AlexNet -bf AlexNet_16 --dataset CIFAR10
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ResNet18 -bf ResNet18_16 --dataset CIFAR10
 
-docker run --rm --gpus '"device=7"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc AlexNet_14 --log True --stat True
+docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc example --log True
+# docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc test_00 --log True --stat True
 
 # docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode temp -m ResNet18 -bf ResNet18_4 --log False 
 
