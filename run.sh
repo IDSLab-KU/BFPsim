@@ -15,10 +15,48 @@
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m AlexNet -bf AlexNet_16 --dataset CIFAR10
 # docker run --rm --gpus '"device=2"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py -m ResNet18 -bf ResNet18_16 --dataset CIFAR10
 
-docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc example --log True
-# docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc test_00 --log True --stat True
 
+# Execute example train config file
+# docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc example
+
+# Execute tempo mode
 # docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode temp -m ResNet18 -bf ResNet18_4 --log False 
+
+# Create new pane
+
+# Automatic train execution
+## Set config name here
+conf_names=(AlexNet_30 AlexNet_31 AlexNet_32 AlexNet_33)
+## Please Change Session name every time, it will override existing session.
+session=fb0
+
+# ================ Do not touch below here ==================
+cpus="4"
+user="$(id -u):$(id -g)"
+devices=('"device=0"' '"device=1"' '"device=2"' '"device=3"' '"device=4"' '"device=5"' '"device=6"' '"device=7"')
+
+# Create Tmux Session
+tmux kill-session -t $session
+tmux new -d -s $session
+tmux split-window -h
+tmux select-pane -t 0
+tmux split-window -v
+tmux split-window -v
+tmux select-pane -t 0
+tmux split-window -v
+tmux select-pane -t 4
+tmux split-window -v
+tmux split-window -v
+tmux select-pane -t 4
+tmux split-window -v
+
+# Send keys to sessions
+for i in ${!conf_names[@]}
+do
+    tmux send-keys -t $session.$i "docker run --rm --gpus ${devices[$i]} --cpus=${cpus} --user ${user} --workdir /app -v $(pwd):/app floatblock:latest python3 -u /app/main.py --mode train -tc ${conf_names[$i]} --log True --stat True" C-m
+done
+
+
 
 # Execute
 # MODEL=DenseNetCifar
