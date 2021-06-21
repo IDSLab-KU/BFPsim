@@ -26,7 +26,7 @@
 
 # Automatic train execution
 ## Set config name here
-conf_names=(AlexNet_30 AlexNet_31 AlexNet_32 AlexNet_33)
+conf_names=(test)
 ## Please Change Session name every time, it will override existing session.
 session=fb0
 
@@ -55,7 +55,6 @@ for i in ${!conf_names[@]}
 do
     tmux send-keys -t $session.$i "docker run --rm --gpus ${devices[$i]} --cpus=${cpus} --user ${user} --workdir /app -v $(pwd):/app floatblock:latest python3 -u /app/main.py --mode train -tc ${conf_names[$i]} --log True --stat True" C-m
 done
-
 
 
 # Execute

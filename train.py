@@ -21,6 +21,10 @@ def Train(args, epoch_current):
 
         outputs = args.net(inputs)
         loss = args.criterion(outputs, labels)
+
+        # Boost Loss
+        loss *= args.loss_boost
+
         loss.backward()
 
         args.optimizer.step()

@@ -79,6 +79,8 @@ def ArgumentParse():
     # Training setup
     parser.add_argument("--training-epochs", type=int, default = 200,
         help = "[TC] Training epochs")
+    parser.add_argument("--loss-boost", type=float, default = 1.0,
+        help = "[TC] Loss Boost")
     # parser.add_argument("--initial-lr", type=float, default = 0.1,
     #     help = "Initial learning rate")
     # parser.add_argument("--momentum", type=float, default = 0,
@@ -164,6 +166,7 @@ def ArgumentParse():
     if args.train_config != None and "model" in args.train_config:
         args.model = args.train_config["model"]
 
+
     # Setting the model
     if args.train_config == None:
         # Parse bf layer conf from file
@@ -220,6 +223,9 @@ def ArgumentParse():
     else:
         args.training_epochs = 200
     
+    if args.train_config != None and "loss-boost" in args.train_config:
+        args.loss_boost = args.train_config["loss-boost"]
+
     # Logger, stat, etc
     args.stat_loss_batches = 100
 
