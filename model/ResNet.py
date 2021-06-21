@@ -13,19 +13,19 @@ from functions import SetConv2dLayer
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, bf_conf, in_planes, planes, stride=1):
+    def __init__(self, bf_conf, in_planes, planes, stride=1, bwg_boost=1.0):
         super(BasicBlock, self).__init__()
         # self.conv1 = nn.Conv2d( in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False, bwg_boost=bwg_boost)
         self.bn1 = nn.BatchNorm2d(planes)
         # self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = SetConv2dLayer("conv2", bf_conf, planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = SetConv2dLayer("conv2", bf_conf, planes, planes, kernel_size=3, stride=1, padding=1, bias=False, bwg_boost=bwg_boost)
         self.bn2 = nn.BatchNorm2d(planes)
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
                 # nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
-                SetConv2dLayer("shortcut", bf_conf, in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                SetConv2dLayer("shortcut", bf_conf, in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False, bwg_boost=bwg_boost),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
@@ -40,24 +40,24 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, bf_conf, in_planes, planes, stride=1):
+    def __init__(self, bf_conf, in_planes, planes, stride=1, bwg_boost=1.0):
         super(Bottleneck, self).__init__()
         
         # self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
-        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, planes, kernel_size=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, planes, kernel_size=1, bias=False, bwg_boost=bwg_boost)
         self.bn1 = nn.BatchNorm2d(planes)
         # self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.conv2 = SetConv2dLayer("conv2", bf_conf, planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)        
+        self.conv2 = SetConv2dLayer("conv2", bf_conf, planes, planes, kernel_size=3, stride=stride, padding=1, bias=False, bwg_boost=bwg_boost)        
         self.bn2 = nn.BatchNorm2d(planes)
         # self.conv3 = nn.Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
-        self.conv3 = SetConv2dLayer("conv3", bf_conf, planes, self.expansion * planes, kernel_size=1, bias=False)   
+        self.conv3 = SetConv2dLayer("conv3", bf_conf, planes, self.expansion * planes, kernel_size=1, bias=False, bwg_boost=bwg_boost)   
         self.bn3 = nn.BatchNorm2d(self.expansion*planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
                 # nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
-                SetConv2dLayer("shortcut", bf_conf, pin_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                SetConv2dLayer("shortcut", bf_conf, in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False, bwg_boost=bwg_boost),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
@@ -70,12 +70,13 @@ class Bottleneck(nn.Module):
         return out
 
 class ResNet(nn.Module):
-    def __init__(self, block, bf_conf, num_blocks, num_classes):
+    def __init__(self, block, bf_conf, num_blocks, num_classes, bwg_boost=1.0):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
+        self.bwg_boost = bwg_boost
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, 64, kernel_size=3, stride=1, padding=1, bias=False, bwg_boost=self.bwg_boost)
         self.bn1 = nn.BatchNorm2d(64)
 
         self.layer1 = self._make_layer(block, bf_conf, "layer1", 64, num_blocks[0], stride=1)
@@ -89,10 +90,10 @@ class ResNet(nn.Module):
         layers = []
         for i in range(len(strides)):
             if name in bf_conf and str(i) in bf_conf[name]: # Not normal layer
-                layers.append(block(bf_conf[name][str(i)], self.in_planes, planes, strides[i]))
+                layers.append(block(bf_conf[name][str(i)], self.in_planes, planes, strides[i], self.bwg_boost))
             else: # Normal Layer
                 empty_dict = dict()
-                layers.append(block(empty_dict, self.in_planes, planes, strides[i]))
+                layers.append(block(empty_dict, self.in_planes, planes, strides[i], self.bwg_boost))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -107,17 +108,17 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
-def ResNet18(bf_conf, num_classes):
-    return ResNet(BasicBlock, bf_conf, [2, 2, 2, 2], num_classes=num_classes)
+def ResNet18(bf_conf, num_classes, bwg_boost=1.0):
+    return ResNet(BasicBlock, bf_conf, [2, 2, 2, 2], num_classes=num_classes, bwg_boost=bwg_boost)
 
-def ResNet34(bf_conf, num_classes):
-    return ResNet(BasicBlock, bf_conf, [3, 4, 6, 3], num_classes=num_classes)
+def ResNet34(bf_conf, num_classes, bwg_boost=1.0):
+    return ResNet(BasicBlock, bf_conf, [3, 4, 6, 3], num_classes=num_classes, bwg_boost=bwg_boost)
 
-def ResNet50(bf_conf, num_classes):
-    return ResNet(Bottleneck, bf_conf, [3, 4, 6, 3], num_classes=num_classes)
+def ResNet50(bf_conf, num_classes, bwg_boost=1.0):
+    return ResNet(Bottleneck, bf_conf, [3, 4, 6, 3], num_classes=num_classes, bwg_boost=bwg_boost)
 
-def ResNet101(bf_conf, num_classes):
-    return ResNet(Bottleneck, bf_conf, [3, 4, 23, 3], num_classes=num_classes)
+def ResNet101(bf_conf, num_classes, bwg_boost=1.0):
+    return ResNet(Bottleneck, bf_conf, [3, 4, 23, 3], num_classes=num_classes, bwg_boost=bwg_boost)
 
-def ResNet152(bf_conf, num_classes):
-    return ResNet(Bottleneck, bf_conf, [3, 8, 36, 3], num_classes=num_classes)
+def ResNet152(bf_conf, num_classes, bwg_boost=1.0):
+    return ResNet(Bottleneck, bf_conf, [3, 8, 36, 3], num_classes=num_classes, bwg_boost=bwg_boost)
