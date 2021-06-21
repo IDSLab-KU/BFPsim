@@ -89,94 +89,122 @@ def DirKey(v):
             return key
 
 class BFConf():
-    def __init__(self, dic):
+    def __init__(self, dic, bwg_boost = 1.0):
         # Foward - Weight
-        self.f_w     = dic["f_w"]                if "f_w"     in dic.keys() else True
-        self.f_w_bit = dic["f_w_bit"]            if "f_w_bit" in dic.keys() else 8
-        self.f_w_sz  = dic["f_w_sz"]             if "f_w_sz"  in dic.keys() else 36
-        self.f_w_dir = DIR_DICT[dic["f_w_dir"]]  if "f_w_dir" in dic.keys() else DIR_DICT["WI"]
+        self.fw     = dic["fw"]                if "fw"     in dic.keys() else True
+        self.fw_bit = dic["fw_bit"]            if "fw_bit" in dic.keys() else 8
+        self.fw_sz  = dic["fw_sz"]             if "fw_sz"  in dic.keys() else 36
+        self.fw_dir = DIR_DICT[dic["fw_dir"]]  if "fw_dir" in dic.keys() else DIR_DICT["WI"]
 
         # Forward - Input
-        self.f_i     = dic["f_i"]                if "f_i"     in dic.keys() else True
-        self.f_i_bit = dic["f_i_bit"]            if "f_i_bit" in dic.keys() else self.f_w_bit
-        self.f_i_sz  = dic["f_i_sz"]             if "f_i_sz"  in dic.keys() else self.f_w_sz
-        self.f_i_dir = DIR_DICT[dic["f_i_dir"]]  if "f_i_dir" in dic.keys() else DIR_DICT["FC"]
+        self.fi     = dic["fi"]                if "fi"     in dic.keys() else True
+        self.fi_bit = dic["fi_bit"]            if "fi_bit" in dic.keys() else self.fw_bit
+        self.fi_sz  = dic["fi_sz"]             if "fi_sz"  in dic.keys() else self.fw_sz
+        self.fi_dir = DIR_DICT[dic["fi_dir"]]  if "fi_dir" in dic.keys() else DIR_DICT["FC"]
 
         # Forward - Output
-        self.f_o     = dic["f_o"]                if "f_o"     in dic.keys() else True
-        self.f_o_bit = dic["f_o_bit"]            if "f_o_bit" in dic.keys() else self.f_w_bit
-        self.f_o_sz  = dic["f_o_sz"]             if "f_o_sz"  in dic.keys() else self.f_w_sz
-        self.f_o_dir = DIR_DICT[dic["f_o_dir"]]  if "f_o_dir" in dic.keys() else DIR_DICT["FC"]
+        self.fo     = dic["fo"]                if "fo"     in dic.keys() else False
+        self.fo_bit = dic["fo_bit"]            if "fo_bit" in dic.keys() else self.fw_bit
+        self.fo_sz  = dic["fo_sz"]             if "fo_sz"  in dic.keys() else self.fw_sz
+        self.fo_dir = DIR_DICT[dic["fo_dir"]]  if "fo_dir" in dic.keys() else DIR_DICT["FC"]
 
-        # Backward - Weight
-        self.b_w     = dic["b_w"]                if "b_w"     in dic.keys() else True
-        self.b_w_bit = dic["b_w_bit"]            if "b_w_bit" in dic.keys() else self.f_w_bit
-        self.b_w_sz  = dic["b_w_sz"]             if "b_w_sz"  in dic.keys() else self.f_w_sz
-        self.b_w_dir = DIR_DICT[dic["b_w_dir"]]  if "b_w_dir" in dic.keys() else DIR_DICT["WO"]
+        # Backward - Output gradient while calculating input gradient
+        self.bio     = dic["bio"]                if "bio"     in dic.keys() else True
+        self.bio_bit = dic["bio_bit"]            if "bio_bit" in dic.keys() else self.fo_bit
+        self.bio_sz  = dic["bio_sz"]             if "bio_sz"  in dic.keys() else self.fo_sz
+        self.bio_dir = DIR_DICT[dic["bio_dir"]]  if "bio_dir" in dic.keys() else DIR_DICT["FC"]
 
-        # Backward - Weight Gradient
-        self.b_wg     = dic["b_wg"]                if "b_wg"     in dic.keys() else True
-        self.b_wg_bit = dic["b_wg_bit"]            if "b_wg_bit" in dic.keys() else self.f_w_bit
-        self.b_wg_sz  = dic["b_wg_sz"]             if "b_wg_sz"  in dic.keys() else self.f_w_sz
-        self.b_wg_dir = DIR_DICT[dic["b_wg_dir"]]  if "b_wg_dir" in dic.keys() else DIR_DICT["WO"]
+        # Backward - Weight while calculating input gradient
+        self.biw     = dic["biw"]                if "biw"     in dic.keys() else True
+        self.biw_bit = dic["biw_bit"]            if "biw_bit" in dic.keys() else self.fw_bit
+        self.biw_sz  = dic["biw_sz"]             if "biw_sz"  in dic.keys() else self.fw_sz
+        self.biw_dir = DIR_DICT[dic["biw_dir"]]  if "biw_dir" in dic.keys() else DIR_DICT["WO"]
 
-        # Backward - Input Gradient
-        self.b_ig     = dic["b_ig"]                if "b_ig"     in dic.keys() else True
-        self.b_ig_bit = dic["b_ig_bit"]            if "b_ig_bit" in dic.keys() else self.f_i_bit
-        self.b_ig_sz  = dic["b_ig_sz"]             if "b_ig_sz"  in dic.keys() else self.f_i_sz
-        self.b_ig_dir = DIR_DICT[dic["b_ig_dir"]]  if "b_ig_dir" in dic.keys() else DIR_DICT["FC"]
+        # Backward - Calculated input gradient
+        self.big     = dic["big"]                if "big"     in dic.keys() else False
+        self.big_bit = dic["big_bit"]            if "big_bit" in dic.keys() else self.fi_bit
+        self.big_sz  = dic["big_sz"]             if "big_sz"  in dic.keys() else self.fi_sz
+        self.big_dir = DIR_DICT[dic["big_dir"]]  if "big_dir" in dic.keys() else DIR_DICT["FC"]
 
-        # Backward - Output Gradient
-        self.b_og     = dic["b_og"]                if "b_og"     in dic.keys() else True
-        self.b_og_bit = dic["b_og_bit"]            if "b_og_bit" in dic.keys() else self.f_o_bit
-        self.b_og_sz  = dic["b_og_sz"]             if "b_og_sz"  in dic.keys() else self.f_o_sz
-        self.b_og_dir = DIR_DICT[dic["b_og_dir"]]  if "b_og_dir" in dic.keys() else DIR_DICT["FC"]
+        # Backward - Output gradient while calculating weight gradient
+        self.bwo     = dic["bwo"]                if "bwo"     in dic.keys() else True
+        self.bwo_bit = dic["bwo_bit"]            if "bwo_bit" in dic.keys() else self.fo_bit
+        self.bwo_sz  = dic["bwo_sz"]             if "bwo_sz"  in dic.keys() else self.fo_sz
+        self.bwo_dir = DIR_DICT[dic["bwo_dir"]]  if "bwo_dir" in dic.keys() else DIR_DICT["FC"]
 
-        
+        # Backward - Input while calculating weight gradient
+        self.bwi     = dic["bwi"]                if "bwi"     in dic.keys() else True
+        self.bwi_bit = dic["bwi_bit"]            if "bwi_bit" in dic.keys() else self.fi_bit
+        self.bwi_sz  = dic["bwi_sz"]             if "bwi_sz"  in dic.keys() else self.fi_sz
+        self.bwi_dir = DIR_DICT[dic["bwi_dir"]]  if "bwi_dir" in dic.keys() else DIR_DICT["FC"]
+
+        # Backward - Calculated weight gradient
+        self.bwg     = dic["bwg"]                if "bwg"     in dic.keys() else False
+        self.bwg_bit = dic["bwg_bit"]            if "bwg_bit" in dic.keys() else self.fw_bit
+        self.bwg_sz  = dic["bwg_sz"]             if "bwg_sz"  in dic.keys() else self.fw_sz
+        self.bwg_dir = DIR_DICT[dic["bwg_dir"]]  if "bwg_dir" in dic.keys() else DIR_DICT["WO"]
+
+        self.bwg_boost = bwg_boost
+
     def __repr__(self):
         return str(self)
     def __str__(self):
         s = "["
-        s += "FW/" if self.f_w else "  /" 
-        s += "FI/" if self.f_i else "  /" 
-        s += "FO/" if self.f_o else "  /" 
-        s += "BW/" if self.b_w else "  /" 
-        s += "WG/" if self.b_wg else "  /" 
-        s += "IG/" if self.b_ig else "  /" 
-        s += "OG]" if self.b_og else "  ]"
+        s += "FW/" if self.fw else "  /" 
+        s += "FI/" if self.fi else "  /" 
+        s += "FO/" if self.fo else "  /" 
+        s += "BIO/" if self.bio else "   /" 
+        s += "BIW/" if self.biw else "   /" 
+        s += "BIG/" if self.big else "   /" 
+        if (self.bwo_bit == self.bio_bit and self.bwo_sz == self.bio_sz and self.bwo_dir == self.bio_dir):
+            s += "BWO*/" if self.bwo else "   /" 
+        else:
+            s += "BWO/" if self.bwo else "   /" 
+        if (self.bwi_bit == self.fi_bit and self.bwi_sz == self.fi_sz and self.bwi_dir == self.fi_dir):
+            s += "BWI*/" if self.bwi else "   /" 
+        else:
+            s += "BWI/" if self.bwi else "   /" 
+        s += "BWG]" if self.bwg else "   ]"
         s += ",bit="
-        if self.f_w_bit == self.f_i_bit == self.f_o_bit == self.b_w_bit == self.b_wg_bit == self.b_ig_bit == self.b_og_bit:
-            s += '{}'.format(self.f_w_bit)
+        if self.fw_bit == self.fi_bit == self.fo_bit == self.bio_bit == self.biw_bit == self.big_bit == self.bwo_bit == self.bwi_bit == self.bwg_bit:
+            s += '{}'.format(self.fw_bit)
         else:
-            s += "{}/".format(self.f_w_bit) if self.f_w else "_/" 
-            s += "{}/".format(self.f_i_bit) if self.f_i else "_/" 
-            s += "{}/".format(self.f_o_bit) if self.f_o else "_/" 
-            s += "{}/".format(self.b_w_bit) if self.b_w else "_/" 
-            s += "{}/".format(self.b_wg_bit) if self.b_wg else "_/" 
-            s += "{}/".format(self.b_ig_bit) if self.b_ig else "_/" 
-            s += "{}".format(self.b_og_bit)  if self.b_wg else "_]"
+            s += "{}/".format(self.fw_bit) if self.fw else "_/" 
+            s += "{}/".format(self.fi_bit) if self.fi else "_/" 
+            s += "{}/".format(self.fo_bit) if self.fo else "_/" 
+            s += "{}/".format(self.bio_bit) if self.bio else "_/" 
+            s += "{}/".format(self.biw_bit) if self.biw else "_/" 
+            s += "{}/".format(self.big_bit) if self.big else "_/" 
+            s += "{}/".format(self.bwo_bit) if self.bwo else "_/" 
+            s += "{}/".format(self.bwi_bit) if self.bwi else "_/" 
+            s += "{}".format(self.bwg_bit)  if self.bwg else "_]"
         s += ",sz="
-        if self.f_w_sz == self.f_i_sz == self.f_o_sz == self.b_w_sz == self.b_wg_sz == self.b_ig_sz == self.b_og_sz:
-            s += '{}'.format(self.f_w_sz)
+        if self.fw_sz == self.fi_sz == self.fo_sz == self.bio_sz == self.biw_sz == self.big_sz == self.bwo_sz == self.bwi_sz == self.bwg_sz:
+            s += '{}'.format(self.fw_sz)
         else:
-            s += "{}/".format(self.f_w_sz) if self.f_w else "_/" 
-            s += "{}/".format(self.f_i_sz) if self.f_i else "_/" 
-            s += "{}/".format(self.f_o_sz) if self.f_o else "_/" 
-            s += "{}/".format(self.b_w_sz) if self.b_w else "_/" 
-            s += "{}/".format(self.b_wg_sz) if self.b_wg else "_/" 
-            s += "{}/".format(self.b_ig_sz) if self.b_ig else "_/" 
-            s += "{}".format(self.b_og_sz)  if self.b_wg else "_]"
+            s += "{}/".format(self.fw_sz) if self.fw else "_/" 
+            s += "{}/".format(self.fi_sz) if self.fi else "_/" 
+            s += "{}/".format(self.fo_sz) if self.fo else "_/" 
+            s += "{}/".format(self.bio_sz) if self.bio else "_/" 
+            s += "{}/".format(self.biw_sz) if self.biw else "_/" 
+            s += "{}/".format(self.big_sz) if self.big else "_/" 
+            s += "{}/".format(self.bwo_sz) if self.bwo else "_/" 
+            s += "{}/".format(self.bwi_sz) if self.bwi else "_/" 
+            s += "{}".format(self.bwg_sz)  if self.bwg else "_]"
         s += ",dir=["
-        if self.f_w_dir == self.f_i_dir == self.f_o_dir == self.b_w_dir == self.b_wg_dir == self.b_ig_dir == self.b_og_dir:
-            s += '{}'.format(DirKey(self.f_w_dir))
+        if self.fw_dir == self.fi_dir == self.fo_dir == self.bio_dir == self.biw_dir == self.big_dir == self.bwo_dir == self.bwi_dir == self.bwg_dir:
+            s += '{}'.format(self.fw_dir)
         else:
-            s += "{}/".format(DirKey(self.f_w_dir)) if self.f_w else "_/" 
-            s += "{}/".format(DirKey(self.f_i_dir)) if self.f_i else "_/" 
-            s += "{}/".format(DirKey(self.f_o_dir)) if self.f_o else "_/" 
-            s += "{}/".format(DirKey(self.b_w_dir)) if self.b_w else "_/" 
-            s += "{}/".format(DirKey(self.b_wg_dir)) if self.b_wg else "_/" 
-            s += "{}/".format(DirKey(self.b_ig_dir)) if self.b_ig else "_/" 
-            s += "{}]".format(DirKey(self.b_og_dir))  if self.b_wg else "_]"
+            s += "{}/".format(DirKey(self.fw_dir)) if self.fw else "_/" 
+            s += "{}/".format(DirKey(self.fi_dir)) if self.fi else "_/" 
+            s += "{}/".format(DirKey(self.fo_dir)) if self.fo else "_/" 
+            s += "{}/".format(DirKey(self.bio_dir)) if self.bio else "_/" 
+            s += "{}/".format(DirKey(self.biw_dir)) if self.biw else "_/" 
+            s += "{}/".format(DirKey(self.big_dir)) if self.big else "_/" 
+            s += "{}/".format(DirKey(self.bwo_dir)) if self.bwo else "_/" 
+            s += "{}/".format(DirKey(self.bwi_dir)) if self.bwi else "_/" 
+            s += "{}".format(DirKey(self.bwg_dir))  if self.bwg else "_]"
+        s += ",bwg_boost={}".format(self.bwg_boost)
         return s
 
 class Stat():
@@ -262,9 +290,9 @@ def SaveStackedGraph(xlabels, data, mode="percentage", title="", save=""):
 from log import Log
 from block import BFLinear, BFConv2d
 
-def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride=1, padding=0, padding_mode="zeros", dilation=1, groups=1, bias=True):
+def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride=1, padding=0, padding_mode="zeros", dilation=1, groups=1, bias=True, bwg_boost=1.0):
     if name in bf_conf:
-        return BFConv2d(in_channels, out_channels, kernel_size, BFConf(bf_conf[name]), stride, padding, dilation, groups, bias, padding_mode)
+        return BFConv2d(in_channels, out_channels, kernel_size, BFConf(bf_conf[name], bwg_boost), stride, padding, dilation, groups, bias, padding_mode)
     else:
         Log.Print("WARNING(SetConv2dLayer): Name %s not in config file. Returning normal nn.Conv2d"%name, col='m', current=False, elapsed=False)
         return torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
