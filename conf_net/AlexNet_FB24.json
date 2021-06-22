@@ -4,40 +4,30 @@
         "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
-        "fo_sz":54,
-        "bwo_bit":16,
-        "bwi_bit":16
+        "fo_sz":54
     },
     "conv2":{
         "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
-        "fo_sz":54,
-        "bwo_bit":16,
-        "bwi_bit":16
+        "fo_sz":54
     },
     "conv3":{
         "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
-        "fo_sz":54,
-        "bwo_bit":16,
-        "bwi_bit":16
+        "fo_sz":54
     },
     "conv4":{
         "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
-        "fo_sz":54,
-        "bwo_bit":16,
-        "bwi_bit":16
+        "fo_sz":54
     },
     "conv5":{
         "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
-        "fo_sz":54,
-        "bwo_bit":16,
-        "bwi_bit":16
+        "fo_sz":54
     }
 }

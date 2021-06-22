@@ -1,20 +1,20 @@
 {
     "name":"MobileNetv1",
     "conv1":{
-        "fw_bit":8,
+        "fw_bit":16,
         "fw_sz":216,
         "fi_sz":54,
         "fo_sz":54
     },
     "0":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -22,13 +22,13 @@
     },
     "1":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -36,13 +36,13 @@
     },
     "2":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -50,13 +50,13 @@
     },
     "3":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -64,13 +64,13 @@
     },
     "4":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -78,13 +78,13 @@
     },
     "5":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -92,13 +92,13 @@
     },
     "6":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -106,13 +106,13 @@
     },
     "7":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -120,13 +120,13 @@
     },
     "8":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -134,13 +134,13 @@
     },
     "9":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -148,13 +148,13 @@
     },
     "10":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -162,13 +162,13 @@
     },
     "11":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
@@ -176,13 +176,13 @@
     },
     "12":{
         "conv1":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
         },
         "conv2":{
-            "fw_bit":8,
+            "fw_bit":16,
             "fw_sz":216,
             "fi_sz":54,
             "fo_sz":54
