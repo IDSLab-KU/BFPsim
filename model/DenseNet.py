@@ -12,14 +12,14 @@ from functions import SetConv2dLayer
 
 
 class Bottleneck(nn.Module):
-    def __init__(self, bf_conf, in_planes, growth_rate):
+    def __init__(self, bf_conf, in_planes, growth_rate, bwg_boost=1.0):
         super(Bottleneck, self).__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
         # self.conv1 = nn.Conv2d(in_planes, 4*growth_rate, kernel_size=1, bias=False)
-        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, 4*growth_rate, kernel_size=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, in_planes, 4*growth_rate, kernel_size=1, bias=False, bwg_boost=bwg_boost)
         self.bn2 = nn.BatchNorm2d(4*growth_rate)
         # self.conv2 = nn.Conv2d(4*growth_rate, growth_rate, kernel_size=3, padding=1, bias=False)
-        self.conv2 = SetConv2dLayer("conv2", bf_conf, 4*growth_rate, growth_rate, kernel_size=3, padding=1, bias=False)
+        self.conv2 = SetConv2dLayer("conv2", bf_conf, 4*growth_rate, growth_rate, kernel_size=3, padding=1, bias=False, bwg_boost=bwg_boost)
 
     def forward(self, x):
         out = self.conv1(F.relu(self.bn1(x)))
@@ -29,11 +29,11 @@ class Bottleneck(nn.Module):
 
 
 class Transition(nn.Module):
-    def __init__(self, bf_conf, name, in_planes, out_planes):
+    def __init__(self, bf_conf, name, in_planes, out_planes, bwg_boost=1.0):
         super(Transition, self).__init__()
         self.bn = nn.BatchNorm2d(in_planes)
         # self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False)
-        self.conv = SetConv2dLayer(name, bf_conf, in_planes, out_planes, kernel_size=1, bias=False)
+        self.conv = SetConv2dLayer(name, bf_conf, in_planes, out_planes, kernel_size=1, bias=False, bwg_boost=bwg_boost)
 
     def forward(self, x):
         out = self.conv(F.relu(self.bn(x)))
@@ -42,13 +42,13 @@ class Transition(nn.Module):
 
 
 class DenseNet(nn.Module):
-    def __init__(self, bf_conf, block, nblocks, growth_rate=12, reduction=0.5, num_classes=10):
+    def __init__(self, bf_conf, block, nblocks, growth_rate=12, reduction=0.5, num_classes=10, bwg_boost=1.0):
         super(DenseNet, self).__init__()
         self.growth_rate = growth_rate
 
         num_planes = 2*growth_rate
         # self.conv1 = nn.Conv2d(3, num_planes, kernel_size=3, padding=1, bias=False)
-        self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, num_planes, kernel_size=3, padding=1, bias=False)
+        self.conv1 = SetConv2dLayer("conv1", bf_conf, 3, num_planes, kernel_size=3, padding=1, bias=False, bwg_boost=bwg_boost)
 
         self.dense1 = self._make_dense_layers(bf_conf, "dense1", block, num_planes, nblocks[0])
         num_planes += nblocks[0]*growth_rate
@@ -96,17 +96,17 @@ class DenseNet(nn.Module):
         out = self.linear(out)
         return out
 
-def DenseNet121(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=32, num_classes=out_channels)
+def DenseNet121(bf_conf, out_channels, bwg_boost=1.0):
+    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=32, num_classes=out_channels, bwg_boost=bwg_boost)
 
-def DenseNet169(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,32,32], growth_rate=32, num_classes=out_channels)
+def DenseNet169(bf_conf, out_channels, bwg_boost=1.0):
+    return DenseNet(bf_conf, Bottleneck, [6,12,32,32], growth_rate=32, num_classes=out_channels, bwg_boost=bwg_boost)
 
-def DenseNet201(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,48,32], growth_rate=32, num_classes=out_channels)
+def DenseNet201(bf_conf, out_channels, bwg_boost=1.0):
+    return DenseNet(bf_conf, Bottleneck, [6,12,48,32], growth_rate=32, num_classes=out_channels, bwg_boost=bwg_boost)
 
-def DenseNet161(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,36,24], growth_rate=48, num_classes=out_channels)
+def DenseNet161(bf_conf, out_channels, bwg_boost=1.0):
+    return DenseNet(bf_conf, Bottleneck, [6,12,36,24], growth_rate=48, num_classes=out_channels, bwg_boost=bwg_boost)
 
-def DenseNetCifar(bf_conf, out_channels):
-    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=12, num_classes=out_channels)
+def DenseNetCifar(bf_conf, out_channels, bwg_boost=1.0):
+    return DenseNet(bf_conf, Bottleneck, [6,12,24,16], growth_rate=12, num_classes=out_channels, bwg_boost=bwg_boost)

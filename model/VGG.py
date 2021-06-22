@@ -16,8 +16,9 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, bf_conf, out_channels, vgg_name):
+    def __init__(self, bf_conf, out_channels, vgg_name, bwg_boost=1.0):
         super(VGG, self).__init__()
+        self.bwg_boost = bwg_boost
         self.features = self._make_layers(bf_conf, cfg[vgg_name])
         self.classifier = nn.Linear(512, out_channels)
 
@@ -36,7 +37,7 @@ class VGG(nn.Module):
             else:
                 layers += [
                         # nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
-                        SetConv2dLayer(str(i), bf_conf, in_channels, x, kernel_size=3, padding=1),
+                        SetConv2dLayer(str(i), bf_conf, in_channels, x, kernel_size=3, padding=1, bwg_boost=self.bwg_boost),
                         nn.BatchNorm2d(x),
                         nn.ReLU(inplace=True)]
                 in_channels = x
@@ -44,14 +45,14 @@ class VGG(nn.Module):
         return nn.Sequential(*layers)
 
 
-def VGG11(bf_conf, out_channels):
-    return VGG(bf_conf, out_channels, 'VGG11')
+def VGG11(bf_conf, out_channels, bwg_boost=1.0):
+    return VGG(bf_conf, out_channels, 'VGG11', bwg_boost=bwg_boost)
 
-def VGG13(bf_conf, out_channels):
-    return VGG(bf_conf, out_channels, 'VGG13')
+def VGG13(bf_conf, out_channels, bwg_boost=1.0):
+    return VGG(bf_conf, out_channels, 'VGG13', bwg_boost=bwg_boost)
 
-def VGG16(bf_conf, out_channels):
-    return VGG(bf_conf, out_channels, 'VGG16')
+def VGG16(bf_conf, out_channels, bwg_boost=1.0):
+    return VGG(bf_conf, out_channels, 'VGG16', bwg_boost=bwg_boost)
 
-def VGG19(bf_conf, out_channels):
-    return VGG(bf_conf, out_channels, 'VGG19')
+def VGG19(bf_conf, out_channels, bwg_boost=1.0):
+    return VGG(bf_conf, out_channels, 'VGG19', bwg_boost=bwg_boost)
