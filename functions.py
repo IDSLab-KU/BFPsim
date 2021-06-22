@@ -195,15 +195,15 @@ class BFConf():
         if self.fw_dir == self.fi_dir == self.fo_dir == self.bio_dir == self.biw_dir == self.big_dir == self.bwo_dir == self.bwi_dir == self.bwg_dir:
             s += '{}'.format(self.fw_dir)
         else:
-            s += "[{}/".format(DirKey(self.fw_dir)) if self.fw else "[_/" 
-            s += "{}/".format(DirKey(self.fi_dir)) if self.fi else "_/" 
-            s += "{}/".format(DirKey(self.fo_dir)) if self.fo else "_/" 
-            s += "{}/".format(DirKey(self.bio_dir)) if self.bio else "_/" 
-            s += "{}/".format(DirKey(self.biw_dir)) if self.biw else "_/" 
-            s += "{}/".format(DirKey(self.big_dir)) if self.big else "_/" 
-            s += "{}/".format(DirKey(self.bwo_dir)) if self.bwo else "_/" 
-            s += "{}/".format(DirKey(self.bwi_dir)) if self.bwi else "_/" 
-            s += "{}".format(DirKey(self.bwg_dir))  if self.bwg else "_]"
+            s += "[{}/".format(DirKey(self.fw_dir)) if (self.fw  or self.fw_sz == 1) else "[_/" 
+            s += "{}/".format(DirKey(self.fi_dir)) if  (self.fi  or self.fi_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.fo_dir)) if  (self.fo  or self.fo_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.bio_dir)) if (self.bio or self.bio_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.biw_dir)) if (self.biw or self.biw_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.big_dir)) if (self.big or self.big_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.bwo_dir)) if (self.bwo or self.bwo_sz == 1) else "_/" 
+            s += "{}/".format(DirKey(self.bwi_dir)) if (self.bwi or self.bwi_sz == 1) else "_/" 
+            s += "{}".format(DirKey(self.bwg_dir))  if (self.bwg or self.bwg_sz == 1) else "_]"
         s += ",bwg_boost={}".format(self.bwg_boost)
         return s
 

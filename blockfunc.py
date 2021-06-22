@@ -19,7 +19,10 @@ fp64_mask = [0,
 # set_mantissa_tensor : set to tensor or numpy array to speicific mantissa bits 
 # TODO : Set direction of grouping
 def set_mantissa_tensor(inp, group_mantissa):
-    inp_n = inp.numpy() # inp_n = inp # For debug,
+    if inp.is_cuda:
+        inp_n = inp.cpu().numpy() # inp_n = inp # For debug,
+    else:
+        inp_n = inp.numpy()
     # Convert to byte stream
     st = inp_n.tobytes() 
     # Set to uint32 array to easy computing
@@ -34,7 +37,10 @@ def set_mantissa_tensor(inp, group_mantissa):
     r_ = np.bitwise_and(v, r_mask)
     # revert to original np.float32 
     r = np.frombuffer(r_, dtype=np.float32)
-    return torch.from_numpy(r.reshape(inp_n.shape))
+    if inp.is_cuda:
+        return torch.from_numpy(r.reshape(inp_n.shape)).cuda()
+    else:
+        return torch.from_numpy(r.reshape(inp_n.shape))
 
 # Basic size dimension, most of code will not work if this value is changed
 # This is set as constant because of expandability
@@ -86,8 +92,47 @@ def make_groups_gpu(arr, group_mantissa, group_size):
 
 threadsperblock = 128
 
+# Grouping tensor for fully connected layer. Direction is not important
+def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
+    if group_size == 1:
+        return set_mantissa_tensor(inp, group_mantissa)
+    # Convert tensor to numpy array
+    if inp.is_cuda:
+        inp_n = inp.cpu().numpy()
+    else:
+        inp_n = inp.numpy()
+
+    inp_m_shape = inp_n.shape
+    # Flatten
+    inp_n = np.reshape(inp_n, (np.product(inp_n.shape),))
+    # Convert to byte stream
+    st = inp_n.tobytes() 
+    # Set to uint32 array to easy computing
+    v = np.frombuffer(st, dtype=np.uint32) 
+
+    # STEP 2 : gpu computation
+    r_ = cuda.to_device(v)
+    blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
+    make_groups_gpu[blockspergrid, threadsperblock](r_, group_mantissa, group_size)
+    r__ = r_.copy_to_host()
+
+    # STEP 3 : reverting array
+    # revert to original np.float32 
+    r = np.frombuffer(r__, dtype=np.float32)
+    # revert back to original shape
+    r = r.reshape(inp_m_shape)
+
+    if inp.is_cuda:
+        return torch.from_numpy(r).cuda()
+    else:
+        return torch.from_numpy(r)
+
+
 # _make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
+    # return set mantissa if group size is 1
+    if group_size == 1:
+        return set_mantissa_tensor(inp, group_mantissa)
     # Convert tensor to numpy array
     if inp.is_cuda:
         inp_n = inp.cpu().numpy()
