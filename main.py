@@ -160,6 +160,8 @@ def ArgumentParse():
     else:
         Log.SetLogFile(False)
     
+    if args.train_config != None and "dataset" in args.train_config:
+        args.dataset = args.train_config["dataset"]
     # Load train data
     args.trainset, args.testset, args.classes = LoadDataset(args.dataset)
 
@@ -167,6 +169,8 @@ def ArgumentParse():
         args.model = args.train_config["model"]
 
 
+    args.bf_layer_confs = []
+    args.checkpoints = []
     # Setting the model
     if args.train_config == None:
         # Parse bf layer conf from file
@@ -177,7 +181,7 @@ def ArgumentParse():
         Log.Print("bf-layer-conf-dict is not set. bf-layer-conf-file will be used.", current=False, elapsed=False)
         if "bf-layer-conf-file" not in args.train_config:
             raise ValueError("bf-layer-conf-file is not set. Please provide at least from bf-layer-conf-file or bf-layer-conf-dict")
-        args.bf_layer_conf = GetBFLayerConfig(args.train_config["bf_layer_conf_file"], args.model)
+        args.bf_layer_conf = GetBFLayerConfig(args.train_config["bf-layer-conf-file"], args.model)
         args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost)
     else:
         Log.Print("Training with checkpoints", current=False, elapsed=False)
