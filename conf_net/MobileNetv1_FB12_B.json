@@ -13,17 +13,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "1":{
@@ -31,17 +27,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "2":{
@@ -49,17 +41,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "3":{
@@ -67,17 +55,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "4":{
@@ -85,17 +69,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "5":{
@@ -103,17 +83,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "6":{
@@ -121,17 +97,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "7":{
@@ -139,17 +111,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "8":{
@@ -157,17 +125,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "9":{
@@ -175,17 +139,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "10":{
@@ -193,17 +153,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "11":{
@@ -211,17 +167,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     },
     "12":{
@@ -229,17 +181,13 @@
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         },
         "conv2":{
             "f_w_bit":4,
             "f_w_sz":144,
             "f_i_sz":36,
-            "f_o_sz":36,
-            "f_o":false,
-            "b_ig":false
+            "f_o_sz":36
         }
     }  
 }
