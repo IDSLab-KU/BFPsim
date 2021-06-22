@@ -1,27 +1,50 @@
 
 
-# Block float values
 
-This repository simulates neural network with grouping float values to same mantissa bits.
+# FlexBlock
 
-Please see the Paper(not ready) for more specific results.
-
-Also, this repository's code can train a network with custom floating point mantissa bits.
-
-# Files
-
-Contents are not ready...
-
-# Execute
+This repository contains source code execution of the FlexBlock's simulation.
 
 
-Execute `./preload.sh` to prepare setup environment
+# Features
+This repository features...
 
-Run `run.sh` to run sample network
+- Training various neural networks with [block floating point](https://en.wikipedia.org/wiki/Block_floating_point)
+- Fully configurable training environment
+- Save checkpoints, logs, etc
 
-# Requirements
-torch >= 1.7.1
+# Installation
 
-torchvision >= 0.5.0
+## Setup with docker (Recommended)
 
-numba
+1. Install [Docker](https://docs.docker.com/engine/install/) on the targeted machine.
+2. Clone this repository with `git clone https://github.com/r3coder/FlexBlock`
+3. Execute `./preload.sh` to install. You may need to execute `chmod 755 ./preload.sh` to get execute privilege.
+
+## Setup without docker
+1. Clone this repository
+2. Install requirements listed below 
+- `torch >= 1.7.1`
+- `torchvision >= 0.5.0`
+- `numba >= 0.50.1`
+- `matplotlib >= 3.4.2`
+
+# Execution examples
+
+## Resnet with preset config
+
+For the simple execution of the ResNet18 with the FlexBlock12 data structure, execute
+
+```docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train --model ResNet18 -bf ResNet18_FB12```
+
+It takes quite time to show the result (30min / epoch), so please be patient.
+
+## More information
+
+More specifically, look at the [docs](/docs/_index.md) for the arguments and setup your custom network, etc...
+
+# Citation
+
+# License
+
+This repository uses [CC BY 4.0](https://creativecommons.org/licenses/)
