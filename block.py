@@ -16,101 +16,93 @@ _size_1_t = _scalar_or_tuple_1_t[int]
 _size_2_t = _scalar_or_tuple_2_t[int]
 _size_3_t = _scalar_or_tuple_3_t[int]
 
-from blockfunc import make_groups_tensor, set_mantissa_tensor
+from blockfunc import make_groups_tensor, make_groups_tensor_fc
 from functions import BFConf
 
 DEFAULT_CUDA = True
 
-# Temp relu, can be removed since relu doesn't need to be optimized
-class BlockReLU(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, input):
-        ctx.save_for_backward(input)
-        return input.clamp(min=0)
-    
-    @staticmethod
-    def backward(ctx, grad_output):
-        input, = ctx.saved_tensors
-        grad_input = grad_output.clone()
-        grad_input[input < 0] = 0
-        return grad_input
-
 # BlockFloat Linear Function
 class BFLinearFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bf_conf, bias):    
+    def forward(ctx, input, weight, bias, bf_conf):    
         # Grouping input and weight
-        if DEFAULT_CUDA:
-            input = make_groups_tensor(input.cpu(), bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir).cuda()
-            weight = make_groups_tensor(weight.cpu(), bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir).cuda()
-        else:
-            input = make_groups_tensor(input, bf_conf.f_i_bit, bf_conf.f_i_sz, bf_conf.f_i_dir)
-            weight = make_groups_tensor(weight, bf_conf.f_w_bit, bf_conf.f_w_sz, bf_conf.f_w_dir)
+        if bf_conf.fi:
+            input = make_groups_tensor(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir)
+        if bf_conf.fw:
+            weight = make_groups_tensor(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir)
 
         # Save context to use on backward
-        bf_confs = torch.from_numpy(np.array([
-            bf_conf.g_o_bit, bf_conf.g_o_sz,
-            bf_conf.g_o_dir[0], bf_conf.g_o_dir[1],
-            bf_conf.g_i_bit, bf_conf.g_w_bit, bf_conf.g_b_bit]))
-        ctx.save_for_backward(input, weight, bias, bf_confs)
+        ctx.bf_conf = bf_conf
+        ctx.save_for_backward(input, weight, bias)
         
         # Compute FC and return
         output = input.mm(weight.t())
         if bias is not None:
             output += bias.unsqueeze(0).expand_as(output)
 
-        # Set mantissa because result of computation is preseted bits
-        if DEFAULT_CUDA:
-            output = set_mantissa_tensor(output.cpu(), bf_conf.f_o_bit).cuda()
-        else:
-            output = set_mantissa_tensor(output, bf_conf.f_o_bit)
+        # Grouping Output
+        if bf_conf.fo:
+            output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
+
         return output
     
     @staticmethod
     def backward(ctx, grad_output):
         # Load saved tensors
         # input, weight, bias, confs = ctx.saved_tensors
-        input, weight, bias, bf_confs = ctx.saved_tensors
-        bf_confs = bf_confs.numpy()
-        g_o_dir = [0,0]
-        g_o_bit, g_o_sz, g_o_dir[0], g_o_dir[1], g_i_bit, g_w_bit, g_b_bit = bf_confs
-        g_o_dir = tuple(g_o_dir)
-
-        # Output Gradient Grouping
-        if DEFAULT_CUDA:
-            grad_output = make_groups_tensor(grad_output.cpu(), g_o_bit, g_o_sz, g_o_dir).cuda()
-        else:
-            grad_output = make_groups_tensor(grad_output, 8, g_o_bit, g_o_sz, g_o_dir)
+        input, weight, bias = ctx.saved_tensors
+        bf_conf = ctx.bf_conf
 
         # Calculate gradients
         grad_input = grad_weight = grad_bias = None
-        grad_input = grad_output.mm(weight)
-        grad_weight = grad_output.t().mm(input)
 
-        # Set mantissa because result of computation is preseted bits
-        if DEFAULT_CUDA:
-            grad_input = set_mantissa_tensor(grad_input.cpu(), g_i_bit).cuda()
-            grad_weight = set_mantissa_tensor(grad_weight.cpu(), g_w_bit).cuda()
-        else:
-            grad_input = set_mantissa_tensor(grad_input, g_i_bit)
-            grad_weight = set_mantissa_tensor(grad_weight, g_w_bit)
-        
+        # Calculate Input Gradient
+        ## Grouping grad_output
+        if bf_conf.bio:
+            grad_output_ = make_groups_tensor(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir)
+        else: # Apply original gradient if grad_output is not grouped
+            grad_output_ = grad_output
+        ## Grouping weight
+        if bf_conf.biw:
+            weight = make_groups_tensor(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir)        
+
+        grad_input_ = grad_output_.mm(weight)
+
+        if bf_conf.big:
+            grad_input_ = make_groups_tensor(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir)
+        else: # If not grouping, use original type
+            grad_input_ = grad_input
+
+        if bf_conf.bwo:
+            # Regroup if bwo / bio grouping configuration is different!
+            if (bf_conf.bwo_bit != bf_conf.bio_bit or bf_conf.bwo_sz != bf_conf.bio_sz or bf_conf.bwo_dir != bf_conf.bio_dir):
+                grad_output_ = make_groups_tensor(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir)
+        else: # If not grouping, use original type
+            grad_output_ = grad_output
+        ## Grouping input - it's not grad_input, right?
+        if bf_conf.bwi:
+            # Regroup if bwi / fi grouping configuration is different!
+            if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
+                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
+        grad_weight = grad_output_.t().mm(input)
+        # Group the gradient of weight
+        if bf_conf.bwg:
+            grad_weight = make_groups_tensor(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir)
+
+        if bf_conf.bwg_boost != 1.0:
+            grad_weight /= bf_conf.bwg_boost
 
         if bias is not None:
             grad_bias = grad_output.sum(0)
-            if DEFAULT_CUDA:
-                grad_bias = set_mantissa_tensor(grad_bias.cpu(), g_b_bit).cuda()
-            else:
-                grad_bias = set_mantissa_tensor(grad_bias, g_b_bit)
 
-        return grad_input, grad_weight, None, grad_bias, None
+        return grad_input_, grad_weight, grad_bias, None
 
 # Blockfloat Linear
 class BFLinear(torch.nn.Module):
     def __init__(self,
                 input_features: int,
                 output_features: int,
-                bf_conf: BFConf):
+                bf_conf: BFConf, bias=True):
         super(BFLinear, self).__init__()
         self.input_features = input_features
         self.output_features = output_features
@@ -130,7 +122,7 @@ class BFLinear(torch.nn.Module):
             self.bias.data.uniform_(-0.1, 0.1)
     
     def forward(self, input):
-        return BFLinearFunction.apply(input, self.weight, self.bf_conf, self.bias)
+        return BFLinearFunction.apply(input, self.weight, self.bias, self.bf_conf)
     
     def extra_repr(self):
         s = ('{input_features}, {output_features}')
@@ -165,7 +157,7 @@ class BFConv2dFunction(torch.autograd.Function):
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
-        # Grouping output
+        # Grouping Output
         if bf_conf.fo:
             output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
 
@@ -230,7 +222,6 @@ class BFConv2dFunction(torch.autograd.Function):
         # TODO : Fix Bias Grouping
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
-            # TODO : Bias Grouping
         
         return grad_input_, grad_weight, grad_bias, None, None, None, None, None
 
