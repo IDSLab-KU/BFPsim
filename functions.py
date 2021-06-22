@@ -169,7 +169,7 @@ class BFConf():
         if self.fw_bit == self.fi_bit == self.fo_bit == self.bio_bit == self.biw_bit == self.big_bit == self.bwo_bit == self.bwi_bit == self.bwg_bit:
             s += '{}'.format(self.fw_bit)
         else:
-            s += "{}/".format(self.fw_bit) if self.fw else "_/" 
+            s += "[{}/".format(self.fw_bit) if self.fw else "[_/" 
             s += "{}/".format(self.fi_bit) if self.fi else "_/" 
             s += "{}/".format(self.fo_bit) if self.fo else "_/" 
             s += "{}/".format(self.bio_bit) if self.bio else "_/" 
@@ -182,7 +182,7 @@ class BFConf():
         if self.fw_sz == self.fi_sz == self.fo_sz == self.bio_sz == self.biw_sz == self.big_sz == self.bwo_sz == self.bwi_sz == self.bwg_sz:
             s += '{}'.format(self.fw_sz)
         else:
-            s += "{}/".format(self.fw_sz) if self.fw else "_/" 
+            s += "[{}/".format(self.fw_sz) if self.fw else "[_/" 
             s += "{}/".format(self.fi_sz) if self.fi else "_/" 
             s += "{}/".format(self.fo_sz) if self.fo else "_/" 
             s += "{}/".format(self.bio_sz) if self.bio else "_/" 
@@ -191,11 +191,11 @@ class BFConf():
             s += "{}/".format(self.bwo_sz) if self.bwo else "_/" 
             s += "{}/".format(self.bwi_sz) if self.bwi else "_/" 
             s += "{}".format(self.bwg_sz)  if self.bwg else "_]"
-        s += ",dir=["
+        s += ",dir="
         if self.fw_dir == self.fi_dir == self.fo_dir == self.bio_dir == self.biw_dir == self.big_dir == self.bwo_dir == self.bwi_dir == self.bwg_dir:
             s += '{}'.format(self.fw_dir)
         else:
-            s += "{}/".format(DirKey(self.fw_dir)) if self.fw else "_/" 
+            s += "[{}/".format(DirKey(self.fw_dir)) if self.fw else "[_/" 
             s += "{}/".format(DirKey(self.fi_dir)) if self.fi else "_/" 
             s += "{}/".format(DirKey(self.fo_dir)) if self.fo else "_/" 
             s += "{}/".format(DirKey(self.bio_dir)) if self.bio else "_/" 

@@ -215,7 +215,7 @@ class BFConv2dFunction(torch.autograd.Function):
         if bf_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
             if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
-                input = make_groups_tensor(input, bf_conf.b_wi_bit, bf_conf.b_wi_sz, bf_conf.b_wi_dir)
+                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
         ## Do the convolution
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)

@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
     if args.mode == "train":
         for arg in vars(args):
-            if arg in ["mode", "dataset", "num_workers", "train_config_file", "model", "bf_layer_config_file", "training_epochs", "save_name", "log_location", "stat_location", "save_prefix", "net", "batch_size_train", "batch_size_test", "criterion", "optimizer", "scheduler"]:
+            if arg in ["mode", "dataset", "num_workers", "train_config_file", "model", "bf_layer_config_file", "training_epochs", "save_name", "log_location", "stat_location", "save_prefix", "net", "batch_size_train", "batch_size_test", "criterion", "optimizer", "scheduler", "loss_boost"]:
                 Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
     elif args.mode == "zse-analyze":
