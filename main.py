@@ -172,13 +172,13 @@ def ArgumentParse():
         # Parse bf layer conf from file
         args.bf_layer_conf = GetBFLayerConfig(args.bf_layer_conf_file, args.model)
         # Define the network and optimize almost everything
-        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes)
+        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost)
     elif "bf-layer-conf-dict" not in args.train_config:
         Log.Print("bf-layer-conf-dict is not set. bf-layer-conf-file will be used.", current=False, elapsed=False)
         if "bf-layer-conf-file" not in args.train_config:
             raise ValueError("bf-layer-conf-file is not set. Please provide at least from bf-layer-conf-file or bf-layer-conf-dict")
         args.bf_layer_conf = GetBFLayerConfig(args.train_config["bf_layer_conf_file"], args.model)
-        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes)
+        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost)
     else:
         Log.Print("Training with checkpoints", current=False, elapsed=False)
         args.bf_layer_confs = []
@@ -195,7 +195,7 @@ def ArgumentParse():
         if args.checkpoints[0] != 0:
             raise ValueError("bf-layer-conf-dict's first checkpoint's epoch is not 0")
         # Load the first checkpoint of the model
-        args.net = GetNetwork(args.model, args.bf_layer_confs[0], args.classes)
+        args.net = GetNetwork(args.model, args.bf_layer_confs[0], args.classes, args.loss_boost)
 
     # Set the print interval
     if args.print_train_count == -1:

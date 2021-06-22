@@ -308,17 +308,17 @@ from model.DenseNet import DenseNetCifar
 from model.MobileNetv1 import MobileNetv1
 from model.VGG import VGG16
 
-def GetNetwork(model, bf_layer_conf, classes):
+def GetNetwork(model, bf_layer_conf, classes, loss_boost):
     if model == "AlexNet":
-        net = AlexNet(bf_layer_conf, len(classes))
+        net = AlexNet(bf_layer_conf, len(classes), loss_boost)
     elif model == "ResNet18":
-        net = ResNet18(bf_layer_conf, len(classes))
+        net = ResNet18(bf_layer_conf, len(classes), loss_boost)
     elif model == "VGG16":
-        net = VGG16(bf_layer_conf, len(classes))
+        net = VGG16(bf_layer_conf, len(classes), loss_boost)
     elif model == "MobileNetv1":
-        net = MobileNetv1(bf_layer_conf, len(classes))
+        net = MobileNetv1(bf_layer_conf, len(classes), loss_boost)
     elif model == "DenseNetCifar":
-        net = DenseNetCifar(bf_layer_conf, len(classes))
+        net = DenseNetCifar(bf_layer_conf, len(classes), loss_boost)
     else:
         raise NotImplementedError("Model {} not Implemented".format(model))
     return net
