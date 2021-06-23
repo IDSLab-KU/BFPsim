@@ -28,6 +28,7 @@ This repository features...
 - `torchvision >= 0.5.0`
 - `numba >= 0.50.1`
 - `matplotlib >= 3.4.2`
+- `einops >= 0.3.0`
 
 # Execution examples
 
