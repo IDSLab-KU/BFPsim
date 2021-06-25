@@ -3,10 +3,10 @@ import torch.optim as optim
 import torch.nn as nn
 
 from log import Log
-from functions import LoadDataset, BFConf, Stat, str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
+from functions import Stat, str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
 from train import TrainNetwork
 from utils import ZSEAnalyze, SaveNetworkWeights
-
+from dataset import LoadDataset
 
 import signal
 import sys
@@ -63,6 +63,8 @@ def ArgumentParse():
     # Data loader
     parser.add_argument("-d","--dataset", type=str, default = "CIFAR10",
         help = "Dataset to use [CIFAR10, CIFAR100]")
+    parser.add_argument("-d","--dataset", type=str, default = "./data",
+        help = "Dataset to use [CIFAR10, CIFAR100, ImageNet]. For imagenet, please specify proper dataset position")
     parser.add_argument("-nw","--num-workers", type=int, default = 4,
         help = "Number of workers to load data")
 
@@ -162,12 +164,16 @@ def ArgumentParse():
     
     if args.train_config != None and "dataset" in args.train_config:
         args.dataset = args.train_config["dataset"]
-    # Load train data
-    args.trainset, args.testset, args.classes = LoadDataset(args.dataset)
 
+    # Load data
+
+    args.trainset, args.testset, args.classes, args.trainloader, args.testloader = LoadDataset(args)
+
+    # Count of the mini-batches
+    args.batch_count = len(args.trainloader)
+    
     if args.train_config != None and "model" in args.train_config:
         args.model = args.train_config["model"]
-
 
     args.bf_layer_confs = []
     args.checkpoints = []
@@ -176,13 +182,13 @@ def ArgumentParse():
         # Parse bf layer conf from file
         args.bf_layer_conf = GetBFLayerConfig(args.bf_layer_conf_file, args.model)
         # Define the network and optimize almost everything
-        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost)
+        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost, args.dataset)
     elif "bf-layer-conf-dict" not in args.train_config:
         Log.Print("bf-layer-conf-dict is not set. bf-layer-conf-file will be used.", current=False, elapsed=False)
         if "bf-layer-conf-file" not in args.train_config:
             raise ValueError("bf-layer-conf-file is not set. Please provide at least from bf-layer-conf-file or bf-layer-conf-dict")
         args.bf_layer_conf = GetBFLayerConfig(args.train_config["bf-layer-conf-file"], args.model)
-        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost)
+        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost, args.dataset)
     else:
         Log.Print("Training with checkpoints", current=False, elapsed=False)
         args.bf_layer_confs = []
@@ -238,15 +244,6 @@ def ArgumentParse():
         args.net.to('cuda')
         # Dataparallel temporary disabled
         # args.net = torch.nn.DataParallel(args.net) 
-
-    # Testloader and Trainloader
-    args.trainloader = torch.utils.data.DataLoader(args.trainset,
-        batch_size=args.batch_size_train, shuffle=True, num_workers=args.num_workers)
-    args.testloader = torch.utils.data.DataLoader(args.testset,
-        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers)
-
-    # Count of the mini-batches
-    args.batch_count = len(args.trainloader)
 
     # Stat object
     if args.stat:

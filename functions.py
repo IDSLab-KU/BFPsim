@@ -5,64 +5,6 @@ import torchvision.transforms as transforms
 import os
 import numpy as np
 
-# LoadDataset : Load dataset, cifar-10 or cifar-100
-def LoadDataset(name):
-    if name == "CIFAR10":
-        # Set transform
-        transform_train = transforms.Compose(
-            [transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-            ])
-        transform_test = transforms.Compose(
-            [transforms.ToTensor(),
-            # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-            ])
-
-        # Prepare Cifar-10 Dataset
-        trainset = torchvision.datasets.CIFAR10(root='./data', train=True,download=True, transform=transform_train)
-        testset =  torchvision.datasets.CIFAR10(root='./data', train=False,download=True, transform=transform_test)
-
-        classes = ('plane', 'car', 'bird', 'cat',
-                'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-    elif name == "CIFAR100":
-        transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-        ])
-        trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
-        testset =  torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
-        
-        classes = ['beaver', 'dolphin', 'otter', 'seal', 'whale',
-                'aquarium_fish', 'flatfish', 'ray', 'shark', 'trout',
-                'orchid', 'poppy', 'rose', 'sunflower', 'tulip',
-                'bottle', 'bowl', 'can', 'cup', 'plate',
-                'apple', 'mushroom', 'orange', 'pear', 'sweet_pepper',
-                'clock', 'keyboard', 'lamp', 'telephone', 'television',
-                'bed', 'chair', 'couch', 'table', 'wardrobe',
-                'bee', 'beetle', 'butterfly', 'caterpillar', 'cockroach',
-                'bear', 'leopard', 'lion', 'tiger', 'wolf',
-                'bridge', 'castle', 'house', 'road', 'skyscraper',
-                'cloud', 'forest', 'mountain', 'plain', 'sea',
-                'camel', 'cattle', 'chimpanzee', 'elephant', 'kangaroo',
-                'fox', 'porcupine', 'possum', 'raccoon', 'skunk',
-                'crab', 'lobster', 'snail', 'spider', 'worm',
-                'baby', 'boy', 'girl', 'man', 'woman',
-                'crocodile', 'dinosaur', 'lizard', 'snake', 'turtle',
-                'hamster', 'mouse', 'rabbit', 'shrew', 'squirrel',
-                'maple_tree', 'oak_tree', 'palm_tree', 'pine_tree', 'willow_tree',
-                'bicycle', 'bus', 'motorcycle', 'pickup_truck', 'train',
-                'lawn_mower', 'rocket', 'streetcar', 'tank', 'tractor']
-    else:
-        raise NotImplementedError("Dataset {} not Implemented".format(name))
-    return trainset, testset, classes
-
 def str2tuple(v):
     r = []
     v = v.replace(" ","").replace("(","").replace(")","").split(",")
@@ -73,7 +15,7 @@ def str2tuple(v):
 def str2bool(v):
     if v.lower() in ["true", "t", "1"]: return True
     elif v.lower() in ["false", "f", "0"]: return False
-    else: raise argparse.ArgumentTypeError("Not Boolean value")
+    else: raise ValueError("str2bool: not parsable")
 
 DIR_DICT = {
     "WI" :  0,
@@ -307,18 +249,40 @@ from model.ResNet import ResNet18
 from model.DenseNet import DenseNetCifar
 from model.MobileNetv1 import MobileNetv1
 from model.VGG import VGG16
+from model.ResNetImageNet import resnet18_imagenet
+from model.MLPMixer import mlp_mixer_b16
 
-def GetNetwork(model, bf_layer_conf, classes, loss_boost):
+def GetNetwork(model, bf_layer_conf, classes, loss_boost, dataset):
     if model == "AlexNet":
-        net = AlexNet(bf_layer_conf, len(classes), loss_boost)
+        if dataset == "ImageNet":
+            NotImplementedError("Model {model} not defined on {dataset}")
+        else:
+            net = AlexNet(bf_layer_conf, len(classes), loss_boost)    
     elif model == "ResNet18":
-        net = ResNet18(bf_layer_conf, len(classes), loss_boost)
+        if dataset == "ImageNet":
+            net = resnet18_imagenet(bf_layer_conf)
+        else:
+            net = ResNet18(bf_layer_conf, len(classes), loss_boost)
     elif model == "VGG16":
-        net = VGG16(bf_layer_conf, len(classes), loss_boost)
+        if dataset == "ImageNet":
+            NotImplementedError("Model {model} not defined on {dataset}")
+        else:
+            net = VGG16(bf_layer_conf, len(classes), loss_boost)
     elif model == "MobileNetv1":
-        net = MobileNetv1(bf_layer_conf, len(classes), loss_boost)
+        if dataset == "ImageNet":
+            NotImplementedError("Model {model} not defined on {dataset}")
+        else:
+            net = MobileNetv1(bf_layer_conf, len(classes), loss_boost)
     elif model == "DenseNetCifar":
-        net = DenseNetCifar(bf_layer_conf, len(classes), loss_boost)
+        if dataset == "ImageNet":
+            NotImplementedError("Model {model} not defined on {dataset}")
+        else:
+            net = DenseNetCifar(bf_layer_conf, len(classes), loss_boost)
+    elif model == "MLPMixerS16":
+        if dataset == "ImageNet":
+            net = mlp_mixer_b16(bf_layer_conf, len(classes))
+        else:
+            NotImplementedError("Model {model} not defined on {dataset}")
     else:
         raise NotImplementedError("Model {} not Implemented".format(model))
     return net
