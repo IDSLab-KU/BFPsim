@@ -42,6 +42,7 @@ def set_mantissa_tensor(inp, group_mantissa):
     else:
         return torch.from_numpy(r.reshape(inp_n.shape))
 
+
 # Basic size dimension, most of code will not work if this value is changed
 # This is set as constant because of expandability
 CONF_SZ = 3
@@ -62,6 +63,12 @@ def _make_groups(v, group_mantissa, group_size):
             else:
                 r_[i*group_size+ii] = 0x00000000
     return r_
+
+
+@jit(nopython=True)
+def _Internal_Group_WI(v, group_mantissa, group_size):
+    r_ = v.copy()
+    
 
 @cuda.jit
 def make_groups_gpu(arr, group_mantissa, group_size):
@@ -162,7 +169,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
         inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//CONF_SZ, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
         inp_n = inp_n.transpose((0,2,4,6,5,7,1,3))
     elif group_direction == 11: # FY Mode
-        inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]/CONF_SZ3, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
+        inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]/CONF_SZ, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))
         inp_n = inp_n.transpose((0,2,6,4,5,7,1,3))
     elif group_direction == 12:
         inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//CONF_SZ, CONF_SZ, inp_n.shape[3]//CONF_SZ, CONF_SZ))

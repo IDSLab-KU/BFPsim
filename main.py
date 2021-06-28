@@ -188,13 +188,11 @@ def ArgumentParse():
     if args.train_config != None and "batch-size-test" in args.train_config:
         args.batch_size_test = args.train_config["batch-size-test"]
     
-    # Load dataset, it will only load data when it is needed
-    if args.mode in ["train", "zseAnalyze"]:
-        args.trainset, args.testset, args.classes, args.trainloader, args.testloader = LoadDataset(args)
-
-        args.batch_count = len(args.trainloader)
-        if args.stat_loss_batches == -1:
-            args.stat_loss_batches = args.batch_count
+    # Load dataset
+    args.trainset, args.testset, args.classes, args.trainloader, args.testloader = LoadDataset(args)
+    args.batch_count = len(args.trainloader)
+    if args.stat_loss_batches == -1:
+        args.stat_loss_batches = args.batch_count
     
     # tag:Model
     args.bf_layer_confs = []
@@ -207,6 +205,8 @@ def ArgumentParse():
         if args.train_config != None and "bf-layer-conf-file" in args.train_config:
             args.bf_layer_conf_file = args.train_config["bf-layer-conf-file"]
         args.bf_layer_conf = GetBFLayerConfig(args.bf_layer_conf_file, args.model)
+
+        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost, args.dataset)
     elif "bf-layer-conf-dict" in args.train_config:
         Log.Print("Training with several network configurations", current=False, elapsed=False)
         Log.Print("Checkpoints", current=False, elapsed=False)
