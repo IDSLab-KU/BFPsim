@@ -2,4 +2,4 @@ mkdir saves
 mkdir stats
 mkdir logs
 
-docker build . -t floatblock:latest
+docker build . -t $(whoami)/floatblock:latest
