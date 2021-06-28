@@ -5,7 +5,7 @@
     "dataset":"ImageNet",
     "dataset-path":"../dataset/ImageNet",
     "training-epochs":50,
-    "train-batch-size":512,
+    "batch-size-train":256,
     "save-name":"MLPMixerB16_ImageNet",
     "print-train-count":20,
     "bf-layer-conf-dict":{

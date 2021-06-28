@@ -127,8 +127,7 @@ def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
     else:
         return torch.from_numpy(r)
 
-
-# _make_group_tensor : Group values as same exponent bits, which shifts mantissa
+# make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
     # return set mantissa if group size is 1
     if group_size == 1:

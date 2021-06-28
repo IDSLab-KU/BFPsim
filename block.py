@@ -27,23 +27,22 @@ class BFLinearFunction(torch.autograd.Function):
     def forward(ctx, input, weight, bias, bf_conf):    
         # Grouping input and weight
         if bf_conf.fi:
-            input = make_groups_tensor(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir)
+            input = make_groups_tensor_fc(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir)
         if bf_conf.fw:
-            weight = make_groups_tensor(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir)
-
+            weight = make_groups_tensor_fc(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir)
         # Save context to use on backward
         ctx.bf_conf = bf_conf
         ctx.save_for_backward(input, weight, bias)
         
         # Compute FC and return
-        output = input.mm(weight.t())
+        output = F.linear(input, weight, bias)
         if bias is not None:
             output += bias.unsqueeze(0).expand_as(output)
 
         # Grouping Output
         if bf_conf.fo:
-            output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
-
+            output = make_groups_tensor_fc(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
+        print("F: %s %s %s"%(input.shape, weight.shape, output.shape))
         return output
     
     @staticmethod
@@ -52,6 +51,7 @@ class BFLinearFunction(torch.autograd.Function):
         # input, weight, bias, confs = ctx.saved_tensors
         input, weight, bias = ctx.saved_tensors
         bf_conf = ctx.bf_conf
+        print("output gradient")
 
         # Calculate gradients
         grad_input = grad_weight = grad_bias = None
@@ -59,35 +59,41 @@ class BFLinearFunction(torch.autograd.Function):
         # Calculate Input Gradient
         ## Grouping grad_output
         if bf_conf.bio:
-            grad_output_ = make_groups_tensor(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir)
+            grad_output_ = make_groups_tensor_fc(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir)
         else: # Apply original gradient if grad_output is not grouped
             grad_output_ = grad_output
         ## Grouping weight
         if bf_conf.biw:
-            weight = make_groups_tensor(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir)        
+            weight = make_groups_tensor_fc(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir)        
 
-        grad_input_ = grad_output_.mm(weight)
+        print(grad_output_.shape)
+        print(weight.shape)
+        grad_input_ = F.linear(grad_output_, weight.t(), bias).t()
+        print(grad_input.shape)
+        # grad_input_ = grad_output_.mm(weight)
 
         if bf_conf.big:
-            grad_input_ = make_groups_tensor(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir)
+            grad_input_ = make_groups_tensor_fc(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir)
         else: # If not grouping, use original type
             grad_input_ = grad_input
 
         if bf_conf.bwo:
             # Regroup if bwo / bio grouping configuration is different!
             if (bf_conf.bwo_bit != bf_conf.bio_bit or bf_conf.bwo_sz != bf_conf.bio_sz or bf_conf.bwo_dir != bf_conf.bio_dir):
-                grad_output_ = make_groups_tensor(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir)
+                grad_output_ = make_groups_tensor_fc(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir)
         else: # If not grouping, use original type
             grad_output_ = grad_output
         ## Grouping input - it's not grad_input, right?
         if bf_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
             if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
-                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
-        grad_weight = grad_output_.t().mm(input)
+                input = make_groups_tensor_fc(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
+        grad_weight = F.linear(grad_output_.t(), input.t(), bias).t()
+        # grad_weight = grad_output_.t().mm(input)
+        # print(grad_weight.shape)
         # Group the gradient of weight
         if bf_conf.bwg:
-            grad_weight = make_groups_tensor(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir)
+            grad_weight = make_groups_tensor_fc(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir)
 
         if bf_conf.bwg_boost != 1.0:
             grad_weight /= bf_conf.bwg_boost
