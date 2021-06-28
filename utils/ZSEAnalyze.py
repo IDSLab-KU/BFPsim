@@ -151,19 +151,19 @@ def ZSEAnalyze_(args, bits, g_size):
             stat_data[ind] = d
             ind += 1
 
-            if args.zt_print_mode == "format":
+            if args.zse_print_mode == "format":
                 for i in d:
                     Log.Print("{}".format(i),end="\t")
                 Log.Print("")
-            if args.zt_print_mode == "all":
+            if args.zse_print_mode == "all":
                 Log.Print("[{:7.3f}%]{:8d}/{:8d}, {}".format(d[-1]/(d.sum())*100,d[-1],d.sum(),d))
     # Save figures
-    if args.zt_graph_mode != "none":
+    if args.zse_graph_mode != "none":
         SaveStackedGraph(args.layer_list_short, np.flip(stat_data.transpose(),axis=0),
-                mode=args.zt_graph_mode,
+                mode=args.zse_graph_mode,
                 title="{}, Bit={}, Group={}".format(args.model, bits, g_size),
                 save="{}_{}_{}".format(args.model, bits, g_size))
-    if args.zt_print_mode in ["sum", "format", "all"]:
+    if args.zse_print_mode in ["sum", "format", "all"]:
         Log.Print("[{:7.3f}%]{:10d}/{:10d}, {}".format(res[-1]/(res.sum())*100,res[-1],res.sum(),res))            
         Log.Print("")
 

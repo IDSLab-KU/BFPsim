@@ -18,9 +18,9 @@ def LoadDataset(args):
     
     train_sampler = None
     trainloader = torch.utils.data.DataLoader(trainset,
-        batch_size=args.batch_size_train, shuffle=(train_sampler is None), num_workers=args.num_workers, sampler=train_sampler, pin_memory=True)
+        batch_size=args.batch_size_train, shuffle=(train_sampler is None), num_workers=args.num_workers, sampler=train_sampler, pin_memory=args.dataset_pin_memory)
     testloader = torch.utils.data.DataLoader(testset,
-        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers, pin_memory=args.dataset_pin_memory)
 
     return trainset, testset, classes, trainloader, testloader
 

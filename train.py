@@ -37,7 +37,7 @@ def Train(args, epoch_current):
             if (i + 1) % args.print_train_batch == 0 or (i + 1) == len(args.trainloader):
                 pF = True
         elif args.print_train_count != 0:
-            if (i+1) / len(args.trainloader) >= ptc_target:
+            if (i + 1) / len(args.trainloader) >= ptc_target:
                 pF = True
                 ptc_count += 1
                 ptc_target = ptc_count/args.print_train_count
@@ -129,7 +129,7 @@ def TrainNetwork(args):
 
         Train(args, epoch_current)
         Evaluate(args)
-        if args.train_accuracy:
+        if args.print_train_accuracy:
             EvaluateTrain(args)
             
         if args.save:
