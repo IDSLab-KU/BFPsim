@@ -33,6 +33,8 @@ def DirKey(v):
 
 class BFConf():
     def __init__(self, dic, bwg_boost = 1.0):
+        self.type   = dic["type"]              if "type"   in dic.keys() else "Conv2d"
+
         # Foward - Weight
         self.fw     = dic["fw"]                if "fw"     in dic.keys() else True
         self.fw_bit = dic["fw_bit"]            if "fw_bit" in dic.keys() else 8

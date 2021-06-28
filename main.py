@@ -110,10 +110,10 @@ def ArgumentParse():
         help = ".")
     parser.add_argument("--loss-boost", type=float, default = 1.0,
         help = "Loss boost to each layer [NOT IMPLEMENTED]")
-    parser.add_argument("--train-accuracy", type=str2bool, default = False,
-        help = "If True, prints train accuracy (slower)")
 
     # tag:Print
+    parser.add_argument("--print-train-accuracy", type=str2bool, default = False,
+        help = "If True, prints train accuracy (slower)")
     parser.add_argument("--print-train-batch", type=int, default = 0,
         help = "Print progress on # of batches, 0 to disable") # 128 = 391
     parser.add_argument("--print-train-count", type=int, default = 5,
