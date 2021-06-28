@@ -41,7 +41,9 @@ def GetBFLayerConfig(file, model):
         # Log.Print("Ignore any additional warnings around setting layers", current=False, elapsed=False)
         conf = dict()
     elif not os.path.exists("./conf_net/"+file+".json"):
-        raise FileNotFoundError(file + ".json not exists on ./conf_net/ directory!")
+        Log.Print(file + ".json not found, returning empty bf_conf_dict...", current=False, elapsed=False)
+        return dict()
+        # raise FileNotFoundError(file + ".json not exists on ./conf_net/ directory!")
     else:
         with open("./conf_net/"+file+".json","r",encoding="utf-8") as f:
             conf = json.load(f)
@@ -63,7 +65,7 @@ def ArgumentParse():
     # Data loader
     parser.add_argument("-d","--dataset", type=str, default = "CIFAR10",
         help = "Dataset to use [CIFAR10, CIFAR100]")
-    parser.add_argument("-d","--dataset", type=str, default = "./data",
+    parser.add_argument("-dp","--dataset-path", type=str, default = "./data",
         help = "Dataset to use [CIFAR10, CIFAR100, ImageNet]. For imagenet, please specify proper dataset position")
     parser.add_argument("-nw","--num-workers", type=int, default = 4,
         help = "Number of workers to load data")
@@ -83,6 +85,10 @@ def ArgumentParse():
         help = "[TC] Training epochs")
     parser.add_argument("--loss-boost", type=float, default = 1.0,
         help = "[TC] Loss Boost")
+    parser.add_argument("--batch-size-train", type=int, default = 128,
+        help = "[TC] Train batch size")
+    parser.add_argument("--batch-size-test", type=int, default = 100,
+        help = "[TC] Test batch size")
     # parser.add_argument("--initial-lr", type=float, default = 0.1,
     #     help = "Initial learning rate")
     # parser.add_argument("--momentum", type=float, default = 0,
@@ -100,8 +106,8 @@ def ArgumentParse():
         help = "Record to log object?")
     parser.add_argument("--print-train-batch", type=int, default = 0,
         help = "Print info on # of batches, 0 to disable") # 128 = 391
-    parser.add_argument("--print-train-count", type=int, default = -1,
-        help = "How many print on each epoch, 0 to disable") # 128 = 391
+    parser.add_argument("--print-train-count", type=int, default = 5,
+        help = "[TC] How many print on each epoch, 0 to disable") # 128 = 391
 
     parser.add_argument("--stat", type=str2bool, default = False,
         help = "Record to stat object?")
@@ -164,9 +170,17 @@ def ArgumentParse():
     
     if args.train_config != None and "dataset" in args.train_config:
         args.dataset = args.train_config["dataset"]
+    if args.train_config != None and "dataset-path" in args.train_config:
+        args.dataset_path = args.train_config["dataset-path"]
 
     # Load data
-
+    # Trainloader and Testloader
+    if args.train_config != None and "batch-size-train" in args.train_config:
+        args.batch_size_train = args.train_config["batch-size-train"]
+    if args.train_config != None and "batch-size-test" in args.train_config:
+        args.batch_size_test = args.train_config["batch-size-test"]
+    # args.batch_size_train = 128
+    # args.batch_size_test = 100
     args.trainset, args.testset, args.classes, args.trainloader, args.testloader = LoadDataset(args)
 
     # Count of the mini-batches
@@ -205,19 +219,10 @@ def ArgumentParse():
         if args.checkpoints[0] != 0:
             raise ValueError("bf-layer-conf-dict's first checkpoint's epoch is not 0")
         # Load the first checkpoint of the model
-        args.net = GetNetwork(args.model, args.bf_layer_confs[0], args.classes, args.loss_boost)
+        args.net = GetNetwork(args.model, args.bf_layer_confs[0], args.classes, args.loss_boost, args.dataset)
 
-    # Set the print interval
-    if args.print_train_count == -1:
-        args.print_train_count = 5 # Reduced print rate
-        
-    # Trainloader and Testloader
-    args.batch_size_train = 128
-    args.batch_size_test = 100
-    
     # Critertion, optimizer, scheduler
     args.criterion = nn.CrossEntropyLoss()
-
 
     if args.train_config != None and "optimizer-dict" in args.train_config:
         if "0" in args.train_config["optimizer-dict"]:
@@ -230,8 +235,6 @@ def ArgumentParse():
     # Training Epochs    
     if args.train_config != None and "training-epochs" in args.train_config:
         args.training_epochs = args.train_config["training-epochs"]
-    else:
-        args.training_epochs = 200
     
     if args.train_config != None and "loss-boost" in args.train_config:
         args.loss_boost = args.train_config["loss-boost"]
@@ -239,6 +242,9 @@ def ArgumentParse():
     # Logger, stat, etc
     args.stat_loss_batches = 100
 
+    if args.train_config != None and "print-train-count" in args.train_config:
+        args.print_train_count = args.train_config["print-train-count"]
+    
     # Move model to gpu if gpu is available
     if args.cuda:
         args.net.to('cuda')

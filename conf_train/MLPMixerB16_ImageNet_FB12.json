@@ -1,0 +1,15 @@
+{
+    "name":"MLPMixerB16_ImageNet_FB12",
+    "description":"MLPMixerB16_ImageNet_FB12",
+    "model":"MLPMixerB16",
+    "dataset":"ImageNet",
+    "dataset-path":"../dataset/ImageNet",
+    "training-epochs":90,
+    "train-batch-size":256,
+    "save-name":"MLPMixerB16_ImageNet",
+    "print-train-count":100,
+    "save-name":"MLPMixerB16_ImageNet_FB12",
+    "bf-layer-conf-dict":{
+        "0":"MLPMixerB16_FB12"
+    }
+}

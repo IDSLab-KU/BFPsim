@@ -7,13 +7,21 @@ import numpy as np
 
 def LoadDataset(args):
     if args.dataset == "CIFAR10":
-        return LoadCifar10(args)
+        trainset, testset, classes = LoadCifar10(args)
     elif args.dataset == "CIFAR100":
-        return LoadCifar100(args)
+        trainset, testset, classes = LoadCifar100(args)
     elif args.dataset == "ImageNet":
-        return LoadImageNet(args)
+        trainset, testset, classes = LoadImageNet(args)
     else:
         raise NotImplementedError("Dataset {} not Implemented".format(args.dataset))
+    
+    train_sampler = None
+    trainloader = torch.utils.data.DataLoader(trainset,
+        batch_size=args.batch_size_train, shuffle=(train_sampler is None), num_workers=args.num_workers, sampler=train_sampler, pin_memory=True)
+    testloader = torch.utils.data.DataLoader(testset,
+        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+
+    return trainset, testset, classes, trainloader, testloader
 
 def LoadCifar10(args):
     transform_train = transforms.Compose(
@@ -30,18 +38,13 @@ def LoadCifar10(args):
         ])
 
     # Prepare Cifar-10 Dataset
-    trainset = torchvision.datasets.CIFAR10(root=args.path_dataset, train=True,download=True, transform=transform_train)
-    testset =  torchvision.datasets.CIFAR10(root=args.path_dataset, train=False,download=True, transform=transform_test)
+    trainset = torchvision.datasets.CIFAR10(root=args.path_dataset, train=True, download=True, transform=transform_train)
+    testset =  torchvision.datasets.CIFAR10(root=args.path_dataset, train=False, download=True, transform=transform_test)
 
     classes = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-    trainloader = torch.utils.data.DataLoader(args.trainset,
-        batch_size=args.batch_size_train, shuffle=True, num_workers=args.num_workers)
-    testloader = torch.utils.data.DataLoader(args.testset,
-        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers)
-    
-    return trainset, testset, classes, trainloader, testloader
+    return trainset, testset, classes
 
 
 def LoadCifar100(args):
@@ -75,12 +78,32 @@ def LoadCifar100(args):
             'bicycle', 'bus', 'motorcycle', 'pickup_truck', 'train',
             'lawn_mower', 'rocket', 'streetcar', 'tank', 'tractor']
             
-    trainloader = torch.utils.data.DataLoader(args.trainset,
-        batch_size=args.batch_size_train, shuffle=True, num_workers=args.num_workers)
-    testloader = torch.utils.data.DataLoader(args.testset,
-        batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_workers)
-    
-    return trainset, testset, classes, trainloader, testloader
+    return trainset, testset, classes
+
+import torchvision.datasets as datasets
 
 def LoadImageNet(args):
-    pass
+
+    
+    traindir = os.path.join(args.dataset_path, 'train')
+    valdir = os.path.join(args.dataset_path, 'val')
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    train_dataset = datasets.ImageFolder(
+        traindir,
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    test_dataset = datasets.ImageFolder(
+        valdir, transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    classes = [" "] * 1000
+    return train_dataset, test_dataset, classes

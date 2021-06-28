@@ -239,6 +239,15 @@ def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride
         Log.Print("WARNING(SetConv2dLayer): Name %s not in config file. Returning normal nn.Conv2d"%name, col='m', current=False, elapsed=False)
         return torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
 
+
+def SetLinearLayer(name, bf_conf, in_channels, out_channels, bias=True, bwg_boost=1.0):
+    if name in bf_conf:
+        return BFLinear(in_channels, out_channels, BFConf(bf_conf[name], bwg_boost), bias=bias)
+    else:
+        Log.Print("WARNING(SetLinear): Name %s not in config file. Returning normal nn.Linear"%name, col='m', current=False, elapsed=False)
+        return torch.nn.Linear(in_channels, out_channels, bias=bias)
+
+
 def SaveModel(args, suffix):
     PATH = "%s_%s.model"%(args.save_prefix,suffix)
     Log.Print("Saving model file as %s"%PATH)
@@ -278,7 +287,7 @@ def GetNetwork(model, bf_layer_conf, classes, loss_boost, dataset):
             NotImplementedError("Model {model} not defined on {dataset}")
         else:
             net = DenseNetCifar(bf_layer_conf, len(classes), loss_boost)
-    elif model == "MLPMixerS16":
+    elif model == "MLPMixerB16":
         if dataset == "ImageNet":
             net = mlp_mixer_b16(bf_layer_conf, len(classes))
         else:
