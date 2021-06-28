@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 
-from log import Log
+from utils.logger import Log
 from functions import SaveModel, GetNetwork, GetOptimizerScheduler
 
 def Train(args, epoch_current):

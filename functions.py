@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 
 import os
 import numpy as np
+from utils.logger import Log
 
 def str2tuple(v):
     r = []
@@ -192,8 +193,6 @@ class Stat():
                 f.write(str(i)+"\t")
             f.write("\n")
 
-
-from log import Log
 from block import BFLinear, BFConv2d
 
 def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride=1, padding=0, padding_mode="zeros", dilation=1, groups=1, bias=True, bwg_boost=1.0):

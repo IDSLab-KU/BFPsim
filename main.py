@@ -2,12 +2,12 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
-from log import Log
+
 from functions import Stat, str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
 from train import TrainNetwork
 
+from utils.logger import Log
 from utils.generateConfig import GenerateConfig
-from utils.makeGraph import SaveNetworkWeights
 from utils.ZSEAnalyze import ZSEAnalyze
 
 from dataset import LoadDataset
@@ -284,10 +284,6 @@ if __name__ == '__main__':
         Log.Print("Graph mode: {}".format(args.zt_graph_mode), current=False, elapsed=False)
         Log.Print("Print mode: {}".format(args.zt_print_mode), current=False, elapsed=False)
         ZSEAnalyze(args)
-    elif args.mode == "save-network-weights":
-        Log.Print("Program executed on save-network-weights mode.", current=False, elapsed=False)
-        Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
-        SaveNetworkWeights(args)
     elif args.mode == "generate-config":
         Log.Print("Program executed on config-generation mode.", current=False, elapsed=False)
         GenerateConfig(args)

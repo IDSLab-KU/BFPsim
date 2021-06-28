@@ -10,14 +10,6 @@ def flatten(el):
         res += c
     return res
 
-# from model.AlexNet import AlexNet
-# from model.ResNet import ResNet18
-# from model.DenseNet import DenseNetCifar
-# from model.MobileNetv1 import MobileNetv1
-# from model.VGG import VGG16
-# from model.ResNetImageNet import resnet18_imagenet
-from model.MLPMixer import mlp_mixer_b16
-
 def GenerateConfig(args):
     print("------------------------------------")
     for name, module in args.net.named_modules():
