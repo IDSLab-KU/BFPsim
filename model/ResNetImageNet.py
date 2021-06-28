@@ -16,7 +16,7 @@ def conv7x7(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, d
     """7x7 convolution with padding"""
     # TODO : Apply grouping for this layer, too!
     return nn.Conv2d(in_planes, out_planes, kernel_size=7, stride=stride,
-                     padding=dilation, groups=groups, bias=bias, dilation=dilation, padding = padding)
+                     padding=dilation, groups=groups, bias=bias, dilation=dilation)
 
 def conv3x3(name: str, bf_conf, in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
     """3x3 convolution with padding"""

@@ -38,8 +38,8 @@ def LoadCifar10(args):
         ])
 
     # Prepare Cifar-10 Dataset
-    trainset = torchvision.datasets.CIFAR10(root=args.path_dataset, train=True, download=True, transform=transform_train)
-    testset =  torchvision.datasets.CIFAR10(root=args.path_dataset, train=False, download=True, transform=transform_test)
+    trainset = torchvision.datasets.CIFAR10(root=args.dataset_path, train=True, download=True, transform=transform_train)
+    testset =  torchvision.datasets.CIFAR10(root=args.dataset_path, train=False, download=True, transform=transform_test)
 
     classes = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -54,8 +54,8 @@ def LoadCifar100(args):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
         ])
-    trainset = torchvision.datasets.CIFAR100(root=args.path_dataset, train=True, download=True, transform=transform)
-    testset =  torchvision.datasets.CIFAR100(root=args.path_dataset, train=False, download=True, transform=transform)
+    trainset = torchvision.datasets.CIFAR100(root=args.dataset_path, train=True, download=True, transform=transform)
+    testset =  torchvision.datasets.CIFAR100(root=args.dataset_path, train=False, download=True, transform=transform)
     
     classes = ['beaver', 'dolphin', 'otter', 'seal', 'whale',
             'aquarium_fish', 'flatfish', 'ray', 'shark', 'trout',
