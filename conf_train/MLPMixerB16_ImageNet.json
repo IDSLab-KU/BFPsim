@@ -4,10 +4,10 @@
     "model":"MLPMixerB16",
     "dataset":"ImageNet",
     "dataset-path":"../dataset/ImageNet",
-    "training-epochs":90,
-    "train-batch-size":256,
+    "training-epochs":50,
+    "train-batch-size":512,
     "save-name":"MLPMixerB16_ImageNet",
-    "print-train-count":100,
+    "print-train-count":20,
     "bf-layer-conf-dict":{
         "0":"MLPMixerB16"
     }
