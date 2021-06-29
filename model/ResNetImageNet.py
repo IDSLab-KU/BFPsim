@@ -53,10 +53,10 @@ class BasicBlock(nn.Module):
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv3x3("conv1", bf_conf["conv1"], inplanes, planes, stride)
+        self.conv1 = conv3x3("conv1", bf_conf, inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3("conv2", bf_conf["conv2"], planes, planes)
+        self.conv2 = conv3x3("conv2", bf_conf, planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.stride = stride
@@ -108,7 +108,7 @@ class Bottleneck(nn.Module):
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
-        self.conv2 = conv3x3("conv2", bf_conf["conv2"], width, width, stride, groups, dilation)
+        self.conv2 = conv3x3("conv2", bf_conf, width, width, stride, groups, dilation)
         self.bn2 = norm_layer(width)
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
