@@ -1,0 +1,14 @@
+{
+    "name":"ResNet18_ImageNet_FB12",
+    "description":"ResNet18_ImageNet_FB12",
+    "model":"ResNet18",
+    "dataset":"ImageNet",
+    "dataset-path":"../dataset/ImageNet",
+    "training-epochs":50,
+    "batch-size-train":256,
+    "save-name":"ResNet18_ImageNet",
+    "print-train-count":20,
+    "bf-layer-conf-dict":{
+        "0":"ResNet18"
+    }
+}
