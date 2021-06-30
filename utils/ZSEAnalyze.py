@@ -162,10 +162,11 @@ def GetZSE(inp_n, group_mantissa, group_size, group_direction):
 
     # Get the stats
     r = r.flatten()
-    res = np.zeros(group_mantissa+1, dtype=np.int32)
-    for i in range(group_mantissa+1):
+    res = np.zeros(group_mantissa+2, dtype=np.int32)
+    for i in range(group_mantissa+2):
         res[i] = (r == i).sum()
-    res[-1] = (r < 0).sum()
+    res[-2] = (r < -50).sum()
+    res[-1] = (r < 0).sum() - res[-2]
     # print(total, res, res.sum())
     # print("bit={}, sz={}, dim={} = {} / {}".format(group_mantissa, group_size, inp_shape, np.asarray(inp_shape).prod(), res.sum()))
     return res
@@ -182,11 +183,21 @@ class ZSEObject_:
     def AddData(self, inp, group_mantissa, group_size, group_direction, type):
         # print(inp.shape)
         typename = DictKey(COMP_TYPE, type)
-        if typename in ["fw", "fi", "bio"]:
+        if typename in ["fw", "fi", "bio", "bwg"]:
             res = GetZSE(inp, group_mantissa, group_size, group_direction)
             if typename not in self.data:
-                self.data[typename] = np.zeros(group_mantissa+1)
+                self.data[typename] = np.zeros(group_mantissa+2)
             self.data[typename] += res
+
+            # if typename == "fi":
+            #     self.printZSEArray(res)
+
+    def printZSEArray(self, res):
+        s = ""
+        for i in res:
+            s += "%7d "%i
+        s += "/ %02.5f"%(res[-1]/res.sum()*100)
+        print(s)
     
     def __repr__(self) -> str:
         return str(self)
@@ -212,8 +223,9 @@ def ZSEAnalyze(args):
 
     args.net.load_state_dict(torch.load(args.save_file))
     args.net.eval()
-
-    count = 10
+    for param_group in args.optimizer.param_groups:
+        param_group['lr'] = 0
+    count = 50
     for i, data in enumerate(args.trainloader, 0):
 
         inputs, labels = data        
@@ -234,6 +246,10 @@ def ZSEAnalyze(args):
         args.optimizer.step()
 
         Log.Print("%d/%d Forward Processed"%(i+1, count))
+        
+        if i < 3 and i != count - 1: # Print for debug
+            Log.Print(str(ZSEObject))
+        
         if i == count - 1:
             break
 

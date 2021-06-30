@@ -18,4 +18,7 @@
 # docker run -ti --rm --gpus '"device=1"' --cpus="4" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode generate-config --log False --model ResNet18 --dataset ImageNet --dataset-path /dataset/ImageNet
 
 # zse-analyze
-docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./trained.model --bf-layer-conf-file ResNet18_FB16 --zse-graph-mode none
+# docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./Results/saves/ResNet18_CIFAR10_8Lbit_finish.model --bf-layer-conf-file ResNet18_FB16_B --zse-graph-mode none
+
+mode=FB12
+docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./trained.model --bf-layer-conf-file ResNet18_${mode} --zse-graph-mode none --log True --save-name ZSE_ResNet18_${mode}
