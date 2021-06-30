@@ -61,7 +61,7 @@ def ArgumentParse():
 
     # Global options
     parser.add_argument("--mode", type=str, default="train",
-        help = "Program execution mode [train, zseAnalyze, generateConfig]")
+        help = "Program execution mode [train, zse-analyze, generate-config]")
     parser.add_argument("--cuda", type=str2bool, default=True,
         help = "True if you want to use cuda")
 
@@ -125,11 +125,11 @@ def ArgumentParse():
     parser.add_argument("--save-file", type=str, default = "",
         help = "Saved checkpoint of the model")
     parser.add_argument("--zse-bf", type=str2bool, default = False,
-        help = "[zseAnalyze] If saved file is BF network, set this to true")
+        help = "[zse-analyze] If saved file is BF network, set this to true")
     parser.add_argument("--zse-graph-mode", type=str, default="percentage",
-        help = "[zseAnalyze] Choose graph mode [none, percentage, count]")
+        help = "[zse-analyze] Choose graph mode [none, percentage, count]")
     parser.add_argument("--zse-print-mode", type=str, default = "sum",
-        help = "[zseAnalyze] Choose print mode [none, sum, format, all]")
+        help = "[zse-analyze] Choose print mode [none, sum, format, all]")
 
     # Parse arguments
     args = parser.parse_args()
@@ -274,13 +274,13 @@ if __name__ == '__main__':
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
-    elif args.mode == "zseAnalyze":
+    elif args.mode == "zse-analyze":
         # zse analyze mode
         Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
         Log.Print("Graph mode: {}".format(args.zse_graph_mode), current=False, elapsed=False)
         Log.Print("Print mode: {}".format(args.zse_print_mode), current=False, elapsed=False)
         ZSEAnalyze(args)
-    elif args.mode == "generateConfig":
+    elif args.mode == "generate-config":
         # Generating config mode
         GenerateConfig(args)
     elif args.mode == "temp":

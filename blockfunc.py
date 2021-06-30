@@ -1,6 +1,7 @@
 import torch
 import numpy as np
-from functions import DIR_DICT
+from conf import FLAGS
+from utils.ZSEAnalyze import ZSEObject
 
 fp32_mask = [0,
     0x00400000, 0x00600000, 0x00700000, 0x00780000,
@@ -135,7 +136,7 @@ def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
         return torch.from_numpy(r)
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
-def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
+def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = -1):
     # return set mantissa if group size is 1
     if group_size == 1:
         return set_mantissa_tensor(inp, group_mantissa)
@@ -144,6 +145,9 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction):
         inp_n = inp.cpu().numpy()
     else:
         inp_n = inp.numpy()
+    # ZSE Handling
+    if FLAGS.ZSE:
+        ZSEObject.AddData(inp_n, group_mantissa, group_size, group_direction, type)
     # Save original shape
     inp_shape = inp_n.shape
     # STEP 1 : Pre-process array to match with group size

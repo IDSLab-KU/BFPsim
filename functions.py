@@ -26,6 +26,11 @@ DIR_DICT = {
     "FC" : 12
 }
 
+def DictKey(d, v):
+    for key in d:
+        if d[key] == v:
+            return key
+
 def DirKey(v):
     for key in DIR_DICT:
         if DIR_DICT[key] == v:

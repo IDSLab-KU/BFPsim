@@ -149,9 +149,9 @@ class BFConv2dFunction(torch.autograd.Function):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
         # Grouping input and weight
         if bf_conf.fi:
-            input = make_groups_tensor(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir)
+            input = make_groups_tensor(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir, 0)
         if bf_conf.fw:
-            weight = make_groups_tensor(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir)
+            weight = make_groups_tensor(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir, 1)
 
         ctx.stride = stride
         ctx.padding = padding
@@ -165,7 +165,7 @@ class BFConv2dFunction(torch.autograd.Function):
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
         # Grouping Output
         if bf_conf.fo:
-            output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
+            output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir, 2)
 
         return output
     
@@ -185,18 +185,18 @@ class BFConv2dFunction(torch.autograd.Function):
         # Calculate Input Gradient
         ## Grouping grad_output
         if bf_conf.bio:
-            grad_output_ = make_groups_tensor(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir)
+            grad_output_ = make_groups_tensor(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir, 10)
         else: # Apply original gradient if grad_output is not grouped
             grad_output_ = grad_output
         ## Grouping weight
         if bf_conf.biw:
-            weight = make_groups_tensor(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir)        
+            weight = make_groups_tensor(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir, 11)        
         ## Do the convolution
         if ctx.needs_input_grad[0]:
             grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output_, stride, padding, dilation, groups)
         ## Grouping output grad_input
         if bf_conf.big:
-            grad_input_ = make_groups_tensor(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir)
+            grad_input_ = make_groups_tensor(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir, 12)
         else: # If not grouping, use original type
             grad_input_ = grad_input
 
@@ -206,20 +206,20 @@ class BFConv2dFunction(torch.autograd.Function):
         if bf_conf.bwo:
             # Regroup if bwo / bio grouping configuration is different!
             if (bf_conf.bwo_bit != bf_conf.bio_bit or bf_conf.bwo_sz != bf_conf.bio_sz or bf_conf.bwo_dir != bf_conf.bio_dir):
-                grad_output_ = make_groups_tensor(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir)
+                grad_output_ = make_groups_tensor(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir, 20)
         else: # If not grouping, use original type
             grad_output_ = grad_output
         ## Grouping input - it's not grad_input, right?
         if bf_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
             if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
-                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
+                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir, 21)
         ## Do the convolution
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
         # Group the gradient of weight
         if bf_conf.bwg:
-            grad_weight = make_groups_tensor(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir)
+            grad_weight = make_groups_tensor(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir, 22)
 
         # Apply weaken gradient if weight gradient boost is applied
         if bf_conf.bwg_boost != 1.0:
