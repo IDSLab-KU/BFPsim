@@ -4,7 +4,6 @@ import torchvision.transforms as transforms
 
 import os
 import numpy as np
-from utils.logger import Log
 
 def LoadDataset(args):
     if args.dataset == "CIFAR10":
