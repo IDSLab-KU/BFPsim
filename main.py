@@ -270,15 +270,17 @@ if __name__ == '__main__':
     if args.mode == "train":
         # Network training mode
         for arg in vars(args):
-            if arg in ["bf_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse-" in arg:
+            if arg in ["bf_layer_confs", "bf_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse-" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
     elif args.mode == "zse-analyze":
+        for arg in vars(args):
+            if arg in ["bf_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bf_layer_conf",
+            "criterion", "optimizer", "scheduler", "stat_location", "save_prefix", "loss_boost", "training_epochs", "train_config_file"]:
+                continue
+            Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         # zse analyze mode
-        Log.Print("Loaded saved file: {}".format(args.save_file), current=False, elapsed=False)
-        Log.Print("Graph mode: {}".format(args.zse_graph_mode), current=False, elapsed=False)
-        Log.Print("Print mode: {}".format(args.zse_print_mode), current=False, elapsed=False)
         ZSEAnalyze(args)
     elif args.mode == "generate-config":
         # Generating config mode
@@ -287,3 +289,5 @@ if __name__ == '__main__':
         pass
     else:
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
+
+    Log.Print("Program Terminated")

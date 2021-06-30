@@ -20,5 +20,14 @@
 # zse-analyze
 # docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./Results/saves/ResNet18_CIFAR10_8Lbit_finish.model --bf-layer-conf-file ResNet18_FB16_B --zse-graph-mode none
 
-mode=FB12
-docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./trained.model --bf-layer-conf-file ResNet18_${mode} --zse-graph-mode none --log True --save-name ZSE_ResNet18_${mode}
+# Normal mode
+# docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./trained.model --bf-layer-conf-file ResNet18_ZSE_${mode} --zse-graph-mode none --log True --save-name ZSE_ResNet18_${mode}
+
+
+# using original mode
+# docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./Results/saves/ResNet18_CIFAR10_4Lbit_finish.model --bf-layer-conf-file ResNet18_FB12 --zse-graph-mode none --save-name ZSE_ResNet18_FB12 --log True
+
+mode=8B
+epoch=200
+gs=108
+docker run --rm --gpus '"device=1"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode zse-analyze --log False --num-workers 2 --model ResNet18 --save-file ./trained.model --bf-layer-conf-file ResNet18_ZSE_${mode}_${gs} --zse-graph-mode none --log False

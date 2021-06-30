@@ -217,15 +217,15 @@ class ZSEObject_:
 ZSEObject = ZSEObject_()
 
 def ZSEAnalyze(args):
-    Log.SetPrintCurrentTime(False)
-    Log.SetPrintElapsedTime(False)
+    # Log.SetPrintCurrentTime(False)
+    # Log.SetPrintElapsedTime(False)
     FLAGS.ZSE = True
 
     args.net.load_state_dict(torch.load(args.save_file))
     args.net.eval()
     for param_group in args.optimizer.param_groups:
         param_group['lr'] = 0
-    count = 50
+    count = 10
     for i, data in enumerate(args.trainloader, 0):
 
         inputs, labels = data        
