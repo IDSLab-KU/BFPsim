@@ -255,7 +255,12 @@ class BFConv2d(torch.nn.Module):
                 valid_padding_modes, padding_mode))
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
+        # TODO : Edit this area
+        if type(kernel_size) == int:
+            self.kernel_size = kernel_size
+        else:
+            self.kernel_size = kernel_size[0]
+
         self.bf_conf = bf_conf
         self.stride = stride
         self.padding = padding
@@ -264,7 +269,7 @@ class BFConv2d(torch.nn.Module):
         self.padding_mode = padding_mode
 
         self.weight = nn.Parameter(torch.Tensor(
-            out_channels, in_channels // groups, kernel_size, kernel_size))
+            out_channels, in_channels // groups, self.kernel_size, self.kernel_size))
         # self.bias = nn.Parameter(torch.Tensor(out_channels))
         if bias:
             self.bias = nn.Parameter(torch.Tensor(out_channels))

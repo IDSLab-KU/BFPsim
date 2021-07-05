@@ -149,7 +149,9 @@ class Logger:
                 t += tCol[col]
             if bg != '':
                 t += bCol[bg]
-            t += msg + rCol
+            t += msg
+            if col != '':
+                t += rCol
             e, f = end, flush
             print(t, end = e, flush = f)
 

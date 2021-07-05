@@ -37,7 +37,9 @@ def DirKey(v):
             return key
 
 class BFConf():
-    def __init__(self, dic, bwg_boost = 1.0):
+    def __init__(self, dic=None, bwg_boost = 1.0):
+        if dic == None:
+            dic = dict()
         self.type   = dic["type"]              if "type"   in dic.keys() else "Conv2d"
 
         # Foward - Weight
@@ -231,6 +233,8 @@ from model.VGG import VGG16
 from model.ResNetImageNet import resnet18_imagenet
 from model.MLPMixer import mlp_mixer_b16
 
+import torchvision.models as models
+
 def GetNetwork(model, bf_layer_conf, classes, loss_boost, dataset):
     if model == "AlexNet":
         if dataset == "ImageNet":
@@ -239,7 +243,8 @@ def GetNetwork(model, bf_layer_conf, classes, loss_boost, dataset):
             net = AlexNet(bf_layer_conf, len(classes), loss_boost)    
     elif model == "ResNet18":
         if dataset == "ImageNet":
-            net = resnet18_imagenet(bf_layer_conf)
+            net = models.resnet18()
+            # net = resnet18_imagenet(bf_layer_conf)
         else:
             net = ResNet18(bf_layer_conf, len(classes), loss_boost)
     elif model == "VGG16":
