@@ -9,3 +9,4 @@ Results/
 _*.py
 *.model
 concat.sh
+*.tar
