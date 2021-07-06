@@ -259,6 +259,8 @@ def ArgumentParse():
 
     return args
 
+from functions import ReplaceLayers
+
 if __name__ == '__main__':
     # handle exit signal, so it can save on user exit
     signal.signal(signal.SIGINT, handler)
@@ -270,7 +272,7 @@ if __name__ == '__main__':
     if args.mode == "train":
         # Network training mode
         for arg in vars(args):
-            if arg in ["bf_layer_confs", "bf_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse-" in arg:
+            if arg in ["bf_layer_confs", "bf_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
@@ -286,7 +288,14 @@ if __name__ == '__main__':
         # Generating config mode
         GenerateConfig(args)
     elif args.mode == "temp":
-        pass
+        ReplaceLayers(args.net, dict())
+
+        # for name, module in args.net.named_modules():
+        #     if isinstance(module, nn.Linear):
+        #         print("LINEAR: " + name)
+        #     if isinstance(module, nn.Conv2d):
+        #         print("CONV2D: " + name)
+        # print(args.net)
     else:
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
 

@@ -204,6 +204,25 @@ class Stat():
 
 from block import BFLinear, BFConv2d
 
+def ReplaceLayers(net, bf_dict, name="net"):
+    for attr_str in dir(net):
+        if attr_str in bf_dict: # Layer configuration is found
+            bfc = BFConf(bf_dict[attr_str])
+        elif "default" in bf_dict: # If default value is set, use the default value
+            bfc = BFConf(bf_dict["default"])
+        else: # If no default value is set, don't replace
+            bfc = None
+        if bfc != None:
+            ta = getattr(net, attr_str)
+            if type(ta) == torch.nn.Conv2d: # Conv2d is replaced
+                new = BFConv2d(ta.in_channels, ta.out_channels, ta.kernel_size, bfc, ta.stride, ta.padding, ta.dilation, ta.groups, ta.bias, ta.padding_mode)
+                setattr(net, attr_str, new)
+                Log.Print("Replaced Conv2d: %s to %s"%(name+"."+attr_str, str(bfc)), current=False, elapsed=False)
+
+    # Recursive call to replace other layers
+    for n, ch in net.named_children():
+        ReplaceLayers(ch, bf_dict, name+"."+n)
+
 def SetConv2dLayer(name, bf_conf, in_channels, out_channels, kernel_size, stride=1, padding=0, padding_mode="zeros", dilation=1, groups=1, bias=True, bwg_boost=1.0):
     if name in bf_conf:
         return BFConv2d(in_channels, out_channels, kernel_size, BFConf(bf_conf[name], bwg_boost), stride, padding, dilation, groups, bias, padding_mode)

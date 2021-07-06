@@ -76,6 +76,7 @@ def GenerateConfig(args):
     print("------------------------------------")
     print("Named Layers")
     for name, module in args.net.named_modules():
+        name = "net." + name
         if isinstance(module, nn.Linear):
             print("LINEAR: " + name)
             configObj.AddLayer(name, "Linear", module)
