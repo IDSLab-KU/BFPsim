@@ -142,21 +142,20 @@ def make_groups_fc(v, dim, gs, group_mantissa):
     # Need to unpack block idx to threads
     # Suppose Group size is inputed as index (1, 4, 3, 3)
 
-    b0 = (dim[0]-1)//gs[0]+1
     b1 = (dim[1]-1)//gs[1]+1
     b2 = (dim[2]-1)//gs[2]+1
     b3 = (dim[3]-1)//gs[3]+1
     
-    idx0 = (idx // (b3 * b2 * b1)) % b0
-    idx1o = (idx // (b3 * b2)) % b1
-    idx2o = (idx // b3) % b2
-    idx3o = idx % b3
+    idx0 = (idx // (b3 * b2 * b1)) * gs[0]
+    idx1o = (idx // (b3 * b2)) % b1 * gs[1]
+    idx2o = (idx // b3) % b2 * gs[2]
+    idx3o = idx % b3 * gs[3]
 
     M = 0
     if idx0 >= dim[0]:
         return
     for idx1 in range(idx1o, idx1o + gs[1]):
-        if idx1o >= dim[1]:
+        if idx1 >= dim[1]:
             break
         for idx2 in range(idx2o, idx2o + gs[2]):
             if idx2 >= dim[2]:
@@ -164,13 +163,13 @@ def make_groups_fc(v, dim, gs, group_mantissa):
             for idx3 in range(idx3o, idx3o + gs[3]):
                 if idx3 >= dim[3]:
                     break
-                e = (v[idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                e = (v[idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0xff
                 if M < e:
                     M = e
 
     # Replace that area
     for idx1 in range(idx1o, idx1o + gs[1]):
-        if idx1o >= dim[1]:
+        if idx1 >= dim[1]:
             break
         for idx2 in range(idx2o, idx2o + gs[2]):
             if idx2 >= dim[2]:
@@ -179,7 +178,7 @@ def make_groups_fc(v, dim, gs, group_mantissa):
                 if idx3 >= dim[3]:
                     break
                 arridx = idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3
-                e = (v[arridx] >> 23 ) & 0x7f
+                e = (v[arridx] >> 23 ) & 0xff
                 if M - e <= group_mantissa - 1:
                     v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
                 else:
@@ -212,7 +211,7 @@ def make_groups_wo(v, dim, group_mantissa, group_size):
             continue
         for idx2 in range(dim[2]):
             for idx3 in range(dim[3]):
-                e = (v[xidx*dim[1]*dim[2]*dim[3]+(yidx*(group_size//9)+idx1)*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                e = (v[xidx*dim[1]*dim[2]*dim[3]+(yidx*(group_size//9)+idx1)*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0xff
                 if M < e:
                     M = e
     # Replace that area
@@ -222,7 +221,7 @@ def make_groups_wo(v, dim, group_mantissa, group_size):
         for idx2 in range(dim[2]):
             for idx3 in range(dim[3]):
                 arridx = xidx*dim[1]*dim[2]*dim[3]+(yidx*(group_size//9)+idx1)*dim[2]*dim[3]+idx2*dim[3]+idx3
-                e = (v[arridx] >> 23 ) & 0x7f
+                e = (v[arridx] >> 23 ) & 0xff
                 if M - e <= group_mantissa - 1:
                     v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
                 else:
@@ -254,7 +253,7 @@ def make_groups_wi(v, dim, group_mantissa, group_size):
             continue
         for idx2 in range(dim[2]):
             for idx3 in range(dim[3]):
-                e = (v[(xidx*(group_size//9)+idx0)*dim[1]*dim[2]*dim[3]+yidx*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                e = (v[(xidx*(group_size//9)+idx0)*dim[1]*dim[2]*dim[3]+yidx*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0xff
                 if M < e:
                     M = e
     # Replace that area
@@ -264,12 +263,32 @@ def make_groups_wi(v, dim, group_mantissa, group_size):
         for idx2 in range(dim[2]):
             for idx3 in range(dim[3]):
                 arridx = (xidx*(group_size//9)+idx0)*dim[1]*dim[2]*dim[3]+yidx*dim[2]*dim[3]+idx2*dim[3]+idx3
-                e = (v[arridx] >> 23 ) & 0x7f
+                e = (v[arridx] >> 23 ) & 0xff
                 if M - e <= group_mantissa - 1:
                     v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
                 else:
                     v[arridx] = 0
 
+
+cnt = 0
+import os
+def PrintNdarray(arr, comp):
+    global cnt
+    s = "ARRAY SHAPE: %s\n"%(str(arr.shape))
+    for i in range(arr.shape[0]):
+        if i > 0:
+            break
+        for j in range(arr.shape[1]):
+            if j > 0:
+                break
+            for k in range(arr.shape[2]):
+                for l in range(arr.shape[3]):
+                    s += "%2.4f=%2.4f "%(arr[i,j,k,l], comp[i,j,k,l])
+                s += "\n"
+    print(s)
+    cnt += 1
+    if cnt > 10:
+        os.exit()
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = -1):
@@ -297,8 +316,10 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         make_groups_wi[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
+        # print("0",end="")
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
         make_groups_wo[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
+        # print("1",end="")
     elif group_direction == 10: # FX Mode
         pass
     elif group_direction == 11: # FY Mode
@@ -306,6 +327,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     elif group_direction == 12: # FC Mode
         gs = (1, group_size//9, 3, 3)
         make_groups_fc[blockspergrid, threadsperblock](r_, inp_n.shape, gs, group_mantissa)
+        # print("c",end="")
     else:
         raise ValueError("group_direction not supported")
 
@@ -317,6 +339,9 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     r = np.frombuffer(r__, dtype=np.float32)
     # revert back to original shape
     r = r.reshape(inp_n.shape)
+
+    # if group_direction == 0:
+    #     PrintNdarray(inp_n, r)
 
     if inp.is_cuda:
         return torch.from_numpy(r).cuda()
