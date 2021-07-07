@@ -1,4 +1,5 @@
-
+# Test
+docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --model AlexNet --dataset CIFAR100 --bf-layer-conf-file AlexNet_FB12_B --log True --stat True
 
 # Execute example train config file
 # docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train -tc example
@@ -12,7 +13,7 @@
 # echo ${conf}
 # docker run --rm --gpus '"device=1"' --cpus="4" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --log True --stat True -tc ${conf}
 
-docker run --rm --gpus '"device=all"' --cpus="16" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/test.py --print-freq 50 --dist-url 'tcp://127.0.0.1:12355' --dist-backend 'nccl' --multiprocessing-distributed --world-size 1 --rank 0 ../dataset/ImageNet/Classification
+# docker run --rm --gpus '"device=all"' --cpus="16" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/_test.py --print-freq 50 --dist-url 'tcp://127.0.0.1:12355' --dist-backend 'nccl' --multiprocessing-distributed --world-size 1 --rank 0 ../dataset/ImageNet/Classification
 
 # docker run --rm --gpus '"device=all"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/test.py ../dataset/ImageNet/Classification --print-freq 50 --rank 4
 

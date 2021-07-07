@@ -66,11 +66,6 @@ def _make_groups(v, group_mantissa, group_size):
     return r_
 
 
-@jit(nopython=True)
-def _Internal_Group_WI(v, group_mantissa, group_size):
-    r_ = v.copy()
-    
-
 @cuda.jit
 def make_groups_gpu(arr, group_mantissa, group_size):
     # Thread id in a 1D block
@@ -98,7 +93,7 @@ def make_groups_gpu(arr, group_mantissa, group_size):
             else:
                 arr[arri] = 0
 
-threadsperblock = 128
+threadsperblock = 1024
 
 # Grouping tensor for fully connected layer. Direction is not important
 def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
@@ -135,8 +130,202 @@ def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
     else:
         return torch.from_numpy(r)
 
+
+# Suppose that kernel size is 3?
+@cuda.jit
+def make_groups_fc(v, dim, gs, group_mantissa):
+    threadidx = cuda.threadIdx.x # thread's idx
+    nthread = cuda.blockDim.x # # how many threads in block
+    blockidx = cuda.blockIdx.x # block (compose of threads)
+    idx = threadidx + nthread * blockidx
+
+    # Need to unpack block idx to threads
+    # Suppose Group size is inputed as index (1, 4, 3, 3)
+
+    b0 = (dim[0]-1)//gs[0]+1
+    b1 = (dim[1]-1)//gs[1]+1
+    b2 = (dim[2]-1)//gs[2]+1
+    b3 = (dim[3]-1)//gs[3]+1
+    
+    idx0 = (idx // (b3 * b2 * b1)) % b0
+    idx1o = (idx // (b3 * b2)) % b1
+    idx2o = (idx // b3) % b2
+    idx3o = idx % b3
+
+    M = 0
+    if idx0 >= dim[0]:
+        return
+    for idx1 in range(idx1o, idx1o + gs[1]):
+        if idx1o >= dim[1]:
+            break
+        for idx2 in range(idx2o, idx2o + gs[2]):
+            if idx2 >= dim[2]:
+                break
+            for idx3 in range(idx3o, idx3o + gs[3]):
+                if idx3 >= dim[3]:
+                    break
+                e = (v[idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                if M < e:
+                    M = e
+
+    # Replace that area
+    for idx1 in range(idx1o, idx1o + gs[1]):
+        if idx1o >= dim[1]:
+            break
+        for idx2 in range(idx2o, idx2o + gs[2]):
+            if idx2 >= dim[2]:
+                break
+            for idx3 in range(idx3o, idx3o + gs[3]):
+                if idx3 >= dim[3]:
+                    break
+                arridx = idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3
+                e = (v[arridx] >> 23 ) & 0x7f
+                if M - e <= group_mantissa - 1:
+                    v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
+                else:
+                    v[arridx] = 0
+
+
+# Suppose that kernel size is 3?
+@cuda.jit
+def make_groups_wo(v, dim, group_mantissa, group_size):
+    threadidx = cuda.threadIdx.x # thread's idx
+    nthread = cuda.blockDim.x # # how many threads in block
+    blockidx = cuda.blockIdx.x # block (compose of threads)
+
+    # Need to unpack block idx to threads
+    idx = threadidx + nthread * blockidx
+    xsz = dim[0] 
+    ysz = dim[1] // (group_size // 9)
+
+    if idx >= xsz * ysz:
+        return
+
+    M = 0
+    xidx = idx % xsz
+    yidx = idx // xsz
+    if xidx >= dim[0]:
+        return
+    # Get the maximum mantissa
+    for idx1 in range(group_size // 9):
+        if yidx*(group_size//9)+idx1 >= dim[1]:
+            continue
+        for idx2 in range(dim[2]):
+            for idx3 in range(dim[3]):
+                e = (v[xidx*dim[1]*dim[2]*dim[3]+(yidx*(group_size//9)+idx1)*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                if M < e:
+                    M = e
+    # Replace that area
+    for idx1 in range(group_size // 9):
+        if yidx*(group_size//9)+idx1 >= dim[1]:
+            continue
+        for idx2 in range(dim[2]):
+            for idx3 in range(dim[3]):
+                arridx = xidx*dim[1]*dim[2]*dim[3]+(yidx*(group_size//9)+idx1)*dim[2]*dim[3]+idx2*dim[3]+idx3
+                e = (v[arridx] >> 23 ) & 0x7f
+                if M - e <= group_mantissa - 1:
+                    v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
+                else:
+                    v[arridx] = 0
+
+# Suppose that kernel size is 3?
+@cuda.jit
+def make_groups_wi(v, dim, group_mantissa, group_size):
+    threadidx = cuda.threadIdx.x # thread's idx
+    nthread = cuda.blockDim.x # # how many threads in block
+    blockidx = cuda.blockIdx.x # block (compose of threads)
+
+    # Need to unpack block idx to threads
+    idx = threadidx + nthread * blockidx
+    xsz = dim[0] // (group_size // 9)
+    ysz = dim[1]
+
+    if idx >= xsz * ysz:
+        return
+
+    M = 0
+    xidx = idx % xsz
+    yidx = idx // xsz
+    if yidx >= dim[1]:
+        return
+    # Get the maximum mantissa
+    for idx0 in range(group_size // 9):
+        if xidx*(group_size//9)+idx0 >= dim[0]:
+            continue
+        for idx2 in range(dim[2]):
+            for idx3 in range(dim[3]):
+                e = (v[(xidx*(group_size//9)+idx0)*dim[1]*dim[2]*dim[3]+yidx*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0x7f
+                if M < e:
+                    M = e
+    # Replace that area
+    for idx0 in range(group_size // 9):
+        if xidx*(group_size//9)+idx0 >= dim[0]:
+            continue
+        for idx2 in range(dim[2]):
+            for idx3 in range(dim[3]):
+                arridx = (xidx*(group_size//9)+idx0)*dim[1]*dim[2]*dim[3]+yidx*dim[2]*dim[3]+idx2*dim[3]+idx3
+                e = (v[arridx] >> 23 ) & 0x7f
+                if M - e <= group_mantissa - 1:
+                    v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
+                else:
+                    v[arridx] = 0
+
+
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = -1):
+    # return set mantissa if group size is 1
+    if group_size == 1:
+        return set_mantissa_tensor(inp, group_mantissa)
+    # Convert tensor to numpy array
+    if inp.is_cuda:
+        inp_n = inp.cpu().numpy()
+    else:
+        inp_n = inp.numpy()
+    
+    # ZSE Handling
+    if FLAGS.ZSE:
+        ZSEObject.AddData(inp_n, group_mantissa, group_size, group_direction, type)
+
+    inp_n_ = np.reshape(inp_n, (np.product(inp_n.shape),))
+    # Convert to byte stream
+    st = inp_n_.tobytes() 
+    # Set to uint32 array to easy computing
+    v = np.frombuffer(st, dtype=np.uint32) 
+
+    # STEP 2 : gpu computation
+    r_ = cuda.to_device(v)
+    blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
+    if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
+        make_groups_wi[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
+    elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
+        make_groups_wo[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
+    elif group_direction == 10: # FX Mode
+        pass
+    elif group_direction == 11: # FY Mode
+        pass
+    elif group_direction == 12: # FC Mode
+        gs = (1, group_size//9, 3, 3)
+        make_groups_fc[blockspergrid, threadsperblock](r_, inp_n.shape, gs, group_mantissa)
+    else:
+        raise ValueError("group_direction not supported")
+
+    # make_groups_gpu[blockspergrid, threadsperblock](r_, group_mantissa, group_size)
+    r__ = r_.copy_to_host()
+
+    # STEP 3 : reverting array
+    # revert to original np.float32 
+    r = np.frombuffer(r__, dtype=np.float32)
+    # revert back to original shape
+    r = r.reshape(inp_n.shape)
+
+    if inp.is_cuda:
+        return torch.from_numpy(r).cuda()
+    else:
+        return torch.from_numpy(r)
+
+
+# make_group_tensor : Group values as same exponent bits, which shifts mantissa
+def _make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = -1):
     # return set mantissa if group size is 1
     if group_size == 1:
         return set_mantissa_tensor(inp, group_mantissa)
