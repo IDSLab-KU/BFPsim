@@ -138,12 +138,9 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     if group_size == 1:
         return set_mantissa_tensor(inp, group_mantissa)
     
-    inp_n = inp.cpu().numpy()
-    # ptr = ctypes.c_void_p(inp_n)
-    # pointer, read_only_flag = inp_n.__array_interface__['data']
-    # pointer = ctypes.pointer(np.ctypeslib.as_array(inp_n))
-    # inp_n = numba.carray(pointer, inp_n.shape, dtype=np.int32)
-    blockspergrid = (inp_n.shape[0]*inp_n.shape[1]*inp_n.shape[2]*inp_n.shape[3] + (threadsperblock - 1)) // threadsperblock
+ 
+    blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (threadsperblock - 1)) // threadsperblock
+    inp = inp.view(inp.size(), torch.int32)
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         gs = (group_size//9, 1, 3, 3)
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
@@ -157,11 +154,12 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     else:
         raise ValueError("group_direction not supported")
     
-    bs = ((inp_n.shape[0]-1)//gs[0]+1, (inp_n.shape[1]-1)//gs[1]+1, (inp_n.shape[2]-1)//gs[2]+1, (inp_n.shape[3]-1)//gs[3]+1)
-    inp_n = cuda.to_device(inp_n)
-    make_groups_4d_internal[blockspergrid, threadsperblock](inp_n.view(np.int32), inp_n.shape, bs, gs, group_mantissa)
-    
-    inp_n = inp_n.copy_to_host()
+    bs = ((inp.size()[0]-1)//gs[0]+1, (inp.size()[1]-1)//gs[1]+1, (inp.size()[2]-1)//gs[2]+1, (inp.size()[3]-1)//gs[3]+1)
+
+    # inp = cuda.to_device(inp)
+    make_groups_4d_internal[blockspergrid, threadsperblock](inp, inp.size(), bs, gs, group_mantissa)
+    # inp = inp.copy_to_host()
+
     # inp = numba.carray(inp, inp_n.shape, dtype=torch.float32)
-    inp_n.view(np.float32)
-    return torch.from_numpy(inp_n).cuda()
+    inp.view(dtype=torch.float32)
+    return inp

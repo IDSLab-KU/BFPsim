@@ -1,5 +1,18 @@
 # Test
-docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --model AlexNet --dataset CIFAR100 --bf-layer-conf-file AlexNet_FB12 --log False
+# AlexNetFB12
+# docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --model AlexNet --dataset CIFAR100 --bf-layer-conf-file AlexNet_FB12 --log False
+
+# ResNet18
+docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --bf-layer-conf-file ResNet18_FB12 --log False
+
+# docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --bf-layer-conf-file ResNet18_FB12 --log False
+
+# _test2
+# docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/_test2.py
+
+# ImageNetTest
+# docker run --rm --gpus '"device=3"' --cpus="16" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/_test.py --print-freq 100 --batch-size 128 ../dataset/ImageNet/Classification
+
 
 # docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --bf-layer-conf-file ResNet18_FB12_B --log False
 
@@ -14,8 +27,6 @@ docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --moun
 # conf=ResNet18_ImageNet
 # echo ${conf}
 # docker run --rm --gpus '"device=1"' --cpus="4" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/main.py --mode train --log True --stat True -tc ${conf}
-
-# docker run --rm --gpus '"device=1"' --cpus="16" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/_test.py --print-freq 50 ../dataset/ImageNet/Classification
 
 # docker run --rm --gpus '"device=all"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/floatblock:latest python3 -u /app/test.py ../dataset/ImageNet/Classification --print-freq 50 --rank 4
 
