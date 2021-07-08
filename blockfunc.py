@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from conf import FLAGS
 from utils.ZSEAnalyze import ZSEObject
+import ctypes
 
 fp32_mask = [0,
     0x00400000, 0x00600000, 0x00700000, 0x00780000,
@@ -19,106 +20,13 @@ fp64_mask = [0,
 from numba import jit, cuda
 
 @cuda.jit
-def make_groups_2d(v, dim, gs, group_mantissa):
-    threadidx = cuda.threadIdx.x # thread's idx
-    nthread = cuda.blockDim.x # # how many threads in block
-    blockidx = cuda.blockIdx.x # block (compose of threads)
-    idx = threadidx + nthread * blockidx
-
-    # Need to unpack block idx to threads
-    b0 = (dim[0]-1)//gs[0]+1
-    b1 = (dim[1]-1)//gs[1]+1
-    idx0o = (idx // b1) % b0 * gs[0]
-    idx1o = idx % b1 * gs[1]
-
-    M = 0
-    for idx0 in range(idx0o, idx0o + gs[0]):
-        if idx0 >= dim[0]:
-            break
-        for idx1 in range(idx1o, idx1o + gs[1]):
-            if idx1 >= dim[1]:
-                break
-            e = (v[idx0*dim[1]+idx1] >> 23 ) & 0xff
-            if M < e:
-                M = e
-
-    # Replace that area
-    for idx0 in range(idx0o, idx0o + gs[0]):
-        if idx0 >= dim[0]:
-            break
-        for idx1 in range(idx1o, idx1o + gs[1]):
-            if idx1 >= dim[1]:
-                break
-            arridx = idx0*dim[1]+idx1
-            e = (v[arridx] >> 23 ) & 0xff
-            if M - e <= group_mantissa - 1:
-                v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
-            else:
-                v[arridx] = 0
-
-@cuda.jit
-def make_groups_3d(v, dim, gs, group_mantissa):
-    threadidx = cuda.threadIdx.x # thread's idx
-    nthread = cuda.blockDim.x # # how many threads in block
-    blockidx = cuda.blockIdx.x # block (compose of threads)
-    idx = threadidx + nthread * blockidx
-
-    # Need to unpack block idx to threads
-    b0 = (dim[0]-1)//gs[0]+1
-    b1 = (dim[1]-1)//gs[1]+1
-    b2 = (dim[2]-1)//gs[2]+1
-    idx0o = (idx // (b2 * b1)) % b0 * gs[0]
-    idx1o = (idx // b2) % b1 * gs[1]
-    idx2o = idx % b2 * gs[2]
-
-    M = 0
-    for idx0 in range(idx0o, idx0o + gs[0]):
-        if idx0 >= dim[0]:
-            break
-        for idx1 in range(idx1o, idx1o + gs[1]):
-            if idx1 >= dim[1]:
-                break
-            for idx2 in range(idx2o, idx2o + gs[2]):
-                if idx2 >= dim[2]:
-                    break
-                e = (v[idx0*dim[1]*dim[2]+idx1*dim[2]+idx2] >> 23 ) & 0xff
-                if M < e:
-                    M = e
-
-    # Replace that area
-    for idx0 in range(idx0o, idx0o + gs[0]):
-        if idx0 >= dim[0]:
-            break
-        for idx1 in range(idx1o, idx1o + gs[1]):
-            if idx1 >= dim[1]:
-                break
-            for idx2 in range(idx2o, idx2o + gs[2]):
-                if idx2 >= dim[2]:
-                    break
-                arridx = idx0*dim[1]*dim[2]+idx1*dim[2]+idx2
-                e = (v[arridx] >> 23 ) & 0xff
-                if M - e <= group_mantissa - 1:
-                    v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
-                else:
-                    v[arridx] = 0
-
-@cuda.jit
-def make_groups_4d(v, dim, gs, group_mantissa):
-    threadidx = cuda.threadIdx.x # thread's idx
-    nthread = cuda.blockDim.x # # how many threads in block
-    blockidx = cuda.blockIdx.x # block (compose of threads)
-    idx = threadidx + nthread * blockidx
-
-    # Need to unpack block idx to threads
-    b0 = (dim[0]-1)//gs[0]+1
-    b1 = (dim[1]-1)//gs[1]+1
-    b2 = (dim[2]-1)//gs[2]+1
-    b3 = (dim[3]-1)//gs[3]+1
+def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // (b3 * b2 * b1)) % b0 * gs[0]
-    idx1o = (idx // (b3 * b2)) % b1 * gs[1]
-    idx2o = (idx // b3) % b2 * gs[2]
-    idx3o = idx % b3 * gs[3]
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
+    idx2o = (idx // bs[3]) % bs[2] * gs[2]
+    idx3o = idx % bs[3] * gs[3]
 
     M = 0
     for idx0 in range(idx0o, idx0o + gs[0]):
@@ -133,7 +41,7 @@ def make_groups_4d(v, dim, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3] >> 23 ) & 0xff
+                    e = (v[idx0,idx1,idx2,idx3] >> 23 ) & 0xff
                     if M < e:
                         M = e
 
@@ -150,12 +58,13 @@ def make_groups_4d(v, dim, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    arridx = idx0*dim[1]*dim[2]*dim[3]+idx1*dim[2]*dim[3]+idx2*dim[3]+idx3
-                    e = (v[arridx] >> 23 ) & 0xff
+                    e = (v[idx0,idx1,idx2,idx3] >> 23 ) & 0xff
                     if M - e <= group_mantissa - 1:
-                        v[arridx] = v[arridx] & (0xffffffff << (24 - group_mantissa + M - e))
+                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (24 - group_mantissa + M - e))
                     else:
-                        v[arridx] = 0
+                        v[idx0,idx1,idx2,idx3] = 0
+
+arrDict = dict()
 
 # set_mantissa_tensor : set to tensor or numpy array to speicific mantissa bits 
 # TODO : Set direction of grouping
@@ -208,7 +117,7 @@ def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
     # STEP 2 : gpu computation
     r_ = cuda.to_device(v)
     blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
-    make_groups_3d[blockspergrid, threadsperblock](r_, group_size, gs, group_mantissa)
+    make_groups_3d_internal[blockspergrid, threadsperblock](r_, group_size, gs, group_mantissa)
     r__ = r_.copy_to_host()
 
     # STEP 3 : reverting array
@@ -222,37 +131,23 @@ def make_groups_tensor_fc(inp, group_mantissa, group_size, group_direction):
     else:
         return torch.from_numpy(r)
 
+import numba
+
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = -1):
-    # return set mantissa if group size is 1
     if group_size == 1:
         return set_mantissa_tensor(inp, group_mantissa)
-    # Convert tensor to numpy array
-    if inp.is_cuda:
-        inp_n = inp.cpu().numpy()
-    else:
-        inp_n = inp.numpy()
     
-    # ZSE Handling
-    if FLAGS.ZSE:
-        ZSEObject.AddData(inp_n, group_mantissa, group_size, group_direction, type)
-
-    inp_n_ = np.reshape(inp_n, (np.product(inp_n.shape),))
-    # Convert to byte stream
-    st = inp_n_.tobytes() 
-    # Set to uint32 array to easy computing
-    v = np.frombuffer(st, dtype=np.uint32) 
-
-    # STEP 2 : gpu computation
-    r_ = cuda.to_device(v)
-    blockspergrid = (v.size + (threadsperblock - 1)) // threadsperblock
-
+    inp_n = inp.cpu().numpy()
+    # ptr = ctypes.c_void_p(inp_n)
+    # pointer, read_only_flag = inp_n.__array_interface__['data']
+    # pointer = ctypes.pointer(np.ctypeslib.as_array(inp_n))
+    # inp_n = numba.carray(pointer, inp_n.shape, dtype=np.int32)
+    blockspergrid = (inp_n.shape[0]*inp_n.shape[1]*inp_n.shape[2]*inp_n.shape[3] + (threadsperblock - 1)) // threadsperblock
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         gs = (group_size//9, 1, 3, 3)
-        # make_groups_wi[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
         gs = (1, group_size//9, 3, 3)
-        # make_groups_wo[blockspergrid, threadsperblock](r_, inp_n.shape, group_mantissa, group_size)
     elif group_direction == 10: # FX Mode
         gs = (1, 1, group_size//3, 3) # Group's size may small if image size is smaller than group_size//3
     elif group_direction == 11: # FY Mode
@@ -262,17 +157,11 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     else:
         raise ValueError("group_direction not supported")
     
-    make_groups_4d[blockspergrid, threadsperblock](r_, inp_n.shape, gs, group_mantissa)
-    # make_groups_gpu[blockspergrid, threadsperblock](r_, group_mantissa, group_size)
-    r__ = r_.copy_to_host()
-
-    # STEP 3 : reverting array
-    # revert to original np.float32 
-    r = np.frombuffer(r__, dtype=np.float32)
-    # revert back to original shape
-    r = r.reshape(inp_n.shape)
-
-    if inp.is_cuda:
-        return torch.from_numpy(r).cuda()
-    else:
-        return torch.from_numpy(r)
+    bs = ((inp_n.shape[0]-1)//gs[0]+1, (inp_n.shape[1]-1)//gs[1]+1, (inp_n.shape[2]-1)//gs[2]+1, (inp_n.shape[3]-1)//gs[3]+1)
+    inp_n = cuda.to_device(inp_n)
+    make_groups_4d_internal[blockspergrid, threadsperblock](inp_n.view(np.int32), inp_n.shape, bs, gs, group_mantissa)
+    
+    inp_n = inp_n.copy_to_host()
+    # inp = numba.carray(inp, inp_n.shape, dtype=torch.float32)
+    inp_n.view(np.float32)
+    return torch.from_numpy(inp_n).cuda()
