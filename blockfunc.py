@@ -140,7 +140,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     
  
     blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (threadsperblock - 1)) // threadsperblock
-    inp = inp.view(inp.size(), torch.int32)
+    inp = inp.view(torch.int32)
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         gs = (group_size//9, 1, 3, 3)
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
@@ -153,13 +153,12 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
         gs = (1, group_size//9, 3, 3)
     else:
         raise ValueError("group_direction not supported")
-    
+    inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
     bs = ((inp.size()[0]-1)//gs[0]+1, (inp.size()[1]-1)//gs[1]+1, (inp.size()[2]-1)//gs[2]+1, (inp.size()[3]-1)//gs[3]+1)
 
     # inp = cuda.to_device(inp)
-    make_groups_4d_internal[blockspergrid, threadsperblock](inp, inp.size(), bs, gs, group_mantissa)
+    make_groups_4d_internal[blockspergrid, threadsperblock](inp, inpsize, bs, gs, group_mantissa)
     # inp = inp.copy_to_host()
 
-    # inp = numba.carray(inp, inp_n.shape, dtype=torch.float32)
-    inp.view(dtype=torch.float32)
+    inp = inp.view(dtype=torch.float32)
     return inp
