@@ -7,6 +7,7 @@ from functions import Stat, str2bool, SaveModel, GetNetwork, GetOptimizerSchedul
 from train import TrainNetwork
 
 from utils.logger import Log
+from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
 from utils.ZSEAnalyze import ZSEAnalyze
 
@@ -173,6 +174,7 @@ def ArgumentParse():
     # Set the log file
     Log.SetLogFile(True, args.log_location) if args.log else Log.SetLogFile(False)
     args.stat = Stat(args) if args.stat else None
+    slackBot.SetProcessInfo(args.save_name)
     
     # tag:Dataset
     if args.train_config != None and "dataset" in args.train_config:
@@ -268,6 +270,8 @@ if __name__ == '__main__':
     # Parse Arguments and prepare almost everything
     args = ArgumentParse()
 
+    slackBot.SetToken("xoxb-2040262209265-2252035149014-zKacvtIydyL05JsFPdCfUDoA")
+    slackBot.SendStartSignal()
     Log.Print("Program executed on {} mode.".format(args.mode), current=False, elapsed=False)
     if args.mode == "train":
         # Network training mode
@@ -300,3 +304,4 @@ if __name__ == '__main__':
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
 
     Log.Print("Program Terminated")
+    slackBot.SendEndSignal()

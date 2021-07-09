@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 
 from utils.logger import Log
+from utils.slackBot import slackBot
 from functions import SaveModel, GetNetwork, GetOptimizerScheduler
 
 def Train(args, epoch_current):
@@ -135,6 +136,8 @@ def TrainNetwork(args):
         if args.save:
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
+        if (epoch_current+1) % 5 == 0:
+            slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
 
     Log.Print("========== Finishing Training ==========")
 
