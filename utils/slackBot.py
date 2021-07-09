@@ -43,6 +43,9 @@ class slackBot_:
     def SetProcessInfo(self, name):
         self.processInfo = name
 
+    def ResetStartTime(self):
+        self.startTime = time.time()
+
     def DisableLimit(self):
         self.isLimit = False
     
@@ -61,8 +64,13 @@ class slackBot_:
         for i in range(length):
             if (i+1)/length <= progress:
                 s += ":black_large_square:"
+            elif (i+0.75)/length <= progress:
+                s += ":black_medium_square:"
+            elif (i+0.5)/length <= progress:
+                s += ":black_medium_small_square:"
             else:
                 s += ":black_small_square:"
+            
         if length > 0:
             s += "\n"
         if estimated:
