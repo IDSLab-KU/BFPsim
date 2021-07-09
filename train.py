@@ -99,7 +99,7 @@ def EvaluateTrain(args):
 def TrainNetwork(args):
     Log.Print("========== Starting Training ==========")
     checkpointIndex = 0 # Index of the checkpoint
-
+    slackBot.ResetStartTime()
     for epoch_current in range(args.training_epochs):
 
         # Change and transfer model
