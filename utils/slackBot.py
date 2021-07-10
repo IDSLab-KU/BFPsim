@@ -34,7 +34,7 @@ class slackBot_:
             self.hostName = "Unknown"
         self.pid = str(os.getpid())
         self.processInfo = self.hostName + ":" + self.pid
-        
+        self.timezone = 9
         self.startTime = time.time()
 
     def SetToken(self, token):
@@ -78,7 +78,7 @@ class slackBot_:
             executed = currentTime - self.startTime
             estimated = self.startTime + executed / progress
 
-            s += "Elapsed `%s`, Expected finishing time `%s` (`%s` Left)\n"%(TimeStrH(executed),TimeStr(estimated), TimeStrH(estimated-time.time()))
+            s += "Elapsed `%s`, Expected finishing time `%s` (`%s` Left)\n"%(TimeStrH(executed),TimeStr(estimated + self.timezone*60*60), TimeStrH(estimated-time.time()))
         if message != "":
             s += "Additional Message:\n"
         self.Send(message, s, channel)
