@@ -127,17 +127,20 @@ def TrainNetwork(args):
             if args.cuda:
                 args.net.to('cuda')
             
-
+        
         Train(args, epoch_current)
         Evaluate(args)
         if args.print_train_accuracy:
             EvaluateTrain(args)
-            
+        
         if args.save:
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
-        if (epoch_current+1) % 5 == 0:
-            slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
+        
+        if (epoch_current+1) == 1:
+            slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
+        # if (epoch_current+1) % 5 == 0:
+        #     slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
 
     Log.Print("========== Finishing Training ==========")
 
