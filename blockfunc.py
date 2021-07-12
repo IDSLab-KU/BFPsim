@@ -41,7 +41,7 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0,idx1,idx2,idx3] >> 23 ) & 0xff
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f000000 ) >> 23  
                     if M < e:
                         M = e
 
@@ -58,7 +58,7 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0,idx1,idx2,idx3] >> 23 ) & 0xff
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f000000 ) >> 23
                     if M - e <= group_mantissa - 1:
                         v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (24 - group_mantissa + M - e))
                     else:
@@ -140,7 +140,7 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     
  
     blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (threadsperblock - 1)) // threadsperblock
-    inp = inp.view(torch.int32)
+    inp = inp.view(torch.int)
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         gs = (group_size//9, 1, 3, 3)
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
