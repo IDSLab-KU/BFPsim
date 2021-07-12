@@ -1,0 +1,20 @@
+{
+    "name":"Mixed_ResNet18_20",
+    "description":"",
+    "model":"ResNet18",
+    "training-epochs":200,
+    "save-name":"Mixed_ResNet18_20",
+    "bf-layer-conf-dict":{
+        "0":"ResNet18_FB16",
+        "20":"ResNet18_FB12",
+        "180":"ResNet18_FB16"
+    },
+    "optimizer-dict":{
+        "20":{
+            "scheduler-step":20
+        },
+        "180":{
+            "scheduler-step":180
+        }
+    }
+}

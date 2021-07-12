@@ -1,0 +1,20 @@
+{
+    "name":"Mixed_MobileNetv1_20",
+    "description":"",
+    "model":"MobileNetv1",
+    "training-epochs":200,
+    "save-name":"Mixed_MobileNetv1_20",
+    "bf-layer-conf-dict":{
+        "0":"MobileNetv1_FB16",
+        "20":"MobileNetv1_FB12",
+        "180":"MobileNetv1_FB16"
+    },
+    "optimizer-dict":{
+        "20":{
+            "scheduler-step":20
+        },
+        "180":{
+            "scheduler-step":180
+        }
+    }
+}

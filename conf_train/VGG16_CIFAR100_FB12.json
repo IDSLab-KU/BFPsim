@@ -1,0 +1,9 @@
+{
+    "name":"VGG16_CIFAR100_FB12",
+    "description":"",
+    "model":"VGG16",
+    "training-epochs":200,
+    "dataset":"CIFAR100",
+    "save-name":"VGG16_CIFAR100_FB12",
+    "bf-layer-conf-file":"VGG16_FB12"
+}

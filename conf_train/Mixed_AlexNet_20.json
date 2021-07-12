@@ -1,0 +1,20 @@
+{
+    "name":"Mixed_AlexNet_20",
+    "description":"",
+    "model":"AlexNet",
+    "training-epochs":200,
+    "save-name":"Mixed_AlexNet_20",
+    "bf-layer-conf-dict":{
+        "0":"AlexNet_FB16",
+        "20":"AlexNet_FB12",
+        "180":"AlexNet_FB16"
+    },
+    "optimizer-dict":{
+        "20":{
+            "scheduler-step":20
+        },
+        "180":{
+            "scheduler-step":180
+        }
+    }
+}

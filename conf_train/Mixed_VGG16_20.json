@@ -1,0 +1,20 @@
+{
+    "name":"Mixed_VGG16_20",
+    "description":"",
+    "model":"VGG16",
+    "training-epochs":200,
+    "save-name":"Mixed_VGG16_20",
+    "bf-layer-conf-dict":{
+        "0":"VGG16_FB16",
+        "20":"VGG16_FB12",
+        "180":"VGG16_FB16"
+    },
+    "optimizer-dict":{
+        "20":{
+            "scheduler-step":20
+        },
+        "180":{
+            "scheduler-step":180
+        }
+    }
+}
