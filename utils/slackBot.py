@@ -84,7 +84,7 @@ class slackBot_:
         self.Send(message, s, channel)
 
     def SendStartSignal(self, message="", channel=""):
-        s = ":large_green_circle: `%s` Started @ `%s` \n"%(self.processInfo, TimeStr(time.time()))
+        s = ":large_green_circle: `%s` Started @ `%s` \n"%(self.processInfo, TimeStr(time.time() + self.timezone*60*60))
         if message != "":
             s += "Additional Message:\n"      
         self.Send(message, s, channel)
@@ -108,6 +108,7 @@ class slackBot_:
         self.Send()
 
     def Send(self, message="", prefix="", channel=""):
+        # return
         # Check client is defined
         if self.client == None:
             print("slackBot ERROR: Please set token using slackBot.setToken(token)")
