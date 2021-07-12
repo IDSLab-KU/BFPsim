@@ -41,7 +41,9 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0,idx1,idx2,idx3] & 0x7f000000 ) >> 23  
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if e < 0:
+                        e = -e
                     if M < e:
                         M = e
 
@@ -58,9 +60,10 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0,idx1,idx2,idx3] & 0x7f000000 ) >> 23
-                    if M - e <= group_mantissa - 1:
-                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (24 - group_mantissa + M - e))
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    k = group_mantissa - M + e - 1
+                    if 0 <= k:
+                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))
                     else:
                         v[idx0,idx1,idx2,idx3] = 0
 
@@ -138,9 +141,19 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
     if group_size == 1:
         return set_mantissa_tensor(inp, group_mantissa)
     
- 
     blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (threadsperblock - 1)) // threadsperblock
-    inp = inp.view(torch.int)
+    inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
+    """
+    s = "==%s============================\n"%(str(inpsize))
+    for i in range(0, 8):
+        for j in range(0, 3):
+            s += "%2.3f\t"%inp[i,j,0,0]
+        s += "\t"
+    s += "\n"
+    # """
+
+
+    inp_ = inp.view(torch.int32)
     if group_direction == 0: # WI Mode, If kernel size is not 3, it will not work properly
         gs = (group_size//9, 1, 3, 3)
     elif group_direction == 1: # WO Mode, If kernel size is not 3, it will not work properly
@@ -153,12 +166,20 @@ def make_groups_tensor(inp, group_mantissa, group_size, group_direction, type = 
         gs = (1, group_size//9, 3, 3)
     else:
         raise ValueError("group_direction not supported")
-    inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
     bs = ((inp.size()[0]-1)//gs[0]+1, (inp.size()[1]-1)//gs[1]+1, (inp.size()[2]-1)//gs[2]+1, (inp.size()[3]-1)//gs[3]+1)
 
     # inp = cuda.to_device(inp)
-    make_groups_4d_internal[blockspergrid, threadsperblock](inp, inpsize, bs, gs, group_mantissa)
+    make_groups_4d_internal[blockspergrid, threadsperblock](inp_, inpsize, bs, gs, group_mantissa)
     # inp = inp.copy_to_host()
 
-    inp = inp.view(dtype=torch.float32)
+    """
+    for i in range(0, 8):
+        for j in range(0, 3):
+            s += "%2.3f\t"%v[i,j,0,0]
+        s += "\t"
+    s += "\n"
+    # """
+    # s = "%d / %d"%(np.count_nonzero(v == 0), inpsize[0]*inpsize[1]*inpsize[2]*inpsize[3])
+    # print(s)
+    # return torch.from_numpy(v).cuda()
     return inp
