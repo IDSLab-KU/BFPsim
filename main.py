@@ -226,7 +226,7 @@ def ArgumentParse():
         if args.checkpoints[0] != 0:
             raise ValueError("bfp-layer-conf-dict's first checkpoint's epoch is not 0")
         # Load the first checkpoint of the model
-        args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_conf[0])
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_confs[0])
     else:
         raise ValueError("bfp-layer-conf-file is not set. Please provide at least from bfp-layer-conf-file or bfp-layer-conf-dict")
 
