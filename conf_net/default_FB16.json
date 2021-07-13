@@ -2,13 +2,13 @@
     "name":"default",
     "default":{
         "fw_bit":8,
-        "fw_dim":[1,24,3,3],
-        "fi_dim":[1,6,3,3],
-        "fo_dim":[1,6,3,3],
+        "fw_dim":"wi, 216",
+        "fi_dim":"fc, 54",
+        "fo_dim":"fc, 54",
         "bwo_bit":16,
         "bwi_bit":16,
-        "bwo_dim":[1,1,18,3],
-        "bwi_dim":[1,1,18,3],
-        "bwg_dim":[1,1,18,3]
+        "bwo_dim":"fx, 54",
+        "bwi_dim":"fx, 54",
+        "bwg_dim":"fx, 54"
     }
 }
