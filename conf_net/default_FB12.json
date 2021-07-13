@@ -2,8 +2,7 @@
     "name":"default",
     "default":{
         "fw_bit":4,
-        "fw_sz":144,
-        "fi_sz":36,
-        "fo_sz":36
+        "bwo_bit":16,
+        "bwi_bit":16
     }
 }

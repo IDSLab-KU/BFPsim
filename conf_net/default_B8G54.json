@@ -1,7 +1,7 @@
 {
     "name":"default",
     "default":{
-        "fw_bit":16,
+        "fw_bit":8,
         "fw_dim":[1,24,3,3],
         "fi_dim":[1,6,3,3],
         "fo_dim":[1,6,3,3],

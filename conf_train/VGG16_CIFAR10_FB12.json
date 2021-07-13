@@ -5,5 +5,5 @@
     "training-epochs":200,
     "dataset":"CIFAR10",
     "save-name":"VGG16_CIFAR10_FB12",
-    "bf-layer-conf-file":"VGG16_FB12"
+    "bfp-layer-conf-file":"default_FB12"
 }

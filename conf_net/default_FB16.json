@@ -2,8 +2,13 @@
     "name":"default",
     "default":{
         "fw_bit":8,
-        "fw_sz":216,
-        "fi_sz":54,
-        "fo_sz":54
+        "fw_dim":[1,24,3,3],
+        "fi_dim":[1,6,3,3],
+        "fo_dim":[1,6,3,3],
+        "bwo_bit":16,
+        "bwi_bit":16,
+        "bwo_dim":[1,1,18,3],
+        "bwi_dim":[1,1,18,3],
+        "bwg_dim":[1,1,18,3]
     }
 }
