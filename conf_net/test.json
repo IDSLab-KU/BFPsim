@@ -1,7 +1,7 @@
 {
     "name":"default",
     "default":{
-        "fw_bit":6,
+        "fw_bit":4,
         "fw_dim":"wi, 216",
         "fi_dim":"fc, 54",
         "fo_dim":"fc, 54",

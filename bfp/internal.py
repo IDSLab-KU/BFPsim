@@ -91,7 +91,8 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                         e = -e
                     if M < e:
                         M = e
-
+    if M == 0:
+        return
     # Replace that area
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -108,7 +109,7 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
                     k = group_mantissa - M + e - 1
                     if 0 <= k:
-                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))
+                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0x7fffffff << (23 - k))
                     else:
                         v[idx0,idx1,idx2,idx3] = 0
 
