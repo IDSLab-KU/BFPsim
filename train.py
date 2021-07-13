@@ -75,6 +75,8 @@ def Evaluate(args):
     Log.Print('Test Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
     if args.stat is not None:
         args.stat.AddTestAccuracy(correct / total)
+    slackBot.AppendDump("%f "%(correct/total))
+        
 
 
 def EvaluateTrain(args):
@@ -94,6 +96,7 @@ def EvaluateTrain(args):
     Log.Print('Train Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
     if args.stat is not None:
         args.stat.AddTrainAccuracy(correct / total)
+    
 
 # Train the network and evaluate
 def TrainNetwork(args):
@@ -139,9 +142,11 @@ def TrainNetwork(args):
         
         if (epoch_current+1) == 1:
             slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
+        
         # if (epoch_current+1) % 5 == 0:
         #     slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
 
+    slackBot.SendDump()
     Log.Print("========== Finishing Training ==========")
 
     if args.stat is not None:
