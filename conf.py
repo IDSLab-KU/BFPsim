@@ -19,3 +19,5 @@ class Flags:
         self.DEBUG = False
 
 FLAGS = Flags()
+
+CUDA_THREADSPERBLOCK = 1024

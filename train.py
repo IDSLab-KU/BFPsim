@@ -114,7 +114,8 @@ def TrainNetwork(args):
             # Save original net
             net_ = args.net
             # Create new net
-            args.net = GetNetwork(args.model, args.bf_layer_confs[checkpointIndex], args.classes, args.loss_boost, args.dataset)           
+            args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_confs[checkpointIndex])
+
             # Copy state dicts
             args.net.load_state_dict(net_.state_dict())
             # Create new optimizer and emulate step

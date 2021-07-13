@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 
 
-from functions import Stat, str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
+from functions import str2bool, SaveModel, GetNetwork, GetOptimizerScheduler
 from train import TrainNetwork
 
 from utils.logger import Log
@@ -207,8 +207,7 @@ def ArgumentParse():
         if args.train_config != None and "bf-layer-conf-file" in args.train_config:
             args.bf_layer_conf_file = args.train_config["bf-layer-conf-file"]
         args.bf_layer_conf = GetBFLayerConfig(args.bf_layer_conf_file, args.model)
-
-        args.net = GetNetwork(args.model, args.bf_layer_conf, args.classes, args.loss_boost, args.dataset)
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_conf)
     elif "bf-layer-conf-dict" in args.train_config:
         Log.Print("Training with several network configurations", current=False, elapsed=False)
         Log.Print("Checkpoints", current=False, elapsed=False)
@@ -223,7 +222,7 @@ def ArgumentParse():
         if args.checkpoints[0] != 0:
             raise ValueError("bf-layer-conf-dict's first checkpoint's epoch is not 0")
         # Load the first checkpoint of the model
-        args.net = GetNetwork(args.model, args.bf_layer_confs[0], args.classes, args.loss_boost, args.dataset)
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_conf[0])
     else:
         raise ValueError("bf-layer-conf-file is not set. Please provide at least from bf-layer-conf-file or bf-layer-conf-dict")
 

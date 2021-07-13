@@ -1,0 +1,9 @@
+{
+    "name":"default",
+    "default":{
+        "fw_bit":4,
+        "fw_sz":144,
+        "fi_sz":36,
+        "fo_sz":36
+    }
+}

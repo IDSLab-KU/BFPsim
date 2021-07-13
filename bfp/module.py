@@ -16,22 +16,20 @@ _size_1_t = _scalar_or_tuple_1_t[int]
 _size_2_t = _scalar_or_tuple_2_t[int]
 _size_3_t = _scalar_or_tuple_3_t[int]
 
-from blockfunc import make_groups_tensor, make_groups_tensor_fc
-from functions import BFConf
-
-DEFAULT_CUDA = True
+from bfp.internal import make_groups_tensor
+from bfp.conf import BFPConf
 
 # BlockFloat Linear Function
-class BFLinearFunction(torch.autograd.Function):
+class BFPLinearFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bias, bf_conf):    
+    def forward(ctx, input, weight, bias, bfp_conf):    
         # Grouping input and weight
-        if bf_conf.fi:
-            input = make_groups_tensor_fc(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir)
-        if bf_conf.fw:
-            weight = make_groups_tensor_fc(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir)
+        if bfp_conf.fi:
+            input = make_groups_tensor(input, bfp_conf.fi_bit, bfp_conf.fi_dim)
+        if bfp_conf.fw:
+            weight = make_groups_tensor(weight, bfp_conf.fw_bit, bfp_conf.fw_dim)
         # Save context to use on backward
-        ctx.bf_conf = bf_conf
+        ctx.bfp_conf = bfp_conf
         ctx.save_for_backward(input, weight, bias)
         
         # Compute FC and return
@@ -40,8 +38,8 @@ class BFLinearFunction(torch.autograd.Function):
             output += bias.unsqueeze(0).expand_as(output)
 
         # Grouping Output
-        if bf_conf.fo:
-            output = make_groups_tensor_fc(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir)
+        if bfp_conf.fo:
+            output = make_groups_tensor(output, bfp_conf.fo_bit, bfp_conf.fo_dim)
         print("F: %s %s %s"%(input.shape, weight.shape, output.shape))
         return output
     
@@ -50,7 +48,7 @@ class BFLinearFunction(torch.autograd.Function):
         # Load saved tensors
         # input, weight, bias, confs = ctx.saved_tensors
         input, weight, bias = ctx.saved_tensors
-        bf_conf = ctx.bf_conf
+        bfp_conf = ctx.bfp_conf
         print("output gradient")
 
         # Calculate gradients
@@ -58,13 +56,13 @@ class BFLinearFunction(torch.autograd.Function):
 
         # Calculate Input Gradient
         ## Grouping grad_output
-        if bf_conf.bio:
-            grad_output_ = make_groups_tensor_fc(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir)
+        if bfp_conf.bio:
+            grad_output_ = make_groups_tensor(grad_output, bfp_conf.bio_bit, bfp_conf.bio_dim)
         else: # Apply original gradient if grad_output is not grouped
             grad_output_ = grad_output
         ## Grouping weight
-        if bf_conf.biw:
-            weight = make_groups_tensor_fc(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir)        
+        if bfp_conf.biw:
+            weight = make_groups_tensor(weight, bfp_conf.biw_bit, bfp_conf.biw_dim)        
 
         print(grad_output_.shape)
         print(weight.shape)
@@ -72,31 +70,31 @@ class BFLinearFunction(torch.autograd.Function):
         print(grad_input.shape)
         # grad_input_ = grad_output_.mm(weight)
 
-        if bf_conf.big:
-            grad_input_ = make_groups_tensor_fc(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir)
+        if bfp_conf.big:
+            grad_input_ = make_groups_tensor(grad_input, bfp_conf.big_bit,bfp_conf.big_dim)
         else: # If not grouping, use original type
             grad_input_ = grad_input
 
-        if bf_conf.bwo:
+        if bfp_conf.bwo:
             # Regroup if bwo / bio grouping configuration is different!
-            if (bf_conf.bwo_bit != bf_conf.bio_bit or bf_conf.bwo_sz != bf_conf.bio_sz or bf_conf.bwo_dir != bf_conf.bio_dir):
-                grad_output_ = make_groups_tensor_fc(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir)
+            if (bfp_conf.bwo_bit != bfp_conf.bio_bit or bfp_conf.bwo_dim != bfp_conf.bio_dim):
+                grad_output_ = make_groups_tensor(grad_output, bfp_conf.bwo_bit, bfp_conf.bwo_dim)
         else: # If not grouping, use original type
             grad_output_ = grad_output
         ## Grouping input - it's not grad_input, right?
-        if bf_conf.bwi:
+        if bfp_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
-            if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
-                input = make_groups_tensor_fc(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir)
+            if (bfp_conf.bwi_bit != bfp_conf.fi_bit or bfp_conf.bwi_dim != bfp_conf.fi_dim):
+                input = make_groups_tensor_fc(input, bfp_conf.bwi_bit, bfp_conf.bwi_dim)
         grad_weight = F.linear(grad_output_.t(), input.t(), bias).t()
         # grad_weight = grad_output_.t().mm(input)
         # print(grad_weight.shape)
         # Group the gradient of weight
-        if bf_conf.bwg:
-            grad_weight = make_groups_tensor_fc(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir)
+        if bfp_conf.bwg:
+            grad_weight = make_groups_tensor_fc(grad_weight, bfp_conf.bwg_bit, bfp_conf.bwg_dim)
 
-        if bf_conf.bwg_boost != 1.0:
-            grad_weight /= bf_conf.bwg_boost
+        if bfp_conf.bwg_boost != 1.0:
+            grad_weight /= bfp_conf.bwg_boost
 
         if bias is not None:
             grad_bias = grad_output.sum(0)
@@ -104,15 +102,16 @@ class BFLinearFunction(torch.autograd.Function):
         return grad_input_, grad_weight, grad_bias, None
 
 # Blockfloat Linear
-class BFLinear(torch.nn.Module):
+class BFPLinear(torch.nn.Module):
     def __init__(self,
                 input_features: int,
                 output_features: int,
-                bf_conf: BFConf, bias=True):
-        super(BFLinear, self).__init__()
+                bfp_conf: BFPConf,
+                bias=True):
+        super(BFPLinear, self).__init__()
         self.input_features = input_features
         self.output_features = output_features
-        self.bf_conf = bf_conf
+        self.bfp_conf = bfp_conf
 
         # Weight parameters, should be grouped with few numbers
         self.weight = nn.Parameter(torch.Tensor(output_features, input_features))
@@ -128,11 +127,11 @@ class BFLinear(torch.nn.Module):
             self.bias.data.uniform_(-0.1, 0.1)
     
     def forward(self, input):
-        return BFLinearFunction.apply(input, self.weight, self.bias, self.bf_conf)
+        return BFPLinearFunction.apply(input, self.weight, self.bias, self.bfp_conf)
     
     def extra_repr(self):
         s = ('{input_features}, {output_features}')
-        s += ', bf_conf=({bf_conf})'
+        s += ', bfp_conf=({bfp_conf})'
         if self.bias is None:
             s += ', bias=False'
         else:
@@ -143,29 +142,29 @@ class BFLinear(torch.nn.Module):
 # Blockfloat Convolution Function
 # TODO : Implement Conv2d Operation
 # https://discuss.pytorch.org/t/implementing-a-custom-convolution-using-conv2d-input-and-conv2d-weight/18556/7
-class BFConv2dFunction(torch.autograd.Function):
+class BFPConv2dFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bias=None, bf_conf=None, stride=1, padding=0, dilation=1, groups=1):
+    def forward(ctx, input, weight, bias=None, bfp_conf=None, stride=1, padding=0, dilation=1, groups=1):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
         # Grouping input and weight
-        if bf_conf.fi:
-            input = make_groups_tensor(input, bf_conf.fi_bit, bf_conf.fi_sz, bf_conf.fi_dir, 0)
-        if bf_conf.fw:
-            weight = make_groups_tensor(weight, bf_conf.fw_bit, bf_conf.fw_sz, bf_conf.fw_dir, 1)
+        if bfp_conf.fi:
+            input = make_groups_tensor(input, bfp_conf.fi_bit, bfp_conf.fi_dim, 0)
+        if bfp_conf.fw:
+            weight = make_groups_tensor(weight, bfp_conf.fw_bit, bfp_conf.fw_dim, 1)
 
         ctx.stride = stride
         ctx.padding = padding
         ctx.dilation = dilation
         ctx.groups = groups
-        ctx.bf_conf = bf_conf
+        ctx.bfp_conf = bfp_conf
 
         ctx.save_for_backward(input, weight, bias)
 
         # Compute Convolution
         output = F.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
         # Grouping Output
-        if bf_conf.fo:
-            output = make_groups_tensor(output, bf_conf.fo_bit, bf_conf.fo_sz, bf_conf.fo_dir, 2)
+        if bfp_conf.fo:
+            output = make_groups_tensor(output, bfp_conf.fo_bit, bfp_conf.fo_dim, 2)
 
         return output
     
@@ -177,53 +176,53 @@ class BFConv2dFunction(torch.autograd.Function):
         padding = ctx.padding
         dilation = ctx.dilation
         groups = ctx.groups
-        bf_conf = ctx.bf_conf
+        bfp_conf = ctx.bfp_conf
 
         # print("= Backward:",grad_output.shape, stride, padding, dilation, groups)
         grad_input = grad_weight = grad_bias = None
 
         # Calculate Input Gradient
         ## Grouping grad_output
-        if bf_conf.bio:
-            grad_output_ = make_groups_tensor(grad_output, bf_conf.bio_bit, bf_conf.bio_sz, bf_conf.bio_dir, 10)
+        if bfp_conf.bio:
+            grad_output_ = make_groups_tensor(grad_output, bfp_conf.bio_bit, bfp_conf.bio_dim, 10)
         else: # Apply original gradient if grad_output is not grouped
             grad_output_ = grad_output
         ## Grouping weight
-        if bf_conf.biw:
-            weight = make_groups_tensor(weight, bf_conf.biw_bit, bf_conf.biw_sz, bf_conf.biw_dir, 11)        
+        if bfp_conf.biw:
+            weight = make_groups_tensor(weight, bfp_conf.biw_bit, bfp_conf.biw_dim, 11)        
         ## Do the convolution
         if ctx.needs_input_grad[0]:
             grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output_, stride, padding, dilation, groups)
         ## Grouping output grad_input
-        if bf_conf.big:
-            grad_input_ = make_groups_tensor(grad_input, bf_conf.big_bit, bf_conf.big_sz, bf_conf.big_dir, 12)
+        if bfp_conf.big:
+            grad_input_ = make_groups_tensor(grad_input, bfp_conf.big_bit,bfp_conf.big_dim, 12)
         else: # If not grouping, use original type
             grad_input_ = grad_input
 
         # Calculate Weight Gradient (2D Convolution, Depthwise Convolution)
         ## Grouping grad_output
         
-        if bf_conf.bwo:
+        if bfp_conf.bwo:
             # Regroup if bwo / bio grouping configuration is different!
-            if (bf_conf.bwo_bit != bf_conf.bio_bit or bf_conf.bwo_sz != bf_conf.bio_sz or bf_conf.bwo_dir != bf_conf.bio_dir):
-                grad_output_ = make_groups_tensor(grad_output, bf_conf.bwo_bit, bf_conf.bwo_sz, bf_conf.bwo_dir, 20)
+            if (bfp_conf.bwo_bit != bfp_conf.bio_bit or bfp_conf.bwo_dim != bfp_conf.bio_dim):
+                grad_output_ = make_groups_tensor(grad_output, bfp_conf.bwo_bit, bfp_conf.bwo_dim, 20)
         else: # If not grouping, use original type
             grad_output_ = grad_output
         ## Grouping input - it's not grad_input, right?
-        if bf_conf.bwi:
+        if bfp_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
-            if (bf_conf.bwi_bit != bf_conf.fi_bit or bf_conf.bwi_sz != bf_conf.fi_sz or bf_conf.bwi_dir != bf_conf.fi_dir):
-                input = make_groups_tensor(input, bf_conf.bwi_bit, bf_conf.bwi_sz, bf_conf.bwi_dir, 21)
+            if (bfp_conf.bwi_bit != bfp_conf.fi_bit or bfp_conf.bwi_dim != bfp_conf.fi_dim):
+                input = make_groups_tensor(input, bfp_conf.bwi_bit, bfp_conf.bwi_dim, 21)
         ## Do the convolution
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
         # Group the gradient of weight
-        if bf_conf.bwg:
-            grad_weight = make_groups_tensor(grad_weight, bf_conf.bwg_bit, bf_conf.bwg_sz, bf_conf.bwg_dir, 22)
+        if bfp_conf.bwg:
+            grad_weight = make_groups_tensor(grad_weight, bfp_conf.bwg_bit, bfp_conf.bwg_dim, 22)
 
         # Apply weaken gradient if weight gradient boost is applied
-        if bf_conf.bwg_boost != 1.0:
-            grad_weight /= bf_conf.bwg_boost
+        if bfp_conf.bwg_boost != 1.0:
+            grad_weight /= bfp_conf.bwg_boost
 
         # TODO : Fix Bias Grouping
         if bias is not None and ctx.needs_input_grad[2]:
@@ -232,19 +231,19 @@ class BFConv2dFunction(torch.autograd.Function):
         return grad_input_, grad_weight, grad_bias, None, None, None, None, None
 
 # Blockfloat Convolution
-class BFConv2d(torch.nn.Module):
+class BFPConv2d(torch.nn.Module):
     def __init__(self,
                 in_channels: int,
                 out_channels: int,
                 kernel_size: _size_2_t,
-                bf_conf: BFConf, 
+                bfp_conf: BFPConf, 
                 stride: _size_2_t = 1,
                 padding: _size_2_t = 0,
                 dilation: _size_2_t = 1,
                 groups: int = 1,
                 bias: bool = True,
                 padding_mode: str = 'zeros'):
-        super(BFConv2d, self).__init__()
+        super(BFPConv2d, self).__init__()
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
         if out_channels % groups != 0:
@@ -261,7 +260,7 @@ class BFConv2d(torch.nn.Module):
         else:
             self.kernel_size = kernel_size[0]
 
-        self.bf_conf = bf_conf
+        self.bfp_conf = bfp_conf
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -287,7 +286,7 @@ class BFConv2d(torch.nn.Module):
             torch.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input):
-        return BFConv2dFunction.apply(input, self.weight, self.bias, self.bf_conf, self.stride, self.padding, self.dilation, self.groups)
+        return BFPConv2dFunction.apply(input, self.weight, self.bias, self.bfp_conf, self.stride, self.padding, self.dilation, self.groups)
     
     def extra_repr(self):
         # From /torch/nn/modules/conv.py
@@ -299,7 +298,7 @@ class BFConv2d(torch.nn.Module):
             s += ', dilation={dilation}'
         if self.groups != 1:
             s += ', groups={groups}'
-        s += ', bf_conf=({bf_conf})'
+        s += ', bfp_conf=({bfp_conf})'
         if self.bias is None:
             s += ', bias=False'
         else:
