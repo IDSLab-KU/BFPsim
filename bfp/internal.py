@@ -139,7 +139,7 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
         make_groups_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
     elif len(inp.size()) == 3:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
         inpsize = (inp.size()[0], inp.size()[1], inp.size()[2])
 
         make_groups_3d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)

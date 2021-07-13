@@ -3,7 +3,7 @@
     "description":"",
     "model":"alexnet",
     "training-epochs":200,
-    "dataset":"CIFAR100",
+    "dataset":"CIFAR10",
     "save-name":"test",
-    "bfp-layer-conf-file":"default_FB24"
+    "bfp-layer-conf-file":"default_FB14"
 }

@@ -4,6 +4,7 @@
     "model":"VGG16",
     "training-epochs":200,
     "save-name":"Mixed_VGG16_20",
+    "dataset":"CIFAR10",
     "bfp-layer-conf-dict":{
         "0":"default_FB16",
         "20":"default_FB12",

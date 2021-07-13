@@ -224,9 +224,9 @@ class BFPConv2dFunction(torch.autograd.Function):
         if bfp_conf.bwg_boost != 1.0:
             grad_weight /= bfp_conf.bwg_boost
 
-        # TODO : Fix Bias Grouping
+        # TODO : Add Bias Grouping / or is it needed?
         if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(dim=(0,2,3)).squeeze(0)
+            grad_bias = grad_output_.sum(dim=(0,2,3)).squeeze(0)
         
         return grad_input_, grad_weight, grad_bias, None, None, None, None, None
 
@@ -301,8 +301,6 @@ class BFPConv2d(torch.nn.Module):
         s += ', bfp_conf=({bfp_conf})'
         if self.bias is None:
             s += ', bias=False'
-        else:
-            s += ', bias=True'
         if self.padding_mode != 'zeros':
             s += ', padding_mode={padding_mode}'
         return s.format(**self.__dict__)

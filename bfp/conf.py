@@ -42,17 +42,17 @@ class BFPConf():
         # Foward - Weight
         self.fw     = dic["fw"]                         if "fw"     in dic.keys() else True
         self.fw_bit = dic["fw_bit"]                     if "fw_bit" in dic.keys() else 8
-        self.fw_dim  = GetDimension(dic["fw_dim"])      if "fw_dim" in dic.keys() else (1,16,3,3)
+        self.fw_dim  = GetDimension(dic["fw_dim"])      if "fw_dim" in dic.keys() else (16,1,3,3)
 
         # Forward - Input
         self.fi     = dic["fi"]                         if "fi"     in dic.keys() else True
         self.fi_bit = dic["fi_bit"]                     if "fi_bit" in dic.keys() else self.fw_bit
-        self.fi_dim  = GetDimension(dic["fi_dim"])      if "fi_dim" in dic.keys() else (1,4,3,3)
+        self.fi_dim  = GetDimension(dic["fi_dim"])      if "fi_dim" in dic.keys() else (4,1,3,3)
 
         # Forward - Output
         self.fo     = dic["fo"]                         if "fo"     in dic.keys() else False
         self.fo_bit = dic["fo_bit"]                     if "fo_bit" in dic.keys() else self.fw_bit
-        self.fo_dim  = GetDimension(dic["fo_dim"])      if "fo_dim" in dic.keys() else (1,4,3,3)
+        self.fo_dim  = GetDimension(dic["fo_dim"])      if "fo_dim" in dic.keys() else (4,1,3,3)
 
         # Backward - Output gradient while calculating input gradient
         self.bio     = dic["bio"]                       if "bio"     in dic.keys() else True
