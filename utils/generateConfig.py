@@ -3,7 +3,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
-from functions import BFConf
+from bfp.conf import BFPConf
 
 def flatten(el):
     flattened = [flatten(children) for children in el.children()]
@@ -24,7 +24,7 @@ class ConfigObj():
     def AddLayer(self, name, type, module):
         a = dict()
         a["type"] = type
-        self.layers[name] = BFConf(a)
+        self.layers[name] = BFPConf(a)
         self.layerObjects[name] = module
 
     def __str__(self) -> str:

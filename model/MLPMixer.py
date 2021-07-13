@@ -9,7 +9,8 @@ import torch.nn as nn
 from einops.layers.torch import Rearrange
 
 
-from functions import SetLinearLayer
+def SetLinearLayer():
+    return None
 
 class PatchEmbeddings(nn.Module):
 

@@ -1,11 +1,10 @@
-'''VGG11/13/16/19 in Pytorch.
+'''
+VGG11/13/16/19 modified for CIFAR-10 / CIFAR-100 in PyTorch.
 Implemented by kuangliu, https://github.com/kuangliu/pytorch-cifar/blob/master/models/vgg.py
-Edited some layer configurations to match blocking
 '''
 import torch
 import torch.nn as nn
 
-from functions import SetConv2dLayer
 
 cfg = {
     'VGG11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -16,11 +15,10 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, bf_conf, out_channels, vgg_name, bwg_boost=1.0):
+    def __init__(self, vgg_name, num_classes):
         super(VGG, self).__init__()
-        self.bwg_boost = bwg_boost
-        self.features = self._make_layers(bf_conf, cfg[vgg_name])
-        self.classifier = nn.Linear(512, out_channels)
+        self.features = self._make_layers(cfg[vgg_name])
+        self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x):
         out = self.features(x)
@@ -28,31 +26,28 @@ class VGG(nn.Module):
         out = self.classifier(out)
         return out
 
-    def _make_layers(self, bf_conf, cfg):
+    def _make_layers(self, cfg):
         layers = []
         in_channels = 3
-        for i, x in enumerate(cfg):
+        for x in cfg:
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
-                layers += [
-                        # nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
-                        SetConv2dLayer(str(i), bf_conf, in_channels, x, kernel_size=3, padding=1, bwg_boost=self.bwg_boost),
-                        nn.BatchNorm2d(x),
-                        nn.ReLU(inplace=True)]
+                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                           nn.BatchNorm2d(x),
+                           nn.ReLU(inplace=True)]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)
 
+def VGG11Cifar(num_classes=10):
+    return VGG('VGG11', num_classes=num_classes)
 
-def VGG11(bf_conf, out_channels, bwg_boost=1.0):
-    return VGG(bf_conf, out_channels, 'VGG11', bwg_boost=bwg_boost)
+def VGG13Cifar(num_classes=10):
+    return VGG('VGG13', num_classes=num_classes)
 
-def VGG13(bf_conf, out_channels, bwg_boost=1.0):
-    return VGG(bf_conf, out_channels, 'VGG13', bwg_boost=bwg_boost)
+def VGG16Cifar(num_classes=10):
+    return VGG('VGG16', num_classes=num_classes)
 
-def VGG16(bf_conf, out_channels, bwg_boost=1.0):
-    return VGG(bf_conf, out_channels, 'VGG16', bwg_boost=bwg_boost)
-
-def VGG19(bf_conf, out_channels, bwg_boost=1.0):
-    return VGG(bf_conf, out_channels, 'VGG19', bwg_boost=bwg_boost)
+def VGG19Cifar(num_classes=10):
+    return VGG('VGG19', num_classes=num_classes)

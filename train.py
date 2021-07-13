@@ -109,12 +109,13 @@ def TrainNetwork(args):
         if args.train_config != None and len(args.checkpoints) > checkpointIndex+1 and epoch_current == args.checkpoints[checkpointIndex+1]:
             checkpointIndex += 1
             s = str(args.checkpoints[checkpointIndex])
-            name = args.train_config["bf-layer-conf-dict"][s] if args.train_config["bf-layer-conf-dict"][s] != "" else "None"
-            Log.Print('Changing Model bf config to: %s'%(name), elapsed=False, current=False)
+            name = args.train_config["bfp-layer-conf-dict"][s] if args.train_config["bfp-layer-conf-dict"][s] != "" else "None"
+            Log.Print('Changing Model bfp config to: %s'%(name), elapsed=False, current=False)
             # Save original net
             net_ = args.net
             # Create new net
-            args.net = GetNetwork(args.model, args.bf_layer_confs[checkpointIndex], args.classes, args.loss_boost, args.dataset)           
+            args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_confs[checkpointIndex])
+
             # Copy state dicts
             args.net.load_state_dict(net_.state_dict())
             # Create new optimizer and emulate step
