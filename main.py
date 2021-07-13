@@ -29,6 +29,9 @@ import argparse
 from datetime import datetime
 args = None
 
+# TODO : Fix this
+from utils.statManager import Stat
+
 def handler(signum, frame):
     print("Quit by user signal")
     if args != None:
@@ -52,8 +55,8 @@ def GetBFLayerConfig(file, model):
     else:
         with open("./conf_net/"+file+".json","r",encoding="utf-8") as f:
             conf = json.load(f)
-        if conf["name"] != model:
-            raise ValueError("BF layer configuration file not match with model")
+        # if conf["name"] != model:
+        #     raise ValueError("BF layer configuration file not match with model")
     return conf
 
 # Parse arguments
@@ -103,8 +106,8 @@ def ArgumentParse():
     # tag:Model
     parser.add_argument("-m","--model", type=str, default = "ResNet18",
         help = "Model [AlexNet, ResNet18, MobileNetv1, DenseNetCifar, VGG16, MLPMixerB16]")
-    parser.add_argument("-bf", "--bf-layer-conf-file", type=str, default="",
-        help = "Config of the bf setup, if not set, original network will be trained")
+    parser.add_argument("-bfp", "--bfp-layer-conf-file", type=str, default="",
+        help = "Config of the bfp setup, if not set, original network will be trained")
     
     # tag:Train
     parser.add_argument("--training-epochs", type=int, default = 200,
@@ -125,8 +128,8 @@ def ArgumentParse():
     # Tag:zseAnalyze
     parser.add_argument("--save-file", type=str, default = "",
         help = "Saved checkpoint of the model")
-    parser.add_argument("--zse-bf", type=str2bool, default = False,
-        help = "[zse-analyze] If saved file is BF network, set this to true")
+    parser.add_argument("--zse-bfp", type=str2bool, default = False,
+        help = "[zse-analyze] If saved file is BFP network, set this to true")
     parser.add_argument("--zse-graph-mode", type=str, default="percentage",
         help = "[zse-analyze] Choose graph mode [none, percentage, count]")
     parser.add_argument("--zse-print-mode", type=str, default = "sum",
@@ -192,39 +195,40 @@ def ArgumentParse():
     
     # Load dataset
     args.trainset, args.testset, args.classes, args.trainloader, args.testloader = LoadDataset(args)
+    args.num_classes = len(args.classes)
     args.batch_count = len(args.trainloader)
     if args.stat_loss_batches == -1:
         args.stat_loss_batches = args.batch_count
     
     # tag:Model
-    args.bf_layer_confs = []
+    args.bfp_layer_confs = []
     args.checkpoints = []
     if args.train_config != None and "model" in args.train_config:
         args.model = args.train_config["model"]
-    if args.train_config == None or args.train_config != None and "bf-layer-conf-file" in args.train_config:
+    if args.train_config == None or args.train_config != None and "bfp-layer-conf-file" in args.train_config:
         # using one network
-        Log.Print("Train config file not set or bf-layer-conf-file is set on config file.")
-        if args.train_config != None and "bf-layer-conf-file" in args.train_config:
-            args.bf_layer_conf_file = args.train_config["bf-layer-conf-file"]
-        args.bf_layer_conf = GetBFLayerConfig(args.bf_layer_conf_file, args.model)
+        Log.Print("Train config file not set or bfp-layer-conf-file is set on config file.")
+        if args.train_config != None and "bfp-layer-conf-file" in args.train_config:
+            args.bfp_layer_conf_file = args.train_config["bfp-layer-conf-file"]
+        args.bfp_layer_conf = GetBFLayerConfig(args.bfp_layer_conf_file, args.model)
         args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_conf)
-    elif "bf-layer-conf-dict" in args.train_config:
+    elif "bfp-layer-conf-dict" in args.train_config:
         Log.Print("Training with several network configurations", current=False, elapsed=False)
         Log.Print("Checkpoints", current=False, elapsed=False)
-        for key, value in args.train_config["bf-layer-conf-dict"].items():
+        for key, value in args.train_config["bfp-layer-conf-dict"].items():
             if len(args.checkpoints) > 0 and int(key) <= args.checkpoints[len(args.checkpoints) - 1]:
-                ValueError("bf-layer-conf-dict's checkpoint epoch is invalid. %d <= %d"%(int(key), args.checkpoints[len(args.checkpoints) - 1]))
+                ValueError("bfp-layer-conf-dict's checkpoint epoch is invalid. %d <= %d"%(int(key), args.checkpoints[len(args.checkpoints) - 1]))
             args.checkpoints.append(int(key))
             b = GetBFLayerConfig(value, args.model)
-            args.bf_layer_confs.append(b)
+            args.bfp_layer_confs.append(b)
             Log.Print("    %d: Epoch %4d = %s"%(len(args.checkpoints), args.checkpoints[len(args.checkpoints)-1], value), current=False, elapsed=False)
         # Error tracking
         if args.checkpoints[0] != 0:
-            raise ValueError("bf-layer-conf-dict's first checkpoint's epoch is not 0")
+            raise ValueError("bfp-layer-conf-dict's first checkpoint's epoch is not 0")
         # Load the first checkpoint of the model
         args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_conf[0])
     else:
-        raise ValueError("bf-layer-conf-file is not set. Please provide at least from bf-layer-conf-file or bf-layer-conf-dict")
+        raise ValueError("bfp-layer-conf-file is not set. Please provide at least from bfp-layer-conf-file or bfp-layer-conf-dict")
 
     # tag:Train
     if args.train_config != None and "training-epochs" in args.train_config:
@@ -275,13 +279,13 @@ if __name__ == '__main__':
     if args.mode == "train":
         # Network training mode
         for arg in vars(args):
-            if arg in ["bf_layer_confs", "bf_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
+            if arg in ["bfp_layer_confs", "bfp_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
     elif args.mode == "zse-analyze":
         for arg in vars(args):
-            if arg in ["bf_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bf_layer_conf",
+            if arg in ["bfp_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bfp_layer_conf",
             "criterion", "optimizer", "scheduler", "stat_location", "save_prefix", "loss_boost", "training_epochs", "train_config_file"]:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)

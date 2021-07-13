@@ -156,6 +156,7 @@ class slackBot_:
 
     ## Send method
     def Send(self, message="", prefix="", channel=""):
+        return
         # Check client is defined
         if self.client == None:
             print("slackBot ERROR: Please set token using slackBot.setToken(token)")

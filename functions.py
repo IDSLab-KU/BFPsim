@@ -42,28 +42,59 @@ def SaveModel(args, suffix):
     torch.save(args.net.state_dict(), PATH)
 
 
-
+from bfp.conf import BFPConf
 from bfp.module import BFPLinear, BFPConv2d
 
+def GetValueFromBFPConf(bfp_dict, attr_str):
+    if attr_str in bfp_dict: # Layer configuration is found
+        return BFPConf(bfp_dict[attr_str])
+    elif "default" in bfp_dict: # If default value is set, use the default value
+        return BFPConf(bfp_dict["default"])
+    else: # If no default value is set, don't replace
+        return None
+
+def ReturnBFPConv2d(ta, bfpc):
+    if bfpc == None:
+        return None
+    bias = True if ta.bias != None else False
+    new = BFPConv2d(in_channels=ta.in_channels, out_channels=ta.out_channels, kernel_size=ta.kernel_size, bfp_conf=bfpc, stride=ta.stride, padding=ta.padding, dilation=ta.dilation, groups=ta.groups, bias=bias, padding_mode=ta.padding_mode)
+    return new
+
 def ReplaceLayers(net, bfp_dict, name="net"):
+    
     for attr_str in dir(net):
-        if attr_str in bfp_dict: # Layer configuration is found
-            bfc = BFPConf(bfp_dict[attr_str])
-        elif "default" in bfp_dict: # If default value is set, use the default value
-            bfc = BFPConf(bfp_dict["default"])
-        else: # If no default value is set, don't replace
-            bfc = None
-        if bfc != None:
-            ta = getattr(net, attr_str)
-            if type(ta) == torch.nn.Conv2d: # Conv2d is replaced
-                new = BFPConv2d(ta.in_channels, ta.out_channels, ta.kernel_size, bfc, ta.stride, ta.padding, ta.dilation, ta.groups, ta.bias, ta.padding_mode)
-                setattr(net, attr_str, new)
-                Log.Print("Conv2d %s replaced to %s"%(name+"."+attr_str, str(bfc)), current=False, elapsed=False)
+        ta = getattr(net, attr_str)
+        # print(type(ta),end="\t")
+        bfpc = GetValueFromBFPConf(bfp_dict, name+"."+attr_str)
+        if type(ta) == torch.nn.Conv2d: # Conv2d is replaced
+            Log.Print("Detected %s : %s"%(name+"."+attr_str, ta), current=False, elapsed=False)
+            if bfpc == None:
+                Log.Print("  == Didn't replaced", current=False, elapsed=False)
+            else:
+                setattr(net, attr_str, ReturnBFPConv2d(ta, bfpc))
+                Log.Print("  => Replaced to BFPConv2d:%s"%(str(bfpc)), current=False, elapsed=False)
         # else:
         #     Log.Print("Conv2d %s"%(name+"."+attr_str), current=False, elapsed=False)
+
+    # print(name)
+    for i, n in enumerate(net.children()):
+        # print(name, str(n))
+        bfpc = GetValueFromBFPConf(bfp_dict, name+"."+str(i))
+        if type(n) == torch.nn.Conv2d:
+            Log.Print("Detected %s : %s"%(name+"."+str(i), str(n)), current=False, elapsed=False)
+            if bfpc == None:
+                Log.Print("  == Didn't replaced", current=False, elapsed=False)
+            else:
+                net[i] = ReturnBFPConv2d(net[i], bfpc)
+                Log.Print("  => Replaced to BFPConv2d:%s"%(str(bfpc)), current=False, elapsed=False)
+            
+
     # Recursive call to replace other layers
     for n, ch in net.named_children():
         ReplaceLayers(ch, bfp_dict, name+"."+n)
+    if type(net) in [list, tuple, torch.nn.Sequential]:
+        for i, n in enumerate(net.children()):
+            ReplaceLayers(net[i], bfp_dict, name+"."+str(i))
 
 
 # Load models
@@ -85,10 +116,10 @@ def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = F
         if model.lower() in model_names:
             if pretrained:
                 net = models.__dict__[args.arch](pretrained=True)
-                Log.Print("Using pretrained pytorch {model} imagenet model...")
+                Log.Print("Using pretrained pytorch {model} imagenet model...", current=False, elapsed=False)
             else:
                 net = models.__dict__[args.arch]()
-                Log.Print("Using pytorch {model} imagenet model...")
+                Log.Print("Using pytorch {model} imagenet model...", current=False, elapsed=False)
         else:
             NotImplementedError("Imagenet model {model} not defined on pytorch")
     elif dataset.lower() in ["cifar10", "cifar100"]:
@@ -109,8 +140,7 @@ def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = F
 
     if bfp_conf != None:
         ReplaceLayers(net, bfp_conf)
-        Log.Print("Replacing model's layers to provided bfp config...")
-
+        Log.Print("Replacing model's layers to provided bfp config...", current=False, elapsed=False)
     return net
 
 

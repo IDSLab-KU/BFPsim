@@ -114,7 +114,7 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    if group_dim == 1 or group_dim = (1):
+    if group_dim == 1 or group_dim == (1):
         group_dim = []
         for i in len(inp.size()):
             group_dim.append(1)
