@@ -112,51 +112,104 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     else:
                         v[idx0,idx1,idx2,idx3] = 0
 
+
+
+@cuda.jit
+def make_groups_gpu(arr, group_mantissa, group_size):
+    # Thread id in a 1D block
+    tx = cuda.threadIdx.x
+    # Block id in a 1D grid
+    ty = cuda.blockIdx.x
+    # Block width, i.e. number of threads per block
+    bw = cuda.blockDim.x
+    # Max value of one block
+    gi = tx + ty * bw
+    if gi < arr.size // group_size:
+        M = 0
+        # Get max mantissa
+        for ii in range(group_size):
+            e = (arr[gi*group_size+ii] >> 23) & 0xff
+            if M < e:
+                M = e
+        # Assign float values
+        for ii in range(group_size):
+            arri = gi*group_size+ii
+            e = (arr[arri] >> 23) & 0xff
+            if M - e <= group_mantissa - 1:
+                arr[arri] = arr[arri] & (0xffffffff << (24 - group_mantissa + M - e))
+                pass
+            else:
+                arr[arri] = 0
+
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    if group_dim == 1 or group_dim == (1):
-        group_dim = []
-        for i in len(inp.size()):
-            group_dim.append(1)
-        group_dim = tuple(group_dim)
-    
-    """
-    s = "==%s============================\n"%(str(inpsize))
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%inp[i,j,0,0]
-        s += "\t"
-    s += "\n"
-    # """
-
-    # inp = cuda.to_device(inp)
-    inp_ = inp.view(torch.int32)
-    if len(inp.size()) == 4:
-        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
-        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
-
-        make_groups_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
-    elif len(inp.size()) == 3:
-        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
-        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2])
-
-        make_groups_3d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
+    # Convert tensor to numpy array
+    if inp.is_cuda:
+        inp_n = inp.cpu().numpy()
     else:
-        # Do nothing
-        print("Tensor not supported, didn't do anything")
-        return inp
-    # inp = inp.copy_to_host()
+        inp_n = inp.numpy()
+    # Save original shape
+    inp_shape = inp_n.shape
+    # STEP 1 : Pre-process array to match with group size
+    # Pad Array to do the grouping correctly
+    g_kernel = int(max(group_dim[0], group_dim[1]) / 3 / 3)
+    if g_kernel != 0 and inp_n.shape[0] % g_kernel != 0:
+        inp_n = np.pad(inp_n, ((0,g_kernel-inp_n.shape[0]%g_kernel),(0,0),(0,0),(0,0)))
+    if g_kernel != 0 and inp_n.shape[1] % g_kernel != 0:
+        inp_n = np.pad(inp_n, ((0,0),(0,g_kernel-inp_n.shape[1]%g_kernel),(0,0),(0,0)))
+    if inp_n.shape[2] % 3 != 0 or inp_n.shape[3] % 3 != 0:
+        inp_n = np.pad(inp_n, ((0,0),(0,0),(0,3-inp_n.shape[2]%3),(0,3-inp_n.shape[3]%3)))
+    inp_p_shape = inp_n.shape
 
-    """
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%v[i,j,0,0]
-        s += "\t"
-    s += "\n"
-    # """
-    # s = "%d / %d"%(np.count_nonzero(v == 0), inpsize[0]*inpsize[1]*inpsize[2]*inpsize[3])
-    # print(s)
-    # return torch.from_numpy(v).cuda()
-    return inp
+    # transposing array to desired grouping direction
+    # TODO : Prevent overflow caused by mapping next kernel map on FX, FY, FC mode
+    # FX, FY, FC Mode have to reshape array to dimension of 8 to manipulate more easily
+    #   Code modified from https://stackoverflow.com/questions/42297115/numpy-split-cube-into-cubes/42298440#42298440
+    if group_dim[1] == 1: # WI Mode, If kernel size is not 3, it will not work properly
+        inp_n = np.transpose(inp_n, (2,3,0,1))
+    elif group_dim[0] == 1 and group_dim[1] == 1: # FX Mode
+        inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//3, 3, inp_n.shape[3]//3, 3))
+        inp_n = inp_n.transpose((0,2,4,6,5,7,1,3))
+    else:
+        inp_n = inp_n.reshape((inp_n.shape[0], 1, inp_n.shape[1], 1, inp_n.shape[2]//3, 3, inp_n.shape[3]//3, 3))
+        inp_n = inp_n.transpose((0,4,6,2,5,7,1,3))
+    # Save modified shape
+    inp_m_shape = inp_n.shape
+    # Flatten
+    inp_n = np.reshape(inp_n, (np.product(inp_n.shape),))
+    # Convert to byte stream
+    st = inp_n.tobytes() 
+    # Set to uint32 array to easy computing
+    v = np.frombuffer(st, dtype=np.uint32) 
+
+    # STEP 2 : gpu computation
+    r_ = cuda.to_device(v)
+    blockspergrid = (v.size + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+    make_groups_gpu[blockspergrid, CUDA_THREADSPERBLOCK](r_, group_mantissa, group_dim[0]*group_dim[1]*group_dim[2]*group_dim[3])
+    r__ = r_.copy_to_host()
+    
+    # Previous STEP 2 : make groups and adjust mantissa
+    # r__ = _make_groups(v, group_mantissa, group_size)
+
+    # STEP 3 : reverting array
+    # revert to original np.float32 
+    r = np.frombuffer(r__, dtype=np.float32)
+    # revert back to original shape
+    r = r.reshape(inp_m_shape)
+    # Transpose and reshape back to original array
+    if group_dim[1] == 1: # WI
+        r = np.transpose(r, (2,3,0,1))
+    elif group_dim[0] == 1 and group_dim[1] == 1: # FX
+        r = r.transpose((0,6,1,7,2,4,3,5))
+        r = r.reshape(inp_p_shape)
+    else:
+        r = r.transpose((0,6,3,7,1,4,2,5))
+        r = r.reshape(inp_p_shape)
+    # Revert padding
+    if inp_p_shape != inp_shape:
+        r = r[:inp_shape[0],:inp_shape[1],:inp_shape[2],:inp_shape[3]]
+
+    if inp.is_cuda:
+        return torch.from_numpy(r).cuda()
+    else:
+        return torch.from_numpy(r)

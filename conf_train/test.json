@@ -5,5 +5,5 @@
     "training-epochs":200,
     "dataset":"CIFAR10",
     "save-name":"test",
-    "bfp-layer-conf-file":"default_FB14"
+    "bfp-layer-conf-file":"default_FB12"
 }
