@@ -4,6 +4,8 @@
     "model":"alexnet",
     "training-epochs":200,
     "dataset":"CIFAR10",
-    "save-name":"test",
-    "bfp-layer-conf-file":"default_FB14"
+    "save-name":"test_01",
+    "print-train-count":5,
+    "bfp-layer-conf-file":"test",
+    "dataset-pin-memory":false
 }

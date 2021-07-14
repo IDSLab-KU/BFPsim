@@ -6,7 +6,7 @@
 # single number with 1 returns (1,1,1,1)
 def GetDimension(val):
     if type(val) == list:
-        return val
+        return tuple(val)
     elif type(val) == str:
         v = val.replace(" ","").split(",")
         gs = int(v[1])

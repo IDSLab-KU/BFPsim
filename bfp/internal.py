@@ -21,13 +21,52 @@ fp64_mask = [0,
 from numba import jit, cuda
 import numba
 
+
+@cuda.jit
+# TODO : make another function to just grouping tensor...?
+def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
+    
+    idx0o = (idx // bs[1]) % bs[0] * gs[0]
+    idx1o = idx % bs[1] * gs[1]
+
+    M = 0
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            e = (v[idx0,idx1] & 0x7f800000 ) >> 23
+            if e < 0:
+                e = -e
+            if M < e:
+                M = e
+    if M == 0:
+        return
+    # Replace that area
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            e = (v[idx0,idx1] & 0x7f800000 ) >> 23
+            if e < 0:
+                e = -e
+            k = group_mantissa - M + e - 1
+            if 0 <= k:
+                v[idx0,idx1] = v[idx0,idx1] & (0xffffffff << (23 - k))
+            else:
+                v[idx0,idx1] = 0
+
 @cuda.jit
 # TODO : make another function to just grouping tensor...?
 def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
     idx0o = (idx // (bs[2] * bs[1])) % bs[0] * gs[0]
-    idx1o = (idx // (bs[2])) % bs[1] * gs[1]
+    idx1o = (idx // bs[2]) % bs[1] * gs[1]
     idx2o = idx % bs[2] * gs[2]
 
     M = 0
@@ -45,7 +84,8 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
                     e = -e
                 if M < e:
                     M = e
-
+    if M == 0:
+        return
     # Replace that area
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -57,6 +97,8 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
                 if idx2 >= dim[2]:
                     break
                 e = (v[idx0,idx1,idx2] & 0x7f800000 ) >> 23
+                if e < 0:
+                    e = -e
                 k = group_mantissa - M + e - 1
                 if 0 <= k:
                     v[idx0,idx1,idx2] = v[idx0,idx1,idx2] & (0xffffffff << (23 - k))
@@ -91,7 +133,8 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                         e = -e
                     if M < e:
                         M = e
-
+    if M == 0:
+        return
     # Replace that area
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -106,57 +149,39 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     if idx3 >= dim[3]:
                         break
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if e < 0:
+                        e = -e
                     k = group_mantissa - M + e - 1
                     if 0 <= k:
                         v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))
                     else:
                         v[idx0,idx1,idx2,idx3] = 0
 
+    cuda.syncthreads()
+
+from utils.logger import Log
+
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    if group_dim == 1 or group_dim == (1):
-        group_dim = []
-        for i in len(inp.size()):
-            group_dim.append(1)
-        group_dim = tuple(group_dim)
-    
-    """
-    s = "==%s============================\n"%(str(inpsize))
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%inp[i,j,0,0]
-        s += "\t"
-    s += "\n"
-    # """
-
-    # inp = cuda.to_device(inp)
     inp_ = inp.view(torch.int32)
+
     if len(inp.size()) == 4:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
         blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
         inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
-
         make_groups_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
     elif len(inp.size()) == 3:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
         blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
         inpsize = (inp.size()[0], inp.size()[1], inp.size()[2])
-
         make_groups_3d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
-    else:
-        # Do nothing
-        print("Tensor not supported, didn't do anything")
+    else len(inp.size()) == 2:
+        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1)
+        blockspergrid = (inp.size()[0]*inp.size()[1] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (inp.size()[0], inp.size()[1])
+        make_groups_2d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
+    else: # Tensor dimension is not supported
+        Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
         return inp
-    # inp = inp.copy_to_host()
 
-    """
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%v[i,j,0,0]
-        s += "\t"
-    s += "\n"
-    # """
-    # s = "%d / %d"%(np.count_nonzero(v == 0), inpsize[0]*inpsize[1]*inpsize[2]*inpsize[3])
-    # print(s)
-    # return torch.from_numpy(v).cuda()
     return inp
