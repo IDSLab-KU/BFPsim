@@ -5,5 +5,5 @@
     "training-epochs":200,
     "dataset":"CIFAR100",
     "save-name":"MobileNetv1_CIFAR100_FB12",
-    "bf-layer-conf-file":"MobileNetv1_FB12"
+    "bfp-layer-conf-file":"MobileNetv1_FB12"
 }
