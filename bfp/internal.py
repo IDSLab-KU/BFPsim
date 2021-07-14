@@ -21,6 +21,45 @@ fp64_mask = [0,
 from numba import jit, cuda
 import numba
 
+
+@cuda.jit
+# TODO : make another function to just grouping tensor...?
+def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
+    
+    idx0o = (idx // bs[1]) % bs[0] * gs[0]
+    idx1o = idx % bs[1] * gs[1]
+
+    M = 0
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            e = (v[idx0,idx1] & 0x7f800000 ) >> 23
+            if e < 0:
+                e = -e
+            if M < e:
+                M = e
+    if M == 0:
+        return
+    # Replace that area
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            e = (v[idx0,idx1] & 0x7f800000 ) >> 23
+            if e < 0:
+                e = -e
+            k = group_mantissa - M + e - 1
+            if 0 <= k:
+                v[idx0,idx1] = v[idx0,idx1] & (0xffffffff << (23 - k))
+            else:
+                v[idx0,idx1] = 0
+
 @cuda.jit
 # TODO : make another function to just grouping tensor...?
 def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
@@ -135,10 +174,13 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
         blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
         inpsize = (inp.size()[0], inp.size()[1], inp.size()[2])
-
         make_groups_3d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
-    else:
-        # Do nothing
+    else len(inp.size()) == 2:
+        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1)
+        blockspergrid = (inp.size()[0]*inp.size()[1] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (inp.size()[0], inp.size()[1])
+        make_groups_2d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
+    else: # Tensor dimension is not supported
         Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
         return inp
 
