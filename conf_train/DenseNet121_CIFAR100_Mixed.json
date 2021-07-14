@@ -1,10 +1,10 @@
 {
-    "name":"Mixed_ResNet18_20",
+    "name":"DenseNet121_CIFAR100_Mixed",
     "description":"",
-    "model":"ResNet18",
+    "model":"DenseNet121",
     "training-epochs":200,
-    "save-name":"Mixed_ResNet18_20",
-    "dataset":"CIFAR10",
+    "save-name":"DenseNet121_CIFAR100_Mixed",
+    "dataset":"CIFAR100",
     "bfp-layer-conf-dict":{
         "0":"default_FB16",
         "20":"default_FB12",

@@ -7,5 +7,5 @@
     "save-name":"test_01",
     "print-train-count":5,
     "bfp-layer-conf-file":"test",
-    "dataset-pin-memory":false
+    "dataset-pin-memory":true
 }

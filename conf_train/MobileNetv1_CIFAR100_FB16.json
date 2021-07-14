@@ -1,9 +1,0 @@
-{
-    "name":"MobileNetv1_CIFAR100_FB16",
-    "description":"",
-    "model":"MobileNetv1",
-    "training-epochs":200,
-    "dataset":"CIFAR100",
-    "save-name":"MobileNetv1_CIFAR100_FB16",
-    "bf-layer-conf-file":"MobileNetv1_FB16"
-}

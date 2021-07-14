@@ -1,10 +1,10 @@
 {
-    "name":"Mixed_MobileNetv1_20",
+    "name":"MobileNetv1_CIFAR100_Mixed",
     "description":"",
     "model":"MobileNetv1",
     "training-epochs":200,
-    "save-name":"Mixed_MobileNetv1_20",
-    "dataset":"CIFAR10",
+    "save-name":"MobileNetv1_CIFAR100_Mixed",
+    "dataset":"CIFAR100",
     "bf-layer-conf-dict":{
         "0":"MobileNetv1_FB16",
         "20":"MobileNetv1_FB12",

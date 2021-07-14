@@ -1,0 +1,21 @@
+{
+    "name":"ResNet18_CIFAR100_Mixed",
+    "description":"",
+    "model":"ResNet18",
+    "training-epochs":200,
+    "save-name":"ResNet18_CIFAR100_Mixed",
+    "dataset":"CIFAR100",
+    "bfp-layer-conf-dict":{
+        "0":"default_FB16",
+        "20":"default_FB12",
+        "180":"default_FB16"
+    },
+    "optimizer-dict":{
+        "20":{
+            "scheduler-step":20
+        },
+        "180":{
+            "scheduler-step":180
+        }
+    }
+}
