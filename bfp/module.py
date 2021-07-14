@@ -191,10 +191,10 @@ class BFPConv2dFunction(torch.autograd.Function):
         if bfp_conf.biw:
             weight = make_groups_tensor(weight, bfp_conf.biw_bit, bfp_conf.biw_dim, 11)        
         ## Do the convolution
-        if ctx.needs_input_grad[0]:
+        if ctx.needs_input_grad[0]: # First Layer's grad_input will be None
             grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output_, stride, padding, dilation, groups)
         ## Grouping output grad_input
-        if bfp_conf.big:
+        if bfp_conf.big and grad_input != None:
             grad_input_ = make_groups_tensor(grad_input, bfp_conf.big_bit,bfp_conf.big_dim, 12)
         else: # If not grouping, use original type
             grad_input_ = grad_input
@@ -217,7 +217,7 @@ class BFPConv2dFunction(torch.autograd.Function):
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
         # Group the gradient of weight
-        if bfp_conf.bwg:
+        if bfp_conf.bwg and grad_weight != None:
             grad_weight = make_groups_tensor(grad_weight, bfp_conf.bwg_bit, bfp_conf.bwg_dim, 22)
 
         # Apply weaken gradient if weight gradient boost is applied
