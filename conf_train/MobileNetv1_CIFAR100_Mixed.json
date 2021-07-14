@@ -5,7 +5,7 @@
     "training-epochs":200,
     "save-name":"MobileNetv1_CIFAR100_Mixed",
     "dataset":"CIFAR100",
-    "bf-layer-conf-dict":{
+    "bfp-layer-conf-dict":{
         "0":"MobileNetv1_FB16",
         "20":"MobileNetv1_FB12",
         "180":"MobileNetv1_FB16"

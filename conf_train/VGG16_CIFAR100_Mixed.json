@@ -1,9 +1,9 @@
 {
-    "name":"Mixed_VGG16_20",
+    "name":"VGG16_CIFAR100_Mixed",
     "description":"",
     "model":"VGG16",
     "training-epochs":200,
-    "save-name":"Mixed_VGG16_20",
+    "save-name":"VGG16_CIFAR100_Mixed",
     "dataset":"CIFAR100",
     "bfp-layer-conf-dict":{
         "0":"default_FB16",
