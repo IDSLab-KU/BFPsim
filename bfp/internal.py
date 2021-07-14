@@ -107,6 +107,8 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     if idx3 >= dim[3]:
                         break
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if e < 0:
+                        e = -e
                     k = group_mantissa - M + e - 1
                     if 0 <= k:
                         v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))

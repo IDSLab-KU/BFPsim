@@ -5,6 +5,7 @@
     "training-epochs":200,
     "dataset":"CIFAR10",
     "save-name":"test_01",
-    "print-train-count":1,
-    "bfp-layer-conf-file":"test"
+    "print-train-count":5,
+    "bfp-layer-conf-file":"test",
+    "dataset-pin-memory":false
 }
