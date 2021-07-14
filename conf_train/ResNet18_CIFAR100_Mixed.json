@@ -6,9 +6,9 @@
     "save-name":"ResNet18_CIFAR100_Mixed",
     "dataset":"CIFAR100",
     "bfp-layer-conf-dict":{
-        "0":"default_FB16",
-        "20":"default_FB12",
-        "180":"default_FB16"
+        "0":"default_B4G36",
+        "20":"default_B8G54",
+        "180":"default_B4G36"
     },
     "optimizer-dict":{
         "20":{
