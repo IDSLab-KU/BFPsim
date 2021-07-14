@@ -27,7 +27,7 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
     idx0o = (idx // (bs[2] * bs[1])) % bs[0] * gs[0]
-    idx1o = (idx // (bs[2])) % bs[1] * gs[1]
+    idx1o = (idx // bs[2]) % bs[1] * gs[1]
     idx2o = idx % bs[2] * gs[2]
 
     M = 0
@@ -109,34 +109,56 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
                     k = group_mantissa - M + e - 1
                     if 0 <= k:
-                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0x7fffffff << (23 - k))
+                        v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))
                     else:
                         v[idx0,idx1,idx2,idx3] = 0
 
+    cuda.syncthreads()
+
+cnt = 0
+
+group = 5
+interval = 20
+from utils.logger import Log
+
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    if group_dim == 1 or group_dim == (1):
-        group_dim = []
-        for i in len(inp.size()):
-            group_dim.append(1)
-        group_dim = tuple(group_dim)
     
-    """
-    s = "==%s============================\n"%(str(inpsize))
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%inp[i,j,0,0]
-        s += "\t"
-    s += "\n"
-    # """
-
-    # inp = cuda.to_device(inp)
     inp_ = inp.view(torch.int32)
+    # """
+    global cnt
+    
+
+    if cnt//group % interval == 0 and (type == 22):
+        if cnt%group == 0 and cnt//group % interval == 0:
+            Log.Print("%4d:"%(cnt//group),end=" ",elapsed=False, current=False)
+        s = "===== inp:%d,%d,%d,%d / mantissa: %d, dim : %s, type = %d\n"%(inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3], group_mantissa, group_dim, type)
+        for i in range(0, 1):
+            for j in range(0, inp.size()[1]):
+                for k in range(0, inp.size()[2]):
+                    for l in range(0, inp.size()[3]):
+                        s += "%12.5f"%inp[i,j,k,l]
+        s += "\n"
+
+        for i in range(0, 1):
+            for j in range(0, inp.size()[1]):
+                for k in range(0, inp.size()[2]):
+                    for l in range(0, inp.size()[3]):
+                        if inp_[i,j,k,l] == 0:
+                            s += "           0"
+                        else:
+                            s += "%12s"%hex(inp_[i,j,k,l])
+        a1 = np.count_nonzero(inp_.cpu().numpy() == 0)
+        b1 = inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3]
+        # print("BEF: %10d/%10d(%f)"%(a1, b1, a1/b1))
+        Log.Print("%2d: %7d/%7d(%f)"%(type, a1, b1, a1/b1), end="  ",elapsed=False, current=False)
+
+        s += "\n"
+    # """
     if len(inp.size()) == 4:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
         blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
         inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
-
         make_groups_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
     elif len(inp.size()) == 3:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
@@ -148,16 +170,38 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
         # Do nothing
         print("Tensor not supported, didn't do anything")
         return inp
-    # inp = inp.copy_to_host()
-
-    """
-    for i in range(0, 8):
-        for j in range(0, 3):
-            s += "%2.3f\t"%v[i,j,0,0]
-        s += "\t"
-    s += "\n"
     # """
-    # s = "%d / %d"%(np.count_nonzero(v == 0), inpsize[0]*inpsize[1]*inpsize[2]*inpsize[3])
-    # print(s)
+    if cnt//group % interval == 0 and (type == 22):
+        if cnt%group == group - 1 and cnt//group % interval == 0:
+            Log.Print("",elapsed=False, current=False)
+        for i in range(0, 1):
+            for j in range(0, inp.size()[1]):
+                for k in range(0, inp.size()[2]):
+                    for l in range(0, inp.size()[3]):
+                        if inp_[i,j,k,l] == 0:
+                            s += "           0"
+                        else:
+                            s += "%12s"%hex(inp_[i,j,k,l])
+        s += "\n"
+        for i in range(0, 1):
+            for j in range(0, inp.size()[1]):
+                for k in range(0, inp.size()[2]):
+                    for l in range(0, inp.size()[3]):
+                        s += "%12.5f"%inp[i,j,k,l]
+        s += "\n"
+        a1 = np.count_nonzero(inp_.cpu().numpy() == 0)
+        b1 = inpsize[0]*inpsize[1]*inpsize[2]*inpsize[3]
+        # print(blockspergrid, CUDA_THREADSPERBLOCK, inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3])
+        # print("inpsize, bs, group_dim : %s / %s / %s"%(inpsize, bs, group_dim))
+        # print("AFT: %10d/%10d(%f)"%(a1, b1, a1/b1))
+        # print(s)
+        # print()
+    # if cnt >= 36*40 + 36*2 :
+    #     os.exit()
+    if type == 22:
+        cnt += 1
+
+    # """
     # return torch.from_numpy(v).cuda()
+
     return inp

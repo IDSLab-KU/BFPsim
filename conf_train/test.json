@@ -4,6 +4,7 @@
     "model":"alexnet",
     "training-epochs":200,
     "dataset":"CIFAR10",
-    "save-name":"test",
+    "save-name":"test_01",
+    "print-train-count":1,
     "bfp-layer-conf-file":"test"
 }
