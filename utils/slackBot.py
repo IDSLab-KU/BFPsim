@@ -112,7 +112,7 @@ class slackBot_:
         self.dumpMessage += message
         if len(self.dumpMessage) >= self.dumpLength:
             self.SendMessage(self.dumpMessage)
-        self.dumpMessage = ""
+            self.dumpMessage = ""
 
     def ResetDump(self):
         self.dumpMessage = ""
