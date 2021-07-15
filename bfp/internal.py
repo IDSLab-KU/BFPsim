@@ -27,7 +27,7 @@ import numba
 def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // bs[1]) % bs[0] * gs[0]
+    idx0o = (idx // bs[1]) * gs[0]
     idx1o = idx % bs[1] * gs[1]
 
     M = 0
@@ -61,7 +61,7 @@ def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
 def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // (bs[2] * bs[1])) % bs[0] * gs[0]
+    idx0o = (idx // (bs[2] * bs[1])) * gs[0]
     idx1o = (idx // bs[2]) % bs[1] * gs[1]
     idx2o = idx % bs[2] * gs[2]
 
@@ -102,7 +102,7 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
 def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) * gs[0]
     idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
     idx2o = (idx // bs[3]) % bs[2] * gs[2]
     idx3o = idx % bs[3] * gs[3]
