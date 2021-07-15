@@ -313,7 +313,7 @@ def zse_tensor(inp, group_mantissa, group_dim, type = -1):
 
 def exp_tensor(inp, group_mantissa, group_dim, type = -1):
     
-    print(inp.size())
+    # print(inp.size())
     inp_ = inp.view(torch.int32)
     if len(inp.size()) == 4:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
@@ -338,13 +338,19 @@ class analyzeObject_():
         self.dataZSE = dict()
         self.dataExp = dict()
         self.isReceiveData = True
+        self.isWeight = True
+    
+    def DisableWeight(self):
+        self.isWeight = False
 
     def AddData(self, inp, group_mantissa, group_dim, type):
         if not self.isReceiveData:
             return
+        
         typename = DictKey(COMP_TYPE, type)
-        if not typename == "fw":
-            return
+        if typename == "fw" or typename == "biw":
+            if not self.isWeight:
+                return
         if typename not in self.dataZSE:
             self.dataZSE[typename] = np.zeros(group_mantissa + 2, dtype=np.int64)
             self.dataExp[typename] = np.zeros(256, dtype=np.int64)
@@ -362,12 +368,41 @@ class analyzeObject_():
             s += "%7d "%i
         s += "/ %02.5f"%(res[1]/res.sum()*100)
         print(s)
+
+    def SaveToFile(self, save_dir):
+        f = open(save_dir, mode="w+", newline='', encoding='utf-8')
+        f.write(self.GetDataStr())
+        f.close()
+        Log.Print("Saved analyze data to %s"%save_dir)
     
+    def GetDataStr(self):
+        s = "\nZSE,zse,zero,"
+        for i in range(0,23):
+            s += str(i)+","
+        s += s[:-1] + "\n"
+        for key, value in self.dataZSE.items():
+            s += key + ","
+            for i in value:
+                s += "%d,"%i
+            s = s[:-1]
+            s += "\n"
+        s += "\nExponent,"
+        for i in range(0,256):
+            s += str(i)+","
+        s += s[:-1] + "\n"
+        for key, value in self.dataExp.items():
+            s += key + ","
+            for i in value:
+                s += "%d,"%i
+            s = s[:-1]
+            s += "\n"
+        return s
+
     def __repr__(self) -> str:
         return str(self)
 
     def __str__(self) -> str:
-        s = "\nZSE Analyze Result"
+        s = "\n=======ZSE Analyze Result======="
         for key, value in self.dataZSE.items():
             total = value.sum()
             error = value[0]
@@ -376,13 +411,13 @@ class analyzeObject_():
                 s += "%8d,"%i
             s = s[:-1]
         s +="\n"
-        s += "Exponent Analyze Result"
+        s += "=======Exponent Analyze Result======="
         for key, value in self.dataExp.items():
             total = value.sum()
             s += "\n%s: %d\n"%(key, total)
-            for i in value:
-                s += "%8d,"%i
-            s = s[:-1]
+            for i in np.nonzero(value)[0]:
+                s += " %3d:%8d,\t"%(i,value[i])
+            s = s[:-2]
         s +="\n"
         # """
         return s
@@ -398,7 +433,7 @@ def TensorAnalyze(args):
     # args.net.eval()
     for param_group in args.optimizer.param_groups:
         param_group['lr'] = 0
-    count = 1
+    count = 10
     for i, data in enumerate(args.trainloader, 0):
 
         inputs, labels = data        
@@ -412,7 +447,7 @@ def TensorAnalyze(args):
         loss = args.criterion(outputs, labels)
 
         # Boost Loss
-        loss *= 0
+        # loss *= 0
 
         loss.backward()
 
@@ -420,12 +455,14 @@ def TensorAnalyze(args):
 
         Log.Print("%d/%d Forward Processed"%(i+1, count))
         
-        if i < 3 and i != count - 1: # Print for debug
-            Log.Print(str(analyzeObject))
+        # if i < 3 and i != count - 1: # Print for debug
+        #     Log.Print(str(analyzeObject))
         
+        if i == 0:
+            analyzeObject.DisableWeight()
         if i == count - 1:
             break
 
     Log.Print(str(analyzeObject))
-    
-    Log.Print("")
+    Log.Print(analyzeObject.GetDataStr())
+    analyzeObject.SaveToFile("./%s_analyze.csv"%args.save_name)

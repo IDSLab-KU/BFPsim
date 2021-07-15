@@ -52,12 +52,12 @@ class BFPConf():
         # Forward - Output
         self.fo     = dic["fo"]                         if "fo"     in dic.keys() else False
         self.fo_bit = dic["fo_bit"]                     if "fo_bit" in dic.keys() else self.fw_bit
-        self.fo_dim  = GetDimension(dic["fo_dim"])      if "fo_dim" in dic.keys() else (4,1,3,3)
+        self.fo_dim  = GetDimension(dic["fo_dim"])      if "fo_dim" in dic.keys() else (1,1,1,1)
 
         # Backward - Output gradient while calculating input gradient
         self.bio     = dic["bio"]                       if "bio"     in dic.keys() else True
-        self.bio_bit = dic["bio_bit"]                   if "bio_bit" in dic.keys() else self.fo_bit
-        self.bio_dim  = GetDimension(dic["bio_dim"])    if "bio_dim" in dic.keys() else self.fo_dim
+        self.bio_bit = dic["bio_bit"]                   if "bio_bit" in dic.keys() else self.fi_bit
+        self.bio_dim  = GetDimension(dic["bio_dim"])    if "bio_dim" in dic.keys() else self.fi_dim
 
         # Backward - Weight while calculating input gradient
         self.biw     = dic["biw"]                       if "biw"     in dic.keys() else True
@@ -67,22 +67,22 @@ class BFPConf():
         # Backward - Calculated input gradient
         self.big     = dic["big"]                       if "big"     in dic.keys() else False
         self.big_bit = dic["big_bit"]                   if "big_bit" in dic.keys() else self.fi_bit
-        self.big_dim  = GetDimension(dic["big_dim"])    if "big_dim" in dic.keys() else self.fi_dim
+        self.big_dim  = GetDimension(dic["big_dim"])    if "big_dim" in dic.keys() else (1,1,1,1)
 
         # Backward - Output gradient while calculating weight gradient
         self.bwo     = dic["bwo"]                       if "bwo"     in dic.keys() else True
-        self.bwo_bit = dic["bwo_bit"]                   if "bwo_bit" in dic.keys() else self.fo_bit
-        self.bwo_dim  = GetDimension(dic["bwo_dim"])    if "bwo_dim" in dic.keys() else (1,1,12,3)
+        self.bwo_bit = dic["bwo_bit"]                   if "bwo_bit" in dic.keys() else self.fi_bit
+        self.bwo_dim  = GetDimension(dic["bwo_dim"])    if "bwo_dim" in dic.keys() else self.fi_dim
 
         # Backward - Input while calculating weight gradient
         self.bwi     = dic["bwi"]                       if "bwi"     in dic.keys() else True
         self.bwi_bit = dic["bwi_bit"]                   if "bwi_bit" in dic.keys() else self.fi_bit
-        self.bwi_dim  = GetDimension(dic["bwi_dim"])    if "bwi_dim" in dic.keys() else (1,1,12,3)
+        self.bwi_dim  = GetDimension(dic["bwi_dim"])    if "bwi_dim" in dic.keys() else self.fi_dim
 
         # Backward - Calculated weight gradient
         self.bwg     = dic["bwg"]                       if "bwg"     in dic.keys() else False
         self.bwg_bit = dic["bwg_bit"]                   if "bwg_bit" in dic.keys() else self.fw_bit
-        self.bwg_dim  = GetDimension(dic["bwg_dim"])    if "bwg_dim" in dic.keys() else (1,1,12,3)
+        self.bwg_dim  = GetDimension(dic["bwg_dim"])    if "bwg_dim" in dic.keys() else (1,1,1,1)
 
         self.bwg_boost = bwg_boost
 
