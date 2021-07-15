@@ -224,7 +224,7 @@ import numba
 def zse_4d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) * gs[0]
     idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
     idx2o = (idx // bs[3]) % bs[2] * gs[2]
     idx3o = idx % bs[3] * gs[3]
@@ -243,8 +243,6 @@ def zse_4d_internal(v, dim, bs, gs, group_mantissa):
                     if idx3 >= dim[3]:
                         break
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
-                    if e < 0:
-                        e = -e
                     if M < e:
                         M = e
     if M == 0:
@@ -262,20 +260,16 @@ def zse_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    if v[idx0,idx1,idx2,idx3] == 0:
-                        v[idx0,idx1,idx2,idx3] = -1000
-                    else:
+                    if v[idx0,idx1,idx2,idx3] != 0:
                         e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
-                        if e < 0:
-                            e = -e
-                        v[idx0,idx1,idx2,idx3] = group_mantissa - M + e - 1
+                        v[idx0,idx1,idx2,idx3] = group_mantissa - M + e - 1 + 256
 
 @cuda.jit
 # TODO : make another function to just grouping tensor...?
 def exponent_4d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
-    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) * gs[0]
     idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
     idx2o = (idx // bs[3]) % bs[2] * gs[2]
     idx3o = idx % bs[3] * gs[3]
@@ -293,10 +287,7 @@ def exponent_4d_internal(v, dim, bs, gs, group_mantissa):
                 for idx3 in range(idx3o, idx3o + gs[3]):
                     if idx3 >= dim[3]:
                         break
-                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
-                    if e < 0:
-                        e = -e
-                    v[idx0,idx1,idx2,idx3] = e
+                    v[idx0,idx1,idx2,idx3] = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def zse_tensor(inp, group_mantissa, group_dim, type = -1):
@@ -314,13 +305,15 @@ def zse_tensor(inp, group_mantissa, group_dim, type = -1):
     
     data = np.zeros(group_mantissa + 2, dtype=np.int64)
     for i in range(group_mantissa):
-        data[i+2] = (i == v).sum()
-    data[1] = (v <= -400).sum() # Originally zero
-    data[0] = (v < 0).sum() - data[1] # zse happen
+        data[i+2] = (i+256 == v).sum()
+    data[1] = (v == 0).sum() # Originally zero
+    data[0] = (v < 256).sum() - data[1] # zse happen
 
     return data
 
 def exp_tensor(inp, group_mantissa, group_dim, type = -1):
+    
+    print(inp.size())
     inp_ = inp.view(torch.int32)
     if len(inp.size()) == 4:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
@@ -329,8 +322,7 @@ def exp_tensor(inp, group_mantissa, group_dim, type = -1):
         exponent_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
     else: # Tensor dimension is not supported
         Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
-
-    
+        
     v = inp_.detach().cpu().numpy()
     v = v.flatten()
     
@@ -351,17 +343,17 @@ class analyzeObject_():
         if not self.isReceiveData:
             return
         typename = DictKey(COMP_TYPE, type)
+        if not typename == "fw":
+            return
         if typename not in self.dataZSE:
             self.dataZSE[typename] = np.zeros(group_mantissa + 2, dtype=np.int64)
             self.dataExp[typename] = np.zeros(256, dtype=np.int64)
         # ZSE analyze
-        zse_inp = inp.clone()
-        zse_data = zse_tensor(zse_inp, group_mantissa, group_dim)
+        zse_data = zse_tensor(inp.clone().detach(), group_mantissa, group_dim)
         self.dataZSE[typename] += zse_data
 
         # exponent analyze
-        exp_inp = inp.clone()
-        exp_data = exp_tensor(exp_inp, group_mantissa, group_dim)
+        exp_data = exp_tensor(inp.clone().detach(), group_mantissa, group_dim)
         self.dataExp[typename] += exp_data
 
     def printZSEArray(self, res):
@@ -384,7 +376,6 @@ class analyzeObject_():
                 s += "%8d,"%i
             s = s[:-1]
         s +="\n"
-        """
         s += "Exponent Analyze Result"
         for key, value in self.dataExp.items():
             total = value.sum()
@@ -403,11 +394,11 @@ def TensorAnalyze(args):
     # Log.SetPrintElapsedTime(False)
     FLAGS.ZSE = True
 
-    args.net.load_state_dict(torch.load(args.save_file))
-    args.net.eval()
+    # args.net.load_state_dict(torch.load(args.save_file))
+    # args.net.eval()
     for param_group in args.optimizer.param_groups:
         param_group['lr'] = 0
-    count = 10
+    count = 1
     for i, data in enumerate(args.trainloader, 0):
 
         inputs, labels = data        
@@ -421,7 +412,7 @@ def TensorAnalyze(args):
         loss = args.criterion(outputs, labels)
 
         # Boost Loss
-        loss *= args.loss_boost
+        loss *= 0
 
         loss.backward()
 
@@ -435,22 +426,6 @@ def TensorAnalyze(args):
         if i == count - 1:
             break
 
-    # Log.Print(str(ZSEObject))
-
-    # parameters = torch.load(args.save_file).items()
+    Log.Print(str(analyzeObject))
     
     Log.Print("")
-    # for bits in [4]:
-    #     for g_size in [36]:
-    # for bits in [4, 5, 6, 7, 8]:
-    #     for g_size in [36, 54, 72]:
-    # ZSEAnalyze_(args, 4, 36)
-    # ZSEAnalyze_(args, 4, 144)
-    # ZSEAnalyze_(args, 8, 54)
-    # ZSEAnalyze_(args, 8, 216)
-    # ZSEAnalyze_(args, 16, 54)
-    # ZSEAnalyze_(args, 16, 216)
-    
-    # ZSEAnalyze_(args, 23, 9)
-    # ZSEAnalyze_(args, 23, 216)
-    # print(args.net)
