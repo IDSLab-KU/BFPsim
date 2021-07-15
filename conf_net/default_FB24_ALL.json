@@ -4,6 +4,12 @@
         "fw_bit":16,
         "big":true,
         "fo":true,
-        "bwg":true
+        "bwg":true,
+        "fw_dim":"wi, 216",
+        "fi_dim":"fc, 54",
+        "fo_dim":"fc, 54",
+        "bwo_dim":"fx, 54",
+        "bwi_dim":"fx, 54",
+        "bwg_dim":"fx, 54"
     }
 }
