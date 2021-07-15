@@ -1,0 +1,9 @@
+{
+    "name":"default",
+    "default":{
+        "fw_bit":16,
+        "big":true,
+        "fo":true,
+        "bwg":true
+    }
+}
