@@ -64,7 +64,7 @@ def ArgumentParse():
 
     # Global options
     parser.add_argument("--mode", type=str, default="train",
-        help = "Program execution mode [train, zse-analyze, generate-config]")
+        help = "Program execution mode [train, analyze, generate-config]")
     parser.add_argument("--cuda", type=str2bool, default=True,
         help = "True if you want to use cuda")
 
@@ -282,7 +282,7 @@ if __name__ == '__main__':
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         TrainNetwork(args)
-    elif args.mode == "zse-analyze":
+    elif args.mode == "analyze":
         for arg in vars(args):
             if arg in ["bfp_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bfp_layer_conf",
             "criterion", "optimizer", "scheduler", "stat_location", "save_prefix", "loss_boost", "training_epochs", "train_config_file"]:

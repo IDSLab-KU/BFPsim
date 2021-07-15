@@ -5,7 +5,7 @@ import torch
 import numpy as np
 
 from utils.logger import Log
-from conf import FLAGS, COMP_TYPE
+from conf import FLAGS, COMP_TYPE, CUDA_THREADSPERBLOCK
 
 CONF_SZ = 3
 
@@ -215,12 +215,186 @@ class ZSEObject_:
 
 ZSEObject = ZSEObject_()
 
+
+from numba import jit, cuda
+import numba
+
+@cuda.jit
+# TODO : make another function to just grouping tensor...?
+def zse_4d_internal(v, dim, bs, gs, group_mantissa):
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
+    
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
+    idx2o = (idx // bs[3]) % bs[2] * gs[2]
+    idx3o = idx % bs[3] * gs[3]
+
+    M = 0
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            for idx2 in range(idx2o, idx2o + gs[2]):
+                if idx2 >= dim[2]:
+                    break
+                for idx3 in range(idx3o, idx3o + gs[3]):
+                    if idx3 >= dim[3]:
+                        break
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if e < 0:
+                        e = -e
+                    if M < e:
+                        M = e
+    if M == 0:
+        return
+    # Replace that area
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            for idx2 in range(idx2o, idx2o + gs[2]):
+                if idx2 >= dim[2]:
+                    break
+                for idx3 in range(idx3o, idx3o + gs[3]):
+                    if idx3 >= dim[3]:
+                        break
+                    if v[idx0,idx1,idx2,idx3] == 0:
+                        v[idx0,idx1,idx2,idx3] = -1000
+                    else:
+                        e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                        if e < 0:
+                            e = -e
+                        v[idx0,idx1,idx2,idx3] = group_mantissa - M + e - 1
+
+@cuda.jit
+# TODO : make another function to just grouping tensor...?
+def exponent_4d_internal(v, dim, bs, gs, group_mantissa):
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
+    
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) % bs[0] * gs[0]
+    idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
+    idx2o = (idx // bs[3]) % bs[2] * gs[2]
+    idx3o = idx % bs[3] * gs[3]
+
+    M = 0
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= dim[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= dim[1]:
+                break
+            for idx2 in range(idx2o, idx2o + gs[2]):
+                if idx2 >= dim[2]:
+                    break
+                for idx3 in range(idx3o, idx3o + gs[3]):
+                    if idx3 >= dim[3]:
+                        break
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if e < 0:
+                        e = -e
+                    v[idx0,idx1,idx2,idx3] = e
+
+# make_group_tensor : Group values as same exponent bits, which shifts mantissa
+def zse_tensor(inp, group_mantissa, group_dim, type = -1):
+    inp_ = inp.view(torch.int32)
+    if len(inp.size()) == 4:
+        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
+        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
+        zse_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
+    else: # Tensor dimension is not supported
+        Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
+    
+    v = inp_.detach().cpu().numpy()
+    v = v.flatten()
+    
+    data = np.zeros(group_mantissa + 2, dtype=np.int64)
+    for i in range(group_mantissa):
+        data[i+2] = (i == v).sum()
+    data[1] = (v <= -400).sum() # Originally zero
+    data[0] = (v < 0).sum() - data[1] # zse happen
+
+    return data
+
+def exp_tensor(inp, group_mantissa, group_dim, type = -1):
+    inp_ = inp.view(torch.int32)
+    if len(inp.size()) == 4:
+        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
+        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
+        exponent_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
+    else: # Tensor dimension is not supported
+        Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
+
+    
+    v = inp_.detach().cpu().numpy()
+    v = v.flatten()
+    
+    data = np.zeros(256, dtype=np.int64)
+    for i in range(256):
+        data[i] = (i == v).sum()
+        
+    return data
+
+
 class analyzeObject_():
     def __init__(self) -> None:
-        pass
+        self.dataZSE = dict()
+        self.dataExp = dict()
+        self.isReceiveData = True
 
-    def AddData(self, pre, cur, group_mantissa, group_dim, type):
-        pass
+    def AddData(self, inp, group_mantissa, group_dim, type):
+        if not self.isReceiveData:
+            return
+        typename = DictKey(COMP_TYPE, type)
+        if typename not in self.dataZSE:
+            self.dataZSE[typename] = np.zeros(group_mantissa + 2, dtype=np.int64)
+            self.dataExp[typename] = np.zeros(256, dtype=np.int64)
+        # ZSE analyze
+        zse_inp = inp.clone()
+        zse_data = zse_tensor(zse_inp, group_mantissa, group_dim)
+        self.dataZSE[typename] += zse_data
+
+        # exponent analyze
+        exp_inp = inp.clone()
+        exp_data = exp_tensor(exp_inp, group_mantissa, group_dim)
+        self.dataExp[typename] += exp_data
+
+    def printZSEArray(self, res):
+        s = ""
+        for i in res:
+            s += "%7d "%i
+        s += "/ %02.5f"%(res[1]/res.sum()*100)
+        print(s)
+    
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        s = "\nZSE Analyze Result"
+        for key, value in self.dataZSE.items():
+            total = value.sum()
+            error = value[0]
+            s += "\n%s: %16d / %16d (%2.5f)\n"%(key, error, total, float(error/total*100))
+            for i in value:
+                s += "%8d,"%i
+            s = s[:-1]
+        s +="\n"
+        """
+        s += "Exponent Analyze Result"
+        for key, value in self.dataExp.items():
+            total = value.sum()
+            s += "\n%s: %d\n"%(key, total)
+            for i in value:
+                s += "%8d,"%i
+            s = s[:-1]
+        s +="\n"
+        # """
+        return s
 
 analyzeObject = analyzeObject_()
 
@@ -256,12 +430,12 @@ def TensorAnalyze(args):
         Log.Print("%d/%d Forward Processed"%(i+1, count))
         
         if i < 3 and i != count - 1: # Print for debug
-            Log.Print(str(ZSEObject))
+            Log.Print(str(analyzeObject))
         
         if i == count - 1:
             break
 
-    Log.Print(str(ZSEObject))
+    # Log.Print(str(ZSEObject))
 
     # parameters = torch.load(args.save_file).items()
     

@@ -163,9 +163,8 @@ from utils.logger import Log
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-
     if FLAGS.ZSE:
-        pre = inp.clone().detach()
+        analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
 
     inp_ = inp.view(torch.int32)
     if len(inp.size()) == 4:
@@ -187,7 +186,5 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
         Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
         return inp
 
-    if FLAGS.ZSE:
-        analyzeObject.AddData(pre, inp.clone().detach(), group_mantissa, group_dim, type)
 
     return inp
