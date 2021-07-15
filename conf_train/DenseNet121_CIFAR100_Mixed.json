@@ -4,7 +4,7 @@
     "model":"DenseNet121",
     "training-epochs":200,
     "save-name":"DenseNet121_CIFAR100_Mixed",
-    "batch-size-train":32,
+    "batch-size-train":64,
     "dataset":"CIFAR100",
     "bfp-layer-conf-dict":{
         "0":"default_B8G54",

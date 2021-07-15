@@ -1,6 +1,6 @@
 # ecution
 ## Set config name here
-conf_names=(MobileNetv1_CIFAR100_FB12 ResNet18_CIFAR100_FB12 VGG16_CIFAR100_FB12 AlexNet_CIFAR100_FB12)
+conf_names=(DenseNet121_CIFAR10_FB12 DenseNet121_CIFAR10_FB16 DenseNet121_CIFAR10_FB24 DenseNet121_CIFAR100_Mixed)
 ## Please Change Session name every time, it will override existing session.
 session=fb0
 
@@ -9,7 +9,7 @@ session=fb0
 # ================ Do not touch below here ==================
 cpus="8"
 user="$(id -u):$(id -g)"
-devices=('"device=0"' '"device=1"' '"device=2"' '"device=3"' '"device=4"' '"device=5"' '"device=6"' '"device=7"')
+devices=('"device=4"' '"device=5"' '"device=6"' '"device=7"')
 
 # Create Tmux Session
 tmux kill-session -t $session

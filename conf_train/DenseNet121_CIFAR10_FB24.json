@@ -4,6 +4,7 @@
     "model":"DenseNet121",
     "training-epochs":200,
     "dataset":"CIFAR10",
+    "batch-size-train":64,
     "save-name":"DenseNet121_CIFAR10_FB24",
     "bfp-layer-conf-file":"default_FB24"
 }
