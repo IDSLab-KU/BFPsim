@@ -375,11 +375,12 @@ class analyzeObject_():
         f.close()
         Log.Print("Saved analyze data to %s"%save_dir)
     
-    def GetDataStr(self):
+    def GetDataStr(self, min=70, max=134):
         s = "\nZSE,zse,zero,"
         for i in range(0,23):
             s += str(i)+","
-        s += s[:-1] + "\n"
+        s = s[:-1] + "\n"
+
         for key, value in self.dataZSE.items():
             s += key + ","
             for i in value:
@@ -389,7 +390,8 @@ class analyzeObject_():
         s += "\nExponent,"
         for i in range(0,256):
             s += str(i)+","
-        s += s[:-1] + "\n"
+        s = s[:-1] + "\n"
+        
         for key, value in self.dataExp.items():
             s += key + ","
             for i in value:
