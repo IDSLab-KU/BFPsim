@@ -109,9 +109,9 @@ class statManager_():
 statManager = statManager_()
 
 
-print(statManager.AddMeter("top1"))
-statManager.AddData("top1", 12.5)
-print(statManager.GetMax("top1"))
+# print(statManager.AddMeter("top1"))
+# statManager.AddData("top1", 12.5)
+# print(statManager.GetMax("top1"))
 # print(statManager.GetMeterString("top1", fmt="8.3f",delim=","))
-print(statManager)
+# print(statManager)
 # statManager.SaveToFile("./save.tmp")

@@ -9,7 +9,7 @@ from train import TrainNetwork
 from utils.logger import Log
 from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
-from utils.ZSEAnalyze import ZSEAnalyze
+from utils.tensorAnalyze import TensorAnalyze
 from utils.statManager import statManager
 
 from dataset import LoadDataset
@@ -289,19 +289,13 @@ if __name__ == '__main__':
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
         # zse analyze mode
-        ZSEAnalyze(args)
+        TensorAnalyze(args)
     elif args.mode == "generate-config":
         # Generating config mode
         GenerateConfig(args)
     elif args.mode == "temp":
         ReplaceLayers(args.net, dict())
 
-        # for name, module in args.net.named_modules():
-        #     if isinstance(module, nn.Linear):
-        #         print("LINEAR: " + name)
-        #     if isinstance(module, nn.Conv2d):
-        #         print("CONV2D: " + name)
-        # print(args.net)
     else:
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
 
