@@ -38,8 +38,6 @@ def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
             if idx1 >= dim[1]:
                 break
             e = (v[idx0,idx1] & 0x7f800000 ) >> 23
-            if e < 0:
-                e = -e
             if M < e:
                 M = e
     if M == 0:
@@ -52,8 +50,6 @@ def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
             if idx1 >= dim[1]:
                 break
             e = (v[idx0,idx1] & 0x7f800000 ) >> 23
-            if e < 0:
-                e = -e
             k = group_mantissa - M + e - 1
             if 0 <= k:
                 v[idx0,idx1] = v[idx0,idx1] & (0xffffffff << (23 - k))
@@ -80,8 +76,6 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
                 if idx2 >= dim[2]:
                     break
                 e = (v[idx0,idx1,idx2] & 0x7f800000 ) >> 23
-                if e < 0:
-                    e = -e
                 if M < e:
                     M = e
     if M == 0:
@@ -97,8 +91,6 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
                 if idx2 >= dim[2]:
                     break
                 e = (v[idx0,idx1,idx2] & 0x7f800000 ) >> 23
-                if e < 0:
-                    e = -e
                 k = group_mantissa - M + e - 1
                 if 0 <= k:
                     v[idx0,idx1,idx2] = v[idx0,idx1,idx2] & (0xffffffff << (23 - k))
@@ -129,8 +121,6 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     if idx3 >= dim[3]:
                         break
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
-                    if e < 0:
-                        e = -e
                     if M < e:
                         M = e
     if M == 0:
@@ -149,8 +139,6 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                     if idx3 >= dim[3]:
                         break
                     e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
-                    if e < 0:
-                        e = -e
                     k = group_mantissa - M + e - 1
                     if 0 <= k:
                         v[idx0,idx1,idx2,idx3] = v[idx0,idx1,idx2,idx3] & (0xffffffff << (23 - k))
