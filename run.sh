@@ -1,5 +1,8 @@
 
-docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode analyze --dataset CIFAR100 --model AlexNet --save-file ./saves/AlexNet_CIFAR100_FB24_finish.model -bfp default_FB24 --log False
+# Analyze
+# docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode analyze --dataset CIFAR100 --model AlexNet --save-file ./saves/AlexNet_CIFAR100_FB12_finish.model -bfp default_FB12_ALL --log False
+
+docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode analyze --dataset CIFAR100 --model AlexNet --save-file ./saves/AlexNet_CIFAR100_FB12_finish.model -bfp default_FB12_ALL --log False
 
 # Test
 # docker run --rm --gpus '"device=2"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log False
