@@ -9,7 +9,7 @@ from train import TrainNetwork
 from utils.logger import Log
 from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
-# from utils.tensorAnalyze import TensorAnalyze
+from utils.tensorAnalyze import TensorAnalyze
 from utils.statManager import statManager
 
 from dataset import LoadDataset

@@ -3,7 +3,7 @@ import numpy as np
 import ctypes
 
 from conf import FLAGS, CUDA_THREADSPERBLOCK
-
+from utils.tensorAnalyze import analyzeObject
 
 fp32_mask = [0,
     0x00400000, 0x00600000, 0x00700000, 0x00780000,
@@ -163,8 +163,11 @@ from utils.logger import Log
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    inp_ = inp.view(torch.int32)
 
+    if FLAGS.ZSE:
+        pre = inp.clone().detach()
+
+    inp_ = inp.view(torch.int32)
     if len(inp.size()) == 4:
         bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
         blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
@@ -183,5 +186,8 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
     else: # Tensor dimension is not supported
         Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
         return inp
+
+    if FLAGS.ZSE:
+        analyzeObject.AddData(pre, inp.clone().detach(), group_mantissa, group_dim, type)
 
     return inp

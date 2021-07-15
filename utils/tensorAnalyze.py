@@ -213,10 +213,18 @@ class ZSEObject_:
         s +="\n"
         return s
 
-        
 ZSEObject = ZSEObject_()
 
-def ZSEAnalyze(args):
+class analyzeObject_():
+    def __init__(self) -> None:
+        pass
+
+    def AddData(self, pre, cur, group_mantissa, group_dim, type):
+        pass
+
+analyzeObject = analyzeObject_()
+
+def TensorAnalyze(args):
     # Log.SetPrintCurrentTime(False)
     # Log.SetPrintElapsedTime(False)
     FLAGS.ZSE = True
