@@ -1,0 +1,15 @@
+{
+    "name":"default",
+    "default":{
+        "fw_bit":23,
+        "fw_dim":1,
+        "fi_dim":1,
+        "fo_dim":1,
+        "bwo_dim":1,
+        "bwi_dim":1,
+        "bwg_dim":1,
+        "big":true,
+        "fo":true,
+        "bwg":true
+    }
+}
