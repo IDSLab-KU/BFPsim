@@ -10,6 +10,7 @@ from utils.logger import Log
 from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
 from utils.ZSEAnalyze import ZSEAnalyze
+from utils.statManager import statManager
 
 from dataset import LoadDataset
 
@@ -29,15 +30,13 @@ import argparse
 from datetime import datetime
 args = None
 
-# TODO : Fix this
-from utils.statManager import Stat
 
 def handler(signum, frame):
     print("Quit by user signal")
     if args != None:
-        if args.stat is not None:
+        if args.stat:
             Log.Print("Saving stat object file...")
-            args.stat.SaveToFile()
+            statManager.SaveToFile(args.stat_location)
         
         if args.save:
             SaveModel(args, "canceled")
@@ -176,7 +175,7 @@ def ArgumentParse():
     args.stat_location = "./stats/" + args.save_name + ".stat"
     # Set the log file
     Log.SetLogFile(True, args.log_location) if args.log else Log.SetLogFile(False)
-    args.stat = Stat(args) if args.stat else None
+    # args.stat = statManager() if args.stat else None
     slackBot.SetProcessInfo(args.save_name)
     
     # tag:Dataset

@@ -4,6 +4,7 @@ import torch.optim as optim
 from utils.logger import Log
 from utils.slackBot import slackBot
 from functions import SaveModel, GetNetwork, GetOptimizerScheduler
+from utils.statManager import statManager
 
 def Train(args, epoch_current):
     running_loss = 0.0
@@ -50,9 +51,6 @@ def Train(args, epoch_current):
             running_loss = 0.0
             batch_count = 0
 
-        # Record to stat
-        if args.stat is not None:
-            args.stat.AddLoss(loss.item())
 
     if args.scheduler != None:
         args.scheduler.step()
@@ -73,8 +71,7 @@ def Evaluate(args):
             correct += (predicted == labels).sum().item()
     
     Log.Print('Test Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
-    if args.stat is not None:
-        args.stat.AddTestAccuracy(correct / total)
+    statManager.AddData("top1", correct/total)
     slackBot.AppendDump("%f "%(correct/total))
         
 
@@ -94,8 +91,7 @@ def EvaluateTrain(args):
             correct += (predicted == labels).sum().item()
     
     Log.Print('Train Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
-    if args.stat is not None:
-        args.stat.AddTrainAccuracy(correct / total)
+    statManager.AddData("top1train", correct/total)
     
 
 # Train the network and evaluate
@@ -147,12 +143,13 @@ def TrainNetwork(args):
         # if (epoch_current+1) % 5 == 0:
         #     slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
 
-    slackBot.SendDump()
-    Log.Print("========== Finishing Training ==========")
+    Log.Print("========== Finished Training ==========")
 
-    if args.stat is not None:
+    slackBot.SendDump()
+    
+    if args.stat:
         Log.Print("Saving stat object file...")
-        args.stat.SaveToFile()
+        statManager.SaveToFile(args.stat_location)
 
     if args.save:
         SaveModel(args, "finish")

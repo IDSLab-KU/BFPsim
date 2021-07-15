@@ -60,6 +60,10 @@ class statManager_():
         self.data[name] = np.empty(0, dtype=type)
 
     def AddData(self, name, value):
+        if name not in self.data:
+            print("statManager: meter name not exists, creating one...")
+            self.AddMeter(name)
+        
         try:
             self.data[name] = np.insert(self.data[name], self.data[name].size, value)
         except:
