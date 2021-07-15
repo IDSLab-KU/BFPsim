@@ -339,6 +339,12 @@ class analyzeObject_():
         self.dataExp = dict()
         self.isReceiveData = True
         self.isWeight = True
+
+        
+        # temp initialize
+        for i in ["fi", "fw", "fo", "biw", "bio", "big", "bwi", "bwo", "bwg", ]:
+            self.dataZSE[i] = np.zeros(25, dtype=np.int64)
+            self.dataExp[i] = np.zeros(256, dtype=np.int64)
     
     def DisableWeight(self):
         self.isWeight = False
@@ -354,16 +360,19 @@ class analyzeObject_():
         if typename not in self.dataZSE:
             self.dataZSE[typename] = np.zeros(group_mantissa + 2, dtype=np.int64)
             self.dataExp[typename] = np.zeros(256, dtype=np.int64)
+
+            
         # ZSE analyze
         zse_data = zse_tensor(inp.clone().detach(), group_mantissa, group_dim)
-        self.dataZSE[typename] += zse_data
+        self.dataZSE[typename][:zse_data.size] += zse_data
 
         # exponent analyze
         exp_data = exp_tensor(inp.clone().detach(), group_mantissa, group_dim)
-        self.dataExp[typename] += exp_data
+        self.dataExp[typename][:exp_data.size] += exp_data
 
     def printZSEArray(self, res):
         s = ""
+
         for i in res:
             s += "%7d "%i
         s += "/ %02.5f"%(res[1]/res.sum()*100)
@@ -435,7 +444,8 @@ def TensorAnalyze(args):
     # args.net.eval()
     for param_group in args.optimizer.param_groups:
         param_group['lr'] = 0
-    count = 10
+    count = 1
+
     for i, data in enumerate(args.trainloader, 0):
 
         inputs, labels = data        
