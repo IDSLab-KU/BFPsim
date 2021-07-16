@@ -47,7 +47,11 @@ from bfp.module import BFPLinear, BFPConv2d
 
 def GetValueFromBFPConf(bfp_dict, attr_str):
     if attr_str in bfp_dict: # Layer configuration is found
-        return BFPConf(bfp_dict[attr_str])
+        # If type is normal Conv2d
+        if "type" in bfp_dict[attr_str] and bfp_dict[attr_str]["type"] == "torch.Conv2d":
+            return None
+        else:   # Found Config!
+            return BFPConf(bfp_dict[attr_str])
     elif "default" in bfp_dict: # If default value is set, use the default value
         return BFPConf(bfp_dict["default"])
     else: # If no default value is set, don't replace
