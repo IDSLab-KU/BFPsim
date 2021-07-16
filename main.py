@@ -272,8 +272,6 @@ if __name__ == '__main__':
     # Parse Arguments and prepare almost everything
     args = ArgumentParse()
 
-    slackBot.SetToken("xoxb-2040262209265-2252035149014-zKacvtIydyL05JsFPdCfUDoA")
-    slackBot.SendStartSignal()
     Log.Print("Program executed on {} mode.".format(args.mode), current=False, elapsed=False)
     if args.mode == "train":
         # Network training mode
@@ -281,7 +279,10 @@ if __name__ == '__main__':
             if arg in ["bfp_layer_confs", "bfp_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
+        slackBot.SetToken("xoxb-2040262209265-2252035149014-zKacvtIydyL05JsFPdCfUDoA")
+        slackBot.SendStartSignal()
         TrainNetwork(args)
+        slackBot.SendEndSignal()
     elif args.mode == "analyze":
         for arg in vars(args):
             if arg in ["bfp_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bfp_layer_conf",
@@ -300,4 +301,4 @@ if __name__ == '__main__':
         raise NotImplementedError("Mode not supported : {}".format(args.mode))
 
     Log.Print("Program Terminated")
-    slackBot.SendEndSignal()
+    
