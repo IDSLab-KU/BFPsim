@@ -1,0 +1,15 @@
+{
+    "name":"default",
+    "default":{
+        "fw_bit":16
+    },
+    "net.layer2.0.shortcut.0":{
+        "type":"torch.Conv2d"
+    },
+    "net.layer3.0.shortcut.0":{
+        "type":"torch.Conv2d"
+    },
+    "net.layer4.0.shortcut.0":{
+        "type":"torch.Conv2d"
+    }
+}
