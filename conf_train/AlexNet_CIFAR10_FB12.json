@@ -1,9 +1,0 @@
-{
-    "name":"AlexNet_CIFAR10_FB12",
-    "description":"",
-    "model":"AlexNet",
-    "training-epochs":200,
-    "dataset":"CIFAR10",
-    "save-name":"AlexNet_CIFAR10_FB12",
-    "bfp-layer-conf-file":"default_FB12"
-}

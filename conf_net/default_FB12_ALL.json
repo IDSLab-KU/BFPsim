@@ -2,8 +2,12 @@
     "name":"default",
     "default":{
         "fw_bit":4,
-        "bwo_bit":16,
-        "bwi_bit":16,
+        "fw_dim":"wi, 216",
+        "fi_dim":"fc, 54",
+        "fo_dim":"fc, 54",
+        "bwo_dim":"fx, 54",
+        "bwi_dim":"fx, 54",
+        "bwg_dim":"fx, 54",
         "big":true,
         "fo":true,
         "bwg":true
