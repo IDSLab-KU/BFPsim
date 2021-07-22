@@ -171,7 +171,7 @@ def GetZSE(inp_n, group_mantissa, group_size, group_direction):
     # print("bit={}, sz={}, dim={} = {} / {}".format(group_mantissa, group_size, inp_shape, np.asarray(inp_shape).prod(), res.sum()))
     return res
 
-from functions import DictKey
+from utils.functions import DictKey
 
 
 class ZSEObject_:

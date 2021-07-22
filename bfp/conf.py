@@ -1,29 +1,40 @@
 
 
-# TODO : improve dimension loading code
 # "wi, 36" returns (4,1,3,3)
 # [1,4,3,3] returns original stuffs
 # single number with 1 returns (1,1,1,1)
-def GetDimension(val):
+def GetDimension(val, dim=4):
     if type(val) == list:
         return tuple(val)
     elif type(val) == str:
         v = val.replace(" ","").split(",")
         gs = int(v[1])
-        if v[0].lower() == "wi":
-            return (gs//9,1,3,3)
-        elif v[0].lower() == "wo":
-            return (1,gs//9,3,3)
-        elif v[0].lower() == "fx":
-            return (1,1,gs//3,3)
-        elif v[0].lower() == "fy":
-            return (1,1,3,gs//3)
-        elif v[0].lower() == "fc":
-            return (1,gs//9,3,3)
+        if dim == 4:
+            if v[0].lower() == "wi":
+                return (gs//9,1,3,3)
+            elif v[0].lower() == "wo":
+                return (1,gs//9,3,3)
+            elif v[0].lower() == "fx":
+                return (1,1,gs//3,3)
+            elif v[0].lower() == "fy":
+                return (1,1,3,gs//3)
+            elif v[0].lower() == "fc":
+                return (1,gs//9,3,3)
+            else:
+                ValueError("BFPConf direction({v[0]}) is not recognized for tensor dim of {dim}")
+        elif dim == 3: # Other dimension
+            return (gs, 1, 1)
+        elif dim == 2:
+            return (gs, 1)
         else:
-            ValueError("BFPConf direction is not recognized: {v[0]}")
+            ValueError("BFPConf tensor dim not supported: {dim}")
     elif val == 1:
-        return (1,1,1,1)
+        if dim == 4:
+            return (1,1,1,1)
+        elif dim == 3:
+            return (1,1,1)
+        elif dim == 2:
+            return (1,1)
 
 def GetTupleShortString(t):
     s = "("
@@ -38,51 +49,55 @@ class BFPConf():
         if dic == None:
             dic = dict()
         self.type   = dic["type"]                   if "type"   in dic.keys() else "Conv2d"
+        if self.type.lower() == "conv2d":
+            di, dw = 4, 4
+        elif self.type.lower() == "linear":
+            di, dw = 2, 2
 
         # Foward - Weight
         self.fw     = dic["fw"]                         if "fw"     in dic.keys() else True
         self.fw_bit = dic["fw_bit"]                     if "fw_bit" in dic.keys() else 8
-        self.fw_dim  = GetDimension(dic["fw_dim"])      if "fw_dim" in dic.keys() else (16,1,3,3)
+        self.fw_dim  = GetDimension(dic["fw_dim"],di)   if "fw_dim" in dic.keys() else (16,1,3,3)
 
         # Forward - Input
         self.fi     = dic["fi"]                         if "fi"     in dic.keys() else True
         self.fi_bit = dic["fi_bit"]                     if "fi_bit" in dic.keys() else self.fw_bit
-        self.fi_dim  = GetDimension(dic["fi_dim"])      if "fi_dim" in dic.keys() else (4,1,3,3)
+        self.fi_dim  = GetDimension(dic["fi_dim"],dw)   if "fi_dim" in dic.keys() else (4,1,3,3)
 
         # Forward - Output
         self.fo     = dic["fo"]                         if "fo"     in dic.keys() else False
         self.fo_bit = dic["fo_bit"]                     if "fo_bit" in dic.keys() else self.fw_bit
-        self.fo_dim  = GetDimension(dic["fo_dim"])      if "fo_dim" in dic.keys() else (1,1,1,1)
+        self.fo_dim  = GetDimension(dic["fo_dim"],di)   if "fo_dim" in dic.keys() else (1,1,1,1)
 
         # Backward - Output gradient while calculating input gradient
         self.bio     = dic["bio"]                       if "bio"     in dic.keys() else True
         self.bio_bit = dic["bio_bit"]                   if "bio_bit" in dic.keys() else self.fi_bit
-        self.bio_dim  = GetDimension(dic["bio_dim"])    if "bio_dim" in dic.keys() else self.fi_dim
+        self.bio_dim  = GetDimension(dic["bio_dim"],di) if "bio_dim" in dic.keys() else self.fi_dim
 
         # Backward - Weight while calculating input gradient
         self.biw     = dic["biw"]                       if "biw"     in dic.keys() else True
         self.biw_bit = dic["biw_bit"]                   if "biw_bit" in dic.keys() else self.fw_bit
-        self.biw_dim  = GetDimension(dic["biw_dim"])    if "biw_dim" in dic.keys() else self.fw_dim
+        self.biw_dim  = GetDimension(dic["biw_dim"],dw) if "biw_dim" in dic.keys() else self.fw_dim
 
         # Backward - Calculated input gradient
         self.big     = dic["big"]                       if "big"     in dic.keys() else False
         self.big_bit = dic["big_bit"]                   if "big_bit" in dic.keys() else self.fi_bit
-        self.big_dim  = GetDimension(dic["big_dim"])    if "big_dim" in dic.keys() else (1,1,1,1)
+        self.big_dim  = GetDimension(dic["big_dim"],di) if "big_dim" in dic.keys() else (1,1,1,1)
 
         # Backward - Output gradient while calculating weight gradient
         self.bwo     = dic["bwo"]                       if "bwo"     in dic.keys() else True
         self.bwo_bit = dic["bwo_bit"]                   if "bwo_bit" in dic.keys() else self.fi_bit
-        self.bwo_dim  = GetDimension(dic["bwo_dim"])    if "bwo_dim" in dic.keys() else self.fi_dim
+        self.bwo_dim  = GetDimension(dic["bwo_dim"],di) if "bwo_dim" in dic.keys() else self.fi_dim
 
         # Backward - Input while calculating weight gradient
         self.bwi     = dic["bwi"]                       if "bwi"     in dic.keys() else True
         self.bwi_bit = dic["bwi_bit"]                   if "bwi_bit" in dic.keys() else self.fi_bit
-        self.bwi_dim  = GetDimension(dic["bwi_dim"])    if "bwi_dim" in dic.keys() else self.fi_dim
+        self.bwi_dim  = GetDimension(dic["bwi_dim"],di) if "bwi_dim" in dic.keys() else self.fi_dim
 
         # Backward - Calculated weight gradient
         self.bwg     = dic["bwg"]                       if "bwg"     in dic.keys() else False
         self.bwg_bit = dic["bwg_bit"]                   if "bwg_bit" in dic.keys() else self.fw_bit
-        self.bwg_dim  = GetDimension(dic["bwg_dim"])    if "bwg_dim" in dic.keys() else (1,1,1,1)
+        self.bwg_dim  = GetDimension(dic["bwg_dim"],dw) if "bwg_dim" in dic.keys() else (1,1,1,1)
 
         self.bwg_boost = bwg_boost
 

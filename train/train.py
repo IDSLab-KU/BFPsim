@@ -3,8 +3,8 @@ import torch.optim as optim
 
 from utils.logger import Log
 from utils.slackBot import slackBot
-from functions import SaveModel, GetNetwork, GetOptimizerScheduler
 from utils.statManager import statManager
+from utils.save import SaveModel
 
 def Train(args, epoch_current):
     running_loss = 0.0
@@ -12,26 +12,33 @@ def Train(args, epoch_current):
     ptc_count = 1
     ptc_target = ptc_count / args.print_train_count
 
+
+    # with torch.autograd.profiler.profile(use_cuda=True) as prof:
     for i, data in enumerate(args.trainloader, 0):
         inputs, labels = data
         
         if args.cuda:
             inputs = inputs.cuda()
             labels = labels.cuda()
-        
+
         args.optimizer.zero_grad()
+        # with torch.cuda.amp.autocast(enabled=True):
 
         outputs = args.net(inputs)
-        loss = args.criterion(outputs, labels)
+        #     assert outputs.dtype is torch.float16
 
-        # Boost Loss
-        loss *= args.loss_boost
+        loss = args.criterion(outputs, labels)
+        #     assert loss.dtype is torch.float32
 
         loss.backward()
+        # args.scaler.scale(loss).backward()
+        # args.scaler.step(args.optimizer)
+        # args.scaler.update()
 
-        args.optimizer.step()
         running_loss += loss.item()
 
+        args.optimizer.step()
+        args.optimizer.zero_grad()
         # Print the running loss
         pF = False
         batch_count += 1
@@ -54,7 +61,7 @@ def Train(args, epoch_current):
 
     if args.scheduler != None:
         args.scheduler.step()
-
+    
 
 def Evaluate(args):
     correct = 0
@@ -99,9 +106,12 @@ def TrainNetwork(args):
     Log.Print("========== Starting Training ==========")
     checkpointIndex = 0 # Index of the checkpoint
     slackBot.ResetStartTime()
+    
+    args.scaler = torch.cuda.amp.GradScaler()
     for epoch_current in range(args.training_epochs):
 
         # Change and transfer model
+        """
         if args.train_config != None and len(args.checkpoints) > checkpointIndex+1 and epoch_current == args.checkpoints[checkpointIndex+1]:
             checkpointIndex += 1
             s = str(args.checkpoints[checkpointIndex])
@@ -126,7 +136,7 @@ def TrainNetwork(args):
             # To gpu
             if args.cuda:
                 args.net.to('cuda')
-            
+        """
         
         Train(args, epoch_current)
         Evaluate(args)

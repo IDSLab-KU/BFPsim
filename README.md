@@ -19,7 +19,7 @@ This repository features...
 
 1. Install [Docker](https://docs.docker.com/engine/install/) on the targeted machine.
 2. Clone this repository with `git clone https://github.com/r3coder/FlexBlock`
-3. Execute `./preload.sh` to install. You may need to execute `chmod 755 ./preload.sh` to get execute privilege.
+3. Make a docker container as: `docker build . -t $(whoami)/flexblock:latest`
 
 ## Setup without docker
 1. Clone this repository

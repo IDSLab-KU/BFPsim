@@ -17,6 +17,7 @@ def TimeStrH(ts):
 
 class slackBot_:
     def __init__(self) -> None:
+        self.enable = True
         self.client = None
         self.channel = "#server_bot"
 
@@ -57,6 +58,12 @@ class slackBot_:
     def EnableLimit(self):
         self.isLimit = True
     
+    def Disable(self):
+        self.enable = False
+
+    def Enable(self):
+        self.enable = True
+
     def SetTimezone(self, time):
         if not (isinstance(time, float) or isinstance(time, int)):
             print("slackBot ERROR: length is not int or float")
@@ -156,7 +163,8 @@ class slackBot_:
 
     ## Send method
     def Send(self, message="", prefix="", channel=""):
-        # return
+        if not self.enable:
+            return
         # Check client is defined
         if self.client == None:
             print("slackBot ERROR: Please set token using slackBot.setToken(token)")

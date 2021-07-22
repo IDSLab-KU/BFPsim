@@ -3,6 +3,9 @@ data/
 logs/
 stats/
 saves/
+_logs/
+_stats/
+_saves/
 figures/
 Archive/
 Results/
@@ -10,3 +13,4 @@ _*.py
 *.model
 concat.sh
 *.tar
+slackbot.token
