@@ -54,53 +54,43 @@ def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = F
 
 import torch.optim as optim
 
-def GetOptimizerScheduler(net, config=None):
 
-    Log.Print("Loading Optimizer and Scheduler",elapsed=False, current=False)
-
-    if config == None:
-        Log.Print("  Config is None, returning default optimizer and scheduler",elapsed=False, current=False)
-        o = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
-        s = torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=200)
-        return o, s
-    
-    Log.Print("  Config is NOT None, setting custom optimizer and scheduler",elapsed=False, current=False)
-    lr = config["lr-initial"] if "lr-initial" in config else 0.1
-    momentum = config["momentum"] if "momentum" in config else 0.9
-    weight_decay = config["weight-decay"] if "weight-decay" in config else 5e-4
-
-    if "optimizer" in config:
-        if config["optimizer"] == "SGD":
-            o = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
-            Log.Print("  Optimizer: SGD, lr=%f, momentum=%f, weight_decay=%f"%(lr, momentum, weight_decay),elapsed=False, current=False)
-        else:
-            o = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
-            Log.Print("  Optimizer can't recognized, setting to basic optimizer",elapsed=False, current=False)
-            Log.Print("  Optimizer: SGD, lr=%f, momentum=%f, weight_decay=%f"%(lr, momentum, weight_decay),elapsed=False, current=False)
+def GetOptimizer(args, epoch):
+    if str(epoch) in args.optimizer_dict:
+        Log.Print("Setting optimizer from dict", elapsed=False, current=False)
+        config = args.optimizer_dict[str(epoch)]
+        lr = config["lr-initial"] if "lr-initial" in config else args.optim_lr
+        momentum = config["momentum"] if "momentum" in config else args.optim_momentum
+        weight_decay = config["weight-decay"] if "weight-decay" in config else args.optim_weight_decay
     else:
-        o = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
-        # Log.Print("  Optimizer is not set, setting to basic optimizer",elapsed=False, current=False)
-        Log.Print("  Optimizer: SGD, lr=%f, momentum=%f, weight_decay=%f"%(lr, momentum, weight_decay),elapsed=False, current=False)
+        Log.Print("Configuration not found. Returning default Optimizer...", elapsed=False, current=False)
+        lr = args.optim_lr
+        momentum = args.optim_momentum
+        weight_decay = args.optim_weight_decay
 
-    T_max = config["t-max"] if "t-max" in config else 200
+    opt = optim.SGD(args.net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
 
-    if "scheduler" in config:
-        if config["scheduler"] == "CosineAnnealingLR":
-            s = torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=T_max)
-            Log.Print("  LR Scheduler: CosineAnnealingLR, T_max=%d"%(T_max),elapsed=False, current=False)
-        else:
-            Log.Print("  Scheduler can't recognized, setting to basic scheduler",elapsed=False, current=False)
-            s = torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=T_max)
-            Log.Print("  LR Scheduler: CosineAnnealingLR, T_max=%d"%(T_max),elapsed=False, current=False)
+    if str(epoch) in args.optimizer_dict:
+        if "step" in config:
+            for i in range(config["step"]):
+                opt.step()
+
+    return opt
+
+# Scheduler also uses same dict with optimizer
+def GetScheduler(args, epoch):
+    if str(epoch) in args.optimizer_dict:
+        Log.Print("Setting scheduler from dict", elapsed=False, current=False)
+        config = args.optimizer_dict[str(epoch)]
     else:
-        # Log.Print("  Scheduler is not set, setting to basic scheduler",elapsed=False, current=False)
-        s = torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=T_max)
-        Log.Print("  LR Scheduler: CosineAnnealingLR, T_max=%d"%(T_max),elapsed=False, current=False)
+        Log.Print("Configuration not found. Returning default Scheduler from args...", elapsed=False, current=False)
+        
+    sche = optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=args.training_epochs)
+        
+    if str(epoch) in args.optimizer_dict:
+        config = args.optimizer_dict[str(epoch)]
+        if "step" in config:
+            for i in range(config["step"]):
+                sche.step()
 
-    if "scheduler-step" in config:
-        Log.Print("  %d scheduler step added on optimizer"%(config["scheduler-step"]),elapsed=False, current=False)
-        for i in range(config["scheduler-step"]):
-            o.step()
-            s.step()
-
-    return o, s
+    return sche

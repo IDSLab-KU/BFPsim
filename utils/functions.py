@@ -18,20 +18,7 @@ def str2bool(v):
     elif v.lower() in ["false", "f", "0"]: return False
     else: raise ValueError("str2bool: not parsable")
 
-DIR_DICT = {
-    "WI" :  0,
-    "WO" :  1,
-    "FX" : 10,
-    "FY" : 11,
-    "FC" : 12
-}
-
 def DictKey(d, v):
     for key in d:
         if d[key] == v:
-            return key
-
-def DirKey(v):
-    for key in DIR_DICT:
-        if DIR_DICT[key] == v:
             return key

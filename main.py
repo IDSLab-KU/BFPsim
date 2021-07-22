@@ -12,7 +12,7 @@ from utils.statManager import statManager
 from utils.functions import str2bool
 
 from train.dataset import LoadDataset
-from train.network import GetNetwork, GetOptimizerScheduler
+from train.network import GetNetwork, GetOptimizer, GetScheduler
 from train.train import TrainNetwork
 from bfp.functions import LoadBFPDictFromFile
 
@@ -49,13 +49,13 @@ def ArgumentParse():
     parser.add_argument("--log", type=str2bool, default = True,
         help = "Set true to save log file")
     parser.add_argument("--slackbot", type=str2bool, default = True,
-        help = "[Train] Set true to send message to slackbot")
+        help = "Set true to send message to slackbot")
     parser.add_argument("--stat", type=str2bool, default = False,
-        help = "[Train] Record to stat object?")
+        help = "Record to stat object?")
     parser.add_argument("--save", type=str2bool, default = False,
-        help = "[Train] Set true to save checkpoints")
+        help = "Set true to save checkpoints")
     parser.add_argument("--save-interval", type=int, default = 0,
-        help = "[Train] Checkpoint save interval. 0:only last, rest:interval")
+        help = "Checkpoint save interval. 0:only last, rest:interval")
     
     
     # tag:Dataset
@@ -83,6 +83,12 @@ def ArgumentParse():
         help = ".")
     parser.add_argument("--start-epoch", type=int, default = 0,
         help = ".")
+    parser.add_argument("--optim-lr", type=float, default = 0.1,
+        help = "Optimizer learning rate")
+    parser.add_argument("--optim-momentum", type=float, default = 0.9,
+        help = "Optimizer momentum")
+    parser.add_argument("--optim-weight-decay", type=float, default = 5e-4,
+        help = "Optimizer weight decay")
     parser.add_argument("--loss-boost", type=float, default = 1.0,
         help = "Loss boost to each layer [NOT IMPLEMENTED]")
 
@@ -166,21 +172,16 @@ def ArgumentParse():
     SetArgsFromConf(args, "bfp-layer-conf-file")
     args.bfp_layer_conf_dict = dict()
     SetArgsFromConf(args, "bfp-layer-conf-dict")
-
-    if args.bfp_layer_conf_file == "" and args.bfp_layer_conf_dict == dict():
-        Log.Print("Naive network will trained.", elapsed=False, current=False)
-        args.net = GetNetwork(args.dataset, args.model, args.num_classes, dict())
-        # raise ValueError("bfp-layer-conf-file is not set. Please provide at least from bfp-layer-conf-file or bfp-layer-conf-dict")
-    elif args.bfp_layer_conf_dict == dict():
+    if args.bfp_layer_conf_file != "":
         Log.Print("bfp-layer-conf-file is set.", elapsed=False, current=False)
         args.net = GetNetwork(args.dataset, args.model, args.num_classes, LoadBFPDictFromFile(args.bfp_layer_conf_file))
+    elif str(args.start_epoch) not in args.bfp_layer_conf_dict:
+        Log.Print('bfp-layer-conf-file or bfp-layer-conf-dict is not set. Or, "{args.start_epoch}" is not provided on bfp-layer-conf-dict. Naive network will trained.', elapsed=False, current=False)
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, dict())
     else:
         Log.Print("bfp-layer-conf-dict is set.", elapsed=False, current=False)
         Log.Print(str(args.bfp_layer_conf_dict))
-        if str(args.start_epoch) in args.bfp_layer_conf_dict:
-            args.net = GetNetwork(args.dataset, args.model, args.num_classes, LoadBFPDictFromFile(args.bfp_layer_conf_dict[str(args.start_epoch)]))
-        else:
-            raise ValueError('There is no "%d" in bfp-layer-conf-dict'%args.start_epoch)
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, LoadBFPDictFromFile(args.bfp_layer_conf_dict[str(args.start_epoch)]))
 
 
     # Critertion, optimizer, scheduler
@@ -189,17 +190,12 @@ def ArgumentParse():
     args.optimizer_dict = dict()
     SetArgsFromConf(args, "optimizer-dict")
     
-    # TODO : Fix this area
-    args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)
-    """
-    if args.train_config != None and "optimizer-dict" in args.train_config:
-        if str(args.start_epoch) in args.optimizer_dict:
-            args.optimizer, args.scheduler = GetOptimizerScheduler(args.net, args.optimizer_dict[str(args.start_epoch)])
-        else:
-            args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)
-    else:
-        args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)
-    """
+    # Optimizer and scheduler
+    SetArgsFromConf(args, "optim-lr")
+    SetArgsFromConf(args, "optim-momentum")
+    SetArgsFromConf(args, "optim-weight-decay")
+    args.optimizer = GetOptimizer(args, args.start_epoch)
+    args.scheduler = GetScheduler(args, args.start_epoch)
     
     # tag:Print
     SetArgsFromConf(args, "print-train-batch")

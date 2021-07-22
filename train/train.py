@@ -5,6 +5,57 @@ from utils.logger import Log
 from utils.slackBot import slackBot
 from utils.statManager import statManager
 from utils.save import SaveModel
+from train.network import GetNetwork, GetOptimizer, GetScheduler
+from bfp.functions import LoadBFPDictFromFile
+
+def TrainMixed(args, epoch_current):
+    running_loss = 0.0
+    batch_count = 0
+    ptc_count = 1
+    ptc_target = ptc_count / args.print_train_count
+
+
+    with torch.autograd.profiler.profile(use_cuda=True) as prof:
+        for i, data in enumerate(args.trainloader, 0):
+            inputs, labels = data
+            
+            if args.cuda:
+                inputs = inputs.cuda()
+                labels = labels.cuda()
+
+            args.optimizer.zero_grad()
+            with torch.cuda.amp.autocast(enabled=True):
+                outputs = args.net(inputs)
+                assert outputs.dtype is torch.float16
+
+                loss = args.criterion(outputs, labels)
+                assert loss.dtype is torch.float32
+
+            # loss.backward()
+            args.scaler.scale(loss).backward()
+            args.scaler.step(args.optimizer)
+            args.scaler.update()
+
+            running_loss += loss.item()
+
+            # Print the running loss
+            pF = False
+            batch_count += 1
+            if args.print_train_batch != 0:
+                if (i + 1) % args.print_train_batch == 0 or (i + 1) == len(args.trainloader):
+                    pF = True
+            elif args.print_train_count != 0:
+                if (i + 1) / len(args.trainloader) >= ptc_target:
+                    pF = True
+                    ptc_count += 1
+                    ptc_target = ptc_count/args.print_train_count
+            if pF:
+                Log.Print('[%d/%d, %5d/%5d] loss: %.3f' %
+                    (epoch_current + 1, args.training_epochs,
+                    i + 1, len(args.trainloader),
+                    running_loss / batch_count))
+                running_loss = 0.0
+                batch_count = 0
 
 def Train(args, epoch_current):
     running_loss = 0.0
@@ -58,103 +109,102 @@ def Train(args, epoch_current):
             running_loss = 0.0
             batch_count = 0
 
-
-    if args.scheduler != None:
-        args.scheduler.step()
     
 
-def Evaluate(args):
-    correct = 0
-    total = 0
+"""
+Accuracy Code from pytorch example
+https://github.com/pytorch/examples/blob/master/imagenet/main.py
+"""
+def Accuracy(output, target, topk=(1,)):
+    """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
-        for data in args.testloader:
-            images, labels = data
-            if args.cuda:
-                images = images.cuda() # Using GPU
-                labels = labels.cuda() # Using GPU
-            outputs = args.net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    
-    Log.Print('Test Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
-    statManager.AddData("top1", correct/total)
-    slackBot.AppendDump("%f "%(correct/total))
-        
+        maxk = max(topk)
+        batch_size = target.size(0)
 
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-def EvaluateTrain(args):
-    correct = 0
-    total = 0
+        res = []
+        for k in topk:
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+            res.append(correct_k.mul_(100.0 / batch_size))
+        return res
+
+def Evaluate(args, mode = "test"):
+    if mode == "test":
+        loader = args.testloader
+    elif mode == "train":
+        loader = args.trainloader
+    else:
+        raise ValueError("Mode not supported")
+    top1, top3, top5, total = 0, 0, 0, 0
+    args.net.eval()
     with torch.no_grad():
-        for data in args.trainloader:
-            images, labels = data
-            if args.cuda:
-                images = images.cuda() # Using GPU
-                labels = labels.cuda() # Using GPU
-            outputs = args.net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    
-    Log.Print('Train Accuracy: %f, lr: %f' % (correct / total, args.optimizer.param_groups[0]['lr']))
-    statManager.AddData("top1train", correct/total)
-    
+        for i, (images, target) in enumerate(loader):
+            images = images.cuda(non_blocking=True)
+            target = target.cuda(non_blocking=True)
+
+            output = args.net(images)
+            loss = args.criterion(output, target)
+            acc1, acc3, acc5 = Accuracy(output, target, topk=(1, 3, 5))
+            top1 += acc1[0] * images.size(0)
+            top3 += acc3[0] * images.size(0)
+            top5 += acc5[0] * images.size(0)
+            total += images.size(0)
+    return (top1/total).cpu().item(), (top3/total).cpu().item(), (top5/total).cpu().item()
 
 # Train the network and evaluate
 def TrainNetwork(args):
     Log.Print("========== Starting Training ==========")
-    checkpointIndex = 0 # Index of the checkpoint
     slackBot.ResetStartTime()
     
-    args.scaler = torch.cuda.amp.GradScaler()
-    for epoch_current in range(args.training_epochs):
+    # args.scaler = torch.cuda.amp.GradScaler() # FP16 Mixed Precision
 
+    for epoch_current in range(args.start_epoch, args.training_epochs):
         # Change and transfer model
-        """
-        if args.train_config != None and len(args.checkpoints) > checkpointIndex+1 and epoch_current == args.checkpoints[checkpointIndex+1]:
-            checkpointIndex += 1
-            s = str(args.checkpoints[checkpointIndex])
-            name = args.train_config["bfp-layer-conf-dict"][s] if args.train_config["bfp-layer-conf-dict"][s] != "" else "None"
-            Log.Print('Changing Model bfp config to: %s'%(name), elapsed=False, current=False)
-            # Save original net
+        if epoch_current != args.start_epoch and str(epoch_current) in args.bfp_layer_conf_dict:
+            Log.Print("Changing Model bfp config to: %s"%args.bfp_layer_conf_dict[str(epoch_current)], elapsed=False, current=False)
             net_ = args.net
-            # Create new net
-            args.net = GetNetwork(args.dataset, args.model, args.num_classes, args.bfp_layer_confs[checkpointIndex])
-
-            # Copy state dicts
+            args.net = GetNetwork(args.dataset, args.model, args.num_classes, LoadBFPDictFromFile(args.bfp_layer_conf_dict[str(args.start_epoch)]))
             args.net.load_state_dict(net_.state_dict())
-            # Create new optimizer and emulate step
-            if "optimizer-dict" in args.train_config:
-                if s in args.train_config["optimizer-dict"]:
-                    args.optimizer, args.scheduler = GetOptimizerScheduler(args.net, args.train_config["optimizer-dict"][s])
-                else:
-                    args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)            
-            else:
-                args.optimizer, args.scheduler = GetOptimizerScheduler(args.net)
-            
-            # To gpu
+            args.net.eval()
+
+            # Load Optimizer, Scheduler, stuffs
+            args.optimizer = GetOptimizer(args, str(epoch_current))
+            args.scheduler = GetScheduler(args, str(epoch_current))
             if args.cuda:
                 args.net.to('cuda')
-        """
         
+        # Train the net
         Train(args, epoch_current)
-        Evaluate(args)
-        if args.print_train_accuracy:
-            EvaluateTrain(args)
+        # Evaluate the net
+        t1, t3, t5 = Evaluate(args)
         
+        statManager.AddData("top1test", t1)
+        statManager.AddData("top3test", t3)
+        statManager.AddData("top5test", t5)
+        Log.Print('E:%d, TestAcc(t1):%7.3f, lr:%f' % (epoch_current, t1, args.optimizer.param_groups[0]['lr']))
+
+        if args.scheduler != None:
+            args.scheduler.step()
+
+        # Save the model
         if args.save:
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
-        
-        if (epoch_current+1) == 1:
+
+        # Send progress to printing expected time
+        if epoch_current == args.start_epoch:
             slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
-        
+
+        # Optional Progress Sending        
         # if (epoch_current+1) % 5 == 0:
         #     slackBot.SendProgress(float(epoch_current+1)/args.training_epochs)
 
     Log.Print("========== Finished Training ==========")
-
+    
+    # Sending remaining dumps
     slackBot.SendDump()
     
     if args.stat:
