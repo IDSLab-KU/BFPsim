@@ -184,7 +184,7 @@ def TrainNetwork(args):
         statManager.AddData("top1test", t1)
         statManager.AddData("top3test", t3)
         statManager.AddData("top5test", t5)
-        Log.Print('E:%d, TestAcc(t1):%7.3f, lr:%f' % (epoch_current, t1, args.optimizer.param_groups[0]['lr']))
+        Log.Print('[%d/%d], TestAcc(t1):%7.3f, lr:%f' % (epoch_current+1, args.training_epochs, t1, args.optimizer.param_groups[0]['lr']))
 
         if args.scheduler != None:
             args.scheduler.step()

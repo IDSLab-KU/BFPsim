@@ -44,7 +44,11 @@ class slackBot_:
         self.dumpLength = 3000
 
     def SetToken(self, token):
-        self.client = WebClient(token=token)
+        try:
+            self.client = WebClient(token=token)
+        except:
+            print("slackBot: WebClient Initialization failed")
+            self.client = None
 
     def SetProcessInfo(self, name):
         self.processInfo = name
