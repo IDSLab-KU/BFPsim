@@ -1,16 +1,5 @@
 __pycache__/
 data/
-logs/
-stats/
-saves/
-_logs/
-_stats/
-_saves/
-figures/
-Archive/
-Results/
+runs/
 _*.py
-*.model
-concat.sh
-*.tar
 slackbot.token

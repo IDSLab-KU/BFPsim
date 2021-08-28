@@ -12,7 +12,10 @@
 ##############################
 
 
-# docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode analyze --dataset CIFAR100 --model ResNet18 --save-file ./saves/old/ResNet18_CIFAR100_4Lbit_finish.model -bfp default_B4G36_ALL --log False --save-name ResNet18_FB12
+docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py
+
+# Run tensorboard
+# docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G -p 8088:8088 -d --name=$(whoami)/bfpsim/tensorboard --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest tensorboard --logdir=runs --port 8088 --host 0.0.0.0
 
 # Test
 # docker run --rm --gpus '"device=2"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/flexblock:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log False
