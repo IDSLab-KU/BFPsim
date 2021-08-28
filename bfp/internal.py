@@ -155,22 +155,24 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
         analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
 
     inp_ = inp.view(torch.int32)
-    if len(inp.size()) == 4:
-        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1, (inp.size()[3]-1)//group_dim[3]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2]*inp.size()[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
-        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2], inp.size()[3])
+    ins = np.array(inp.size())
+    if len(ins) == 4:
+        bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1, (ins[2]-1)//group_dim[2]+1, (ins[3]-1)//group_dim[3]+1)
+        blockspergrid = (ins[0]*ins[1]*ins[2]*ins[3] +  (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (ins[0], ins[1], ins[2], ins[3])
         make_groups_4d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
-    elif len(inp.size()) == 3:
-        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1, (inp.size()[2]-1)//group_dim[2]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1]*inp.size()[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
-        inpsize = (inp.size()[0], inp.size()[1], inp.size()[2])
+    elif len(ins) == 3:
+        bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1, (ins[2]-1)//group_dim[2]+1)
+        blockspergrid = (ins[0]*ins[1]*ins[2] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (ins[0], ins[1], ins[2])
         make_groups_3d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
-    elif len(inp.size()) == 2:
-        bs = ((inp.size()[0]-1)//group_dim[0]+1, (inp.size()[1]-1)//group_dim[1]+1)
-        blockspergrid = (inp.size()[0]*inp.size()[1] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
-        inpsize = (inp.size()[0], inp.size()[1])
+    elif len(ins) == 2:
+        bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1)
+        blockspergrid = (ins[0]*ins[1] + (CUDA_THREADSPERBLOCK - 1)) // CUDA_THREADSPERBLOCK
+        inpsize = (ins[0], ins[1])
         make_groups_2d_internal[blockspergrid, CUDA_THREADSPERBLOCK](inp_, inpsize, bs, group_dim, group_mantissa)
     else: # Tensor dimension is not supported
+        inpsize = (ins[0], ins[1], ins[2], ins[3])
         Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
         return inp
 

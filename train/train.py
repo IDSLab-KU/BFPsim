@@ -66,6 +66,7 @@ def Train(args, epoch_current):
 
     # with torch.autograd.profiler.profile(use_cuda=True) as prof:
     for i, data in enumerate(args.trainloader, 0):
+    
         inputs, labels = data
         
         if args.cuda:
@@ -90,7 +91,7 @@ def Train(args, epoch_current):
 
         args.optimizer.step()
         args.optimizer.zero_grad()
-        # Print the running loss
+        # Print and record the running loss
         pF = False
         batch_count += 1
         if args.print_train_batch != 0:
@@ -106,9 +107,13 @@ def Train(args, epoch_current):
                 (epoch_current + 1, args.training_epochs,
                 i + 1, len(args.trainloader),
                 running_loss / batch_count))
+            args.writer.add_scalar('training loss',
+                    running_loss / batch_count,
+                    epoch_current * len(args.trainloader) + i)
+            # statManager.AddData("training loss", running_loss / batch_count)
             running_loss = 0.0
             batch_count = 0
-
+            
     
 
 """
@@ -181,9 +186,13 @@ def TrainNetwork(args):
         # Evaluate the net
         t1, t3, t5 = Evaluate(args)
         
-        statManager.AddData("top1test", t1)
-        statManager.AddData("top3test", t3)
-        statManager.AddData("top5test", t5)
+        args.writer.add_scalar('top1 accuracy', t1, epoch_current)
+        # args.writer.add_scalar('top3 accuracy', t3, epoch_current)
+        # args.writer.add_scalar('top5 accuracy', t5, epoch_current)
+
+        # statManager.AddData("top1test", t1)
+        # statManager.AddData("top3test", t3)
+        # statManager.AddData("top5test", t5)
         Log.Print('[%d/%d], TestAcc(t1):%7.3f, lr:%f' % (epoch_current+1, args.training_epochs, t1, args.optimizer.param_groups[0]['lr']))
 
         if args.scheduler != None:
@@ -209,7 +218,7 @@ def TrainNetwork(args):
     
     if args.stat:
         Log.Print("Saving stat object file...")
-        statManager.SaveToFile(args.stat_location)
+        # statManager.SaveToFile(args.stat_location)
 
     if args.save:
         SaveModel(args, "finish")

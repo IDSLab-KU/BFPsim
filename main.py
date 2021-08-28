@@ -10,6 +10,7 @@ from utils.generateConfig import GenerateConfig
 from utils.tensorAnalyze import TensorAnalyze
 from utils.statManager import statManager
 from utils.functions import str2bool
+from torch.utils.tensorboard import SummaryWriter
 
 from train.dataset import LoadDataset
 from train.network import GetNetwork, GetOptimizer, GetScheduler
@@ -20,6 +21,8 @@ import os
 import json
 import argparse
 from datetime import datetime
+import string
+import random
 args = None
 
 
@@ -44,18 +47,19 @@ def ArgumentParse():
 
     # ----------------- configurable by train config file -------------------
     # tag:Save
-    parser.add_argument("--save-name", type=str, default = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_"),
+    parser.add_argument("--run-dir", type=str, default = "",
         help = "Name of the saved log file, stat object, save checkpoint")
     parser.add_argument("--log", type=str2bool, default = True,
         help = "Set true to save log file")
-    parser.add_argument("--slackbot", type=str2bool, default = True,
-        help = "Set true to send message to slackbot")
-    parser.add_argument("--stat", type=str2bool, default = False,
-        help = "Record to stat object?")
+    # parser.add_argument("--stat", type=str2bool, default = False,
+    #     help = "Record to stat object?") # To tensorboard
     parser.add_argument("--save", type=str2bool, default = False,
         help = "Set true to save checkpoints")
-    parser.add_argument("--save-interval", type=int, default = 0,
-        help = "Checkpoint save interval. 0:only last, rest:interval")
+    # parser.add_argument("--save-interval", type=int, default = 0,
+    #     help = "Checkpoint save interval. 0:only last, rest:interval")
+
+    parser.add_argument("--slackbot", type=str2bool, default = False,
+        help = "Set true to send message to slackbot")
     
     
     # tag:Dataset
@@ -89,8 +93,6 @@ def ArgumentParse():
         help = "Optimizer momentum")
     parser.add_argument("--optim-weight-decay", type=float, default = 5e-4,
         help = "Optimizer weight decay")
-    parser.add_argument("--loss-boost", type=float, default = 1.0,
-        help = "Loss boost to each layer [NOT IMPLEMENTED]")
 
     # tag:Print
     parser.add_argument("--print-train-batch", type=int, default = 0,
@@ -124,28 +126,39 @@ def ArgumentParse():
             args.train_config = json.load(f)
 
     # tag:Save
-    SetArgsFromConf(args, "save-name")
+    SetArgsFromConf(args, "run-dir")
     SetArgsFromConf(args, "log")
     SetArgsFromConf(args, "stat")
     SetArgsFromConf(args, "save")
     SetArgsFromConf(args, "slackbot")
     SetArgsFromConf(args, "save-interval")
 
+    if not os.path.exists("./runs"):
+        os.makedirs("./runs")
+
+    if args.run_dir == "":
+        
+        if args.train_config != None:
+            args.run_dir = "[TC]" + args.train_config_file
+        else:
+            args.run_dir = args.dataset + "_" + args.model
+            if args.bfp_layer_conf_file != "":
+                args.run_dir += args.bfp_layer_conf_file
+        # args.run_dir += "_" + str(datetime.now())[4:-7].replace("-","").replace(":","").replace(" ","_")
+        # Random ID...?
+        args.run_dir += "_" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     # Additional handlers
-    if not os.path.exists("./_logs"):
-        os.makedirs("./_logs")
-    if not os.path.exists("./_saves"):
-        os.makedirs("./_saves")
-    if not os.path.exists("./_stats"):
-        os.makedirs("./_stats")
-    args.log_location = "./_logs/" + args.save_name + ".log"
-    args.save_prefix = "./_saves/" + args.save_name
-    args.stat_location = "./_stats/" + args.save_name + ".stat"
+    
+    args.writer = SummaryWriter('runs/'+args.run_dir)
+
+    args.log_location = "./runs/" + args.run_dir + "/log.txt"
+    args.save_prefix = "./runs/" + args.run_dir
+    # args.stat_location = "./_stats/" + args.save_name + ".stat"
     # Set the log file
     Log.SetLogFile(True, args.log_location) if args.log else Log.SetLogFile(False)
     # args.stat = statManager() if args.stat else None
     slackBot.Enable() if args.slackbot else slackBot.Disable()
-    slackBot.SetProcessInfo(args.save_name)
+    slackBot.SetProcessInfo(args.run_dir)
     
     # tag:Dataset
     SetArgsFromConf(args, "dataset")
@@ -205,6 +218,13 @@ def ArgumentParse():
         args.net.to('cuda')
     # TODO : Support Distributed DataParallel
 
+
+    # Write Tensorboard model
+    dataiter = iter(args.trainloader)
+    images, _ = dataiter.next()
+    args.writer.add_graph(args.net, images.cuda())
+    args.writer.close()
+
     return args
 
 if __name__ == '__main__':
@@ -229,10 +249,10 @@ if __name__ == '__main__':
             TrainNetwork(args)
         except KeyboardInterrupt:
             Log.Print("Quit from User Signal")
-            if args.stat:
-                statManager.SaveToFile(args.stat_location)
-            if args.save:
-                SaveState(suffix = "canceled")
+            # if args.stat:
+            #     statManager.SaveToFile(args.stat_location)
+            # if args.save:
+            #     SaveState(suffix = "canceled")
             if args.slackbot:
                 slackBot.SendError("User Interrupted")
         # End the Training Signal
