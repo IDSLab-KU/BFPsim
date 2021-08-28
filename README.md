@@ -21,6 +21,18 @@ This repository features...
 2. Clone this repository with `git clone https://github.com/r3coder/FlexBlock`
 3. Make a docker container as: `docker build . -t $(whoami)/flexblock:latest`
 
+
+## Setup tensorboard
+
+After creating docker container, you should execute tensorboard on background.
+
+On this repository, just execute `./tensorboard.sh [External Port]`. External Port can set manually, take care that it doesn't conflict with other user if you are using remote server. Recommended value is `6006`.
+
+If your running this on remote server, make sure you opened the external port using `ufw` or else, then input `[Remote Server IP]:[External Port]` on your favorite internet browser.
+
+If you are running this on local machine, just type `http://localhost:[External Port]`.
+
+
 ## Setup without docker
 1. Clone this repository
 2. Install requirements listed below 
@@ -29,6 +41,7 @@ This repository features...
 - `numba >= 0.50.1`
 - `matplotlib >= 3.4.2`
 - `einops >= 0.3.0`
+- `tensorboard >= 2.6.0`
 
 # Execution examples
 
