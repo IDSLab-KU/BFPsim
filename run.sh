@@ -13,7 +13,9 @@
 
 # docker run -it $(whoami)/bfpsim:latest /bin/bash
 
-docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log True --bfp ResNet18_FB24
+docker run --rm --gpus '"device=2"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log True --bfp ResNet18_FB24
+
+# docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log True
 
 # Run tensorboard
 # docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G -p 8088:8088 -d --name=$(whoami)/bfpsim/tensorboard --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest tensorboard --logdir=runs --port 8088 --host 0.0.0.0
