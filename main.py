@@ -143,7 +143,8 @@ def ArgumentParse():
         else:
             args.run_dir = args.dataset + "_" + args.model
             if args.bfp_layer_conf_file != "":
-                args.run_dir += args.bfp_layer_conf_file
+                s = args.bfp_layer_conf_file
+                args.run_dir += "_" + s[s.index("_")+1:]
         # args.run_dir += "_" + str(datetime.now())[4:-7].replace("-","").replace(":","").replace(" ","_")
         # Random ID...?
         args.run_dir += "_" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -238,6 +239,7 @@ if __name__ == '__main__':
             if arg in ["bfp_layer_confs", "bfp_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
+            args.writer.add_text('config', str(arg) + " : " + str(getattr(args, arg)))
         # Setup Slackbot
         text_file = open("./slackbot.token", "r")
         data = text_file.read()
