@@ -235,11 +235,13 @@ if __name__ == '__main__':
     Log.Print("Program executed on {} mode.".format(args.mode), current=False, elapsed=False)
     if args.mode == "train":
         # Network training mode
+        s = ""
         for arg in vars(args):
             if arg in ["bfp_layer_confs", "bfp_layer_conf", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader"] or "zse" in arg:
                 continue
             Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
-            args.writer.add_text('config', str(arg) + " : " + str(getattr(args, arg)))
+            s += str(arg) + " : " + str(getattr(args, arg)) + "\n\n"
+        args.writer.add_text("config", s)
         # Setup Slackbot
         text_file = open("./slackbot.token", "r")
         data = text_file.read()

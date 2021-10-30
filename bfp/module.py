@@ -139,6 +139,10 @@ class BFPLinear(torch.nn.Module):
         return s.format(**self.__dict__)
 
 
+from torch.utils.cpp_extension import load
+cudnn_convolution = load(name="cudnn_convolution", sources=["./extensions/cudnn_convolution.cpp"], build_directory= "./extensions/", verbose=True)
+
+
 # Blockfloat Convolution Function
 # TODO : Implement Conv2d Operation
 # https://discuss.pytorch.org/t/implementing-a-custom-convolution-using-conv2d-input-and-conv2d-weight/18556/7
@@ -201,7 +205,8 @@ class BFPConv2dFunction(torch.autograd.Function):
             weight_ = weight
         ## Do the convolution
         if ctx.needs_input_grad[0]: # First Layer's grad_input will be None
-            grad_input = torch.nn.grad.conv2d_input(input.shape, weight_, grad_output_, stride, padding, dilation, groups)
+            # grad_input = torch.nn.grad.conv2d_input(input.shape, weight_, grad_output_, stride, padding, dilation, groups)
+            grad_input = cudnn_convolution.convolution_backward_input(input.shape, weight, grad_output, stride, padding, dilation, groups, False, False, False)
         ## Grouping output grad_input
         if bfp_conf.big and grad_input != None:
             grad_input_ = make_groups_tensor(grad_input.clone().detach(), bfp_conf.big_bit,bfp_conf.big_dim, 12)
@@ -224,7 +229,8 @@ class BFPConv2dFunction(torch.autograd.Function):
                 input = make_groups_tensor(input.clone().detach(), bfp_conf.bwi_bit, bfp_conf.bwi_dim, 21)
         ## Do the convolution
         if ctx.needs_input_grad[1]:
-            grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
+            # grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
+            grad_weight = cudnn_convolution.convolution_backward_weight(input, weight.shape, grad_output, stride, padding, dilation, groups, False, False, False)
         # Group the gradient of weight
         if bfp_conf.bwg and grad_weight != None:
             grad_weight = make_groups_tensor(grad_weight.clone().detach(), bfp_conf.bwg_bit, bfp_conf.bwg_dim, 22)
