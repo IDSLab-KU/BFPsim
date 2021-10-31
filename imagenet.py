@@ -31,6 +31,11 @@ from datetime import datetime
 import string
 import random
 
+def SaveModel(args, suffix):
+    PATH = "%s/%s.model"%(args.save_prefix,suffix)
+    Log.Print("Saving model file as %s"%PATH)
+    torch.save(args.model.state_dict(), PATH)
+
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
@@ -39,7 +44,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -57,6 +62,8 @@ parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=100, type=int,
                     metavar='N', help='print frequency (default: 10)')
+parser.add_argument('-l', '--loss-freq', default=10, type=int,
+                    metavar='N', help='loss frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
@@ -324,10 +331,10 @@ def main_worker(gpu, ngpus_per_node, args):
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
-
+        
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):
-            save_checkpoint({
+            save_checkpoint(args, {
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
@@ -386,6 +393,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.display(i)
+        if i % args.loss_freq == 0:
             args.writer.add_scalar('training loss (on exact batch)',
                     losses.val,
                     epoch * len(train_loader) + i)
@@ -437,10 +445,10 @@ def validate(val_loader, model, criterion, args):
     return top1.avg, top5.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(args, state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, args.save_prefix + "/" + filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(args.save_prefix + "/" + filename, 'model_best.pth.tar')
 
 
 class AverageMeter(object):
