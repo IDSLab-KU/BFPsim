@@ -216,8 +216,8 @@ def TrainNetwork(args):
     # Sending remaining dumps
     slackBot.SendDump()
     
-    if args.stat:
-        Log.Print("Saving stat object file...")
+    # if args.stat:
+    #     Log.Print("Saving stat object file...")
         # statManager.SaveToFile(args.stat_location)
 
     if args.save:

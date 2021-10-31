@@ -3,7 +3,7 @@ import torch
 from utils.logger import Log
 
 def SaveModel(args, suffix):
-    PATH = "%s_%s.model"%(args.save_prefix,suffix)
+    PATH = "%s/%s.model"%(args.save_prefix,suffix)
     Log.Print("Saving model file as %s"%PATH)
     torch.save(args.net.state_dict(), PATH)
 

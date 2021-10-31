@@ -55,8 +55,8 @@ def ArgumentParse():
     #     help = "Record to stat object?") # To tensorboard
     parser.add_argument("--save", type=str2bool, default = False,
         help = "Set true to save checkpoints")
-    # parser.add_argument("--save-interval", type=int, default = 0,
-    #     help = "Checkpoint save interval. 0:only last, rest:interval")
+    parser.add_argument("--save-interval", type=int, default = 0,
+        help = "Checkpoint save interval. 0:only last, rest:interval")
 
     parser.add_argument("--slackbot", type=str2bool, default = False,
         help = "Set true to send message to slackbot")

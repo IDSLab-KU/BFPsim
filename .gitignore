@@ -1,6 +1,7 @@
 __pycache__/
 data/
 runs/
+_logs/
 _*.py
 slackbot.token
 extensions/.ninja_log
