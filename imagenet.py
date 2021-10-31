@@ -18,6 +18,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
+from torch.utils.tensorboard import SummaryWriter
+
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
@@ -26,6 +28,8 @@ model_names = sorted(name for name in models.__dict__
 from utils.logger import Log
 from utils.slackBot import slackBot
 from datetime import datetime
+import string
+import random
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
@@ -79,8 +83,14 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 
 parser.add_argument('--train-partial', default=1, type=float,
                     help='train partial value')
-parser.add_argument("--save-name", type=str, default = str(datetime.now())[:-7].replace("-","").replace(":","").replace(" ","_"),
+parser.add_argument("-tc", "--train-config-file", type=str, default="",
+    help = "Train config file. Please see documentation about usage")
+
+parser.add_argument("--run-dir", type=str, default = "",
     help = "Name of the saved log file, stat object, save checkpoint")
+parser.add_argument("-bfp", "--bfp-layer-conf-file", type=str, default="",
+    help = "Config of the bfp setup, if not set, original network will be trained")
+    
 best_acc1 = 0
 
 
@@ -89,8 +99,21 @@ def main():
     args = parser.parse_args()
     args.data = '/dataset/ImageNet/Classification'
 
+
+    if args.run_dir == "":
+        # if args.train_config != None:
+        #     args.run_dir = "[TC]" + args.train_config_file
+        # else:
+        args.run_dir = "ImageNet_" + args.arch
+        if args.bfp_layer_conf_file != "":
+            s = args.bfp_layer_conf_file
+            args.run_dir += "_" + s[s.index("_")+1:]
+        args.run_dir += "_" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    args.writer = SummaryWriter('runs/'+args.run_dir)
     args.log = True
-    args.log_location = "./_logs/" + args.save_name + ".log"
+    args.log_location = "./runs/" + args.run_dir + "/log.txt"
+    args.save_prefix = "./runs/" + args.run_dir
     Log.SetLogFile(True, args.log_location) if args.log else Log.SetLogFile(False)
 
     # slackBot.Enable() if args.slackbot else slackBot.Disable()
@@ -158,9 +181,10 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # model_ = models.resnet18(pretrained=False)
 
-    args.bfp_layer_conf_file = "ResNet18_FB16"
-    model = models.resnet18(pretrained=False)
-    ReplaceLayers(model, LoadBFPDictFromFile(args.bfp_layer_conf_file))
+    # model = models.resnet18(pretrained=False)
+    model = models.__dict__[args.arch]()
+    if args.bfp_layer_conf_file != "":
+        ReplaceLayers(model, LoadBFPDictFromFile(args.bfp_layer_conf_file))
 
     # model.load_state_dict(model_.state_dict())
     # model = models.densenet121(pretrained=False)
@@ -168,6 +192,7 @@ def main_worker(gpu, ngpus_per_node, args):
     model.eval()
     Log.Print("model:")
     Log.Print(str(model))
+
 
     if not torch.cuda.is_available():
         print('using CPU, this will be slow')
@@ -265,6 +290,19 @@ def main_worker(gpu, ngpus_per_node, args):
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
+    # Write tensorboard model
+    # dataiter = iter(train_loader)
+    # images, _ = dataiter.next()
+    # args.writer.add_graph(args.net, images.cuda())
+    # args.writer.close()
+
+    # Record Arguments
+    s = ""
+    for arg in vars(args):
+        Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
+        s += str(arg) + " : " + str(getattr(args, arg)) + "\n\n"
+        args.writer.add_text("config", s)
+
     if args.evaluate:
         validate(val_loader, model, criterion, args)
         return
@@ -278,7 +316,10 @@ def main_worker(gpu, ngpus_per_node, args):
         train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1, acc5 = validate(val_loader, model, criterion, args)
+        
+        args.writer.add_scalar('top1 accuracy', acc1, epoch)
+        args.writer.add_scalar('top5 accuracy', acc5, epoch)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
@@ -345,6 +386,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.display(i)
+            args.writer.add_scalar('training loss (on exact batch)',
+                    losses.val,
+                    epoch * len(train_loader) + i)
 
 
 def validate(val_loader, model, criterion, args):
@@ -388,8 +432,9 @@ def validate(val_loader, model, criterion, args):
         # TODO: this should also be done with the ProgressMeter
         Log.Print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
+            
 
-    return top1.avg
+    return top1.avg, top5.avg
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
