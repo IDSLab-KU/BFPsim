@@ -121,6 +121,47 @@ class BFPLinearFunction(torch.autograd.Function):
 
         return grad_input_, grad_weight_, grad_bias, None
 
+
+
+# Blockfloat Linear
+class BFPLinear(torch.nn.Module):
+    def __init__(self,
+                in_features: int,
+                out_features: int,
+                bfp_conf: BFPConf,
+                bias=True):
+        super(BFPLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.bfp_conf = bfp_conf
+
+        # Weight parameters, should be grouped with few numbers
+        self.weight = nn.Parameter(torch.Tensor(out_features, in_features).cuda())
+
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_features).cuda())
+        else:
+            self.bias = None
+            # self.register_paramter('bias', None)
+        
+        # Initialize weights manually
+        self.weight.data.uniform_(-0.1, 0.1)
+        if self.bias is not None:
+            self.bias.data.uniform_(-0.1, 0.1)
+    
+    def forward(self, input):
+        return BFPLinearFunction.apply(input, self.weight, self.bias, self.bfp_conf)
+    
+    def extra_repr(self):
+        s = ('{in_features}, {out_features}')
+        s += ', bfp_conf=({bfp_conf})'
+        if self.bias is None:
+            s += ', bias=False'
+        else:
+            s += ', bias=True'
+        return s.format(**self.__dict__)
+
+
 from torch.utils.cpp_extension import load
 cudnn_convolution = load(name="cudnn_convolution", sources=["./extensions/cudnn_convolution.cpp"], build_directory= "./extensions/", verbose=True)
 
