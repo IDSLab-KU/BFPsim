@@ -152,9 +152,8 @@ class BFPConv2dFunction(torch.autograd.Function):
         # print("= Forward:",input.shape, weight.shape, stride, padding, dilation, groups)
         # Grouping input and weight
         if bfp_conf.fi:
-            input_ = make_groups_tensor(input.clone().detach(), bfp_conf.fi_bit, bfp_conf.fi_dim, 0)
-        else:
-            input_ = input
+            input = make_groups_tensor(input, bfp_conf.fi_bit, bfp_conf.fi_dim, 0)
+        
         if bfp_conf.fw:
             weight_ = make_groups_tensor(weight.clone().detach(), bfp_conf.fw_bit, bfp_conf.fw_dim, 1)
         else:
@@ -166,10 +165,10 @@ class BFPConv2dFunction(torch.autograd.Function):
         ctx.groups = groups
         ctx.bfp_conf = bfp_conf
 
-        ctx.save_for_backward(input_, weight_, bias)
+        ctx.save_for_backward(input, weight_, bias)
 
         # Compute Convolution
-        output = F.conv2d(input_, weight_, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
+        output = F.conv2d(input, weight_, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
         # Grouping Output
         if bfp_conf.fo:
             output = make_groups_tensor(output.clone().detach(), bfp_conf.fo_bit, bfp_conf.fo_dim, 2)
@@ -206,12 +205,10 @@ class BFPConv2dFunction(torch.autograd.Function):
         ## Do the convolution
         if ctx.needs_input_grad[0]: # First Layer's grad_input will be None
             # grad_input = torch.nn.grad.conv2d_input(input.shape, weight_, grad_output_, stride, padding, dilation, groups)
-            grad_input = cudnn_convolution.convolution_backward_input(input.shape, weight, grad_output, stride, padding, dilation, groups, False, False, False)
+            grad_input = cudnn_convolution.convolution_backward_input(input.shape, weight_, grad_output_, stride, padding, dilation, groups, False, False, False)
         ## Grouping output grad_input
         if bfp_conf.big and grad_input != None:
-            grad_input_ = make_groups_tensor(grad_input.clone().detach(), bfp_conf.big_bit,bfp_conf.big_dim, 12)
-        else: # If not grouping, use original type
-            grad_input_ = grad_input
+            make_groups_tensor(grad_input, bfp_conf.big_bit,bfp_conf.big_dim, 12)
 
         # Calculate Weight Gradient (2D Convolution, Depthwise Convolution)
         ## Grouping grad_output
@@ -226,24 +223,24 @@ class BFPConv2dFunction(torch.autograd.Function):
         if bfp_conf.bwi:
             # Regroup if bwi / fi grouping configuration is different!
             if (bfp_conf.bwi_bit != bfp_conf.fi_bit or bfp_conf.bwi_dim != bfp_conf.fi_dim):
-                input = make_groups_tensor(input.clone().detach(), bfp_conf.bwi_bit, bfp_conf.bwi_dim, 21)
+                make_groups_tensor(input, bfp_conf.bwi_bit, bfp_conf.bwi_dim, 21)
         ## Do the convolution
         if ctx.needs_input_grad[1]:
             # grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups)
-            grad_weight = cudnn_convolution.convolution_backward_weight(input, weight.shape, grad_output, stride, padding, dilation, groups, False, False, False)
+            grad_weight = cudnn_convolution.convolution_backward_weight(input, weight.shape, grad_output_, stride, padding, dilation, groups, False, False, False)
         # Group the gradient of weight
         if bfp_conf.bwg and grad_weight != None:
-            grad_weight = make_groups_tensor(grad_weight.clone().detach(), bfp_conf.bwg_bit, bfp_conf.bwg_dim, 22)
+            make_groups_tensor(grad_weight, bfp_conf.bwg_bit, bfp_conf.bwg_dim, 22)
 
         # Apply weaken gradient if weight gradient boost is applied
-        if bfp_conf.bwg_boost != 1.0:
-            grad_weight /= bfp_conf.bwg_boost
+        # if bfp_conf.bwg_boost != 1.0:
+        #     grad_weight /= bfp_conf.bwg_boost
 
         # TODO : Add Bias Grouping / or is it needed?
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output_.sum(dim=(0,2,3)).squeeze(0)
         
-        return grad_input_, grad_weight, grad_bias, None, None, None, None, None
+        return grad_input, grad_weight, grad_bias, None, None, None, None, None
 
 # Blockfloat Convolution
 class BFPConv2d(torch.nn.Module):
