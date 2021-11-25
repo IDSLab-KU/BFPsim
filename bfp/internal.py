@@ -1,7 +1,15 @@
+"""
+    This code is part of the BFPSim (https://github.com/ids-Lab-DGIST/BFPSim)
+
+    Seunghyun Lee (R3C0D3r) from IDSLab, DGIST
+    coder@dgist.ac.kr
+
+    License: CC BY 4.0
+"""
+
 import torch
 import numpy as np
 import ctypes
-
 
 fp32_mask = [0,
     0x00400000, 0x00600000, 0x00700000, 0x00780000,
