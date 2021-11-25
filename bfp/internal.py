@@ -191,3 +191,47 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
 
 
     return inp
+
+
+
+# Linear Backward Gradient Computation
+@cuda.jit
+def gradient_linear_weight_internal(o, a, b):
+    idx = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) % a.shape[2]
+    idy = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) // a.shape[2]
+
+    if idx >= a.shape[2] or idy >= b.shape[2]:
+        return
+    # Concat calculated data to dimension of (0,1)
+    tmp = 0
+    for ix in range(a.shape[0]):
+        for iy in range(a.shape[1]):
+           tmp += a[ix,iy,idx] * b[ix,iy,idy]
+    o[idx,idy] = tmp
+    # cuda.syncthreads()
+
+# gradient_linear_weight : (b*n*i)*(b*n*o) = (i*o)
+def gradient_linear_weight(grad_output, input, weight_shape):
+    # Create grad_weight to store data
+    grad_weight = torch.empty((grad_output.shape[2], input.shape[2]),dtype=torch.float).cuda()
+    # Handling error
+    if grad_output.shape[0] != input.shape[0] or grad_output.shape[1] != input.shape[1]:
+        print("gradient_linear_weight ERROR: Tensor dimension not match. [b*n*i] x [b*n*o] = [i*o], %s x %s"%(grad_output.shape, input.shape))
+        return None
+    if grad_output.is_cuda == False:
+        print("gradient_linear_weight ERROR: grad_output is not in cuda")
+        return None
+    if input.is_cuda == False:
+        print("gradient_linear_weight ERROR: input is not in cuda")
+        return None
+    # Define threads and blockspergrid (Optimizeable, I think)
+    threads = grad_output.shape[2] * input.shape[2]
+    threads = threads + (32 - threads % 32)
+    if threads > 1024:
+        threads = 1024
+    threads = int(threads)
+    blockspergrid = (grad_output.shape[2] * input.shape[2] + (threads - 1)) // threads
+    # Call internal function to calcaluate actually
+    gradient_linear_weight_internal[blockspergrid, threads](grad_weight, grad_output, input)
+
+    return grad_weight
