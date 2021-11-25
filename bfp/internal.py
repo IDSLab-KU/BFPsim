@@ -2,8 +2,6 @@ import torch
 import numpy as np
 import ctypes
 
-from conf import FLAGS, CUDA_THREADSPERBLOCK
-from utils.tensorAnalyze import analyzeObject
 
 fp32_mask = [0,
     0x00400000, 0x00600000, 0x00700000, 0x00780000,
@@ -21,15 +19,17 @@ fp64_mask = [0,
 from numba import jit, cuda
 import numba
 
+# from conf import FLAGS
+# from utils.tensorAnalyze import analyzeObject
 
 @cuda.jit
-# TODO : make another function to just grouping tensor...?
 def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
     idx0o = (idx // bs[1]) * gs[0]
     idx1o = idx % bs[1] * gs[1]
 
+    # Find the max exponent from each group
     M = 0
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -42,7 +42,7 @@ def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
                 M = e
     if M == 0:
         return
-    # Replace that area
+    # Remove each mantissa to desired values
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
             break
@@ -57,7 +57,6 @@ def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
                 v[idx0,idx1] = 0
 
 @cuda.jit
-# TODO : make another function to just grouping tensor...?
 def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
     
@@ -65,6 +64,7 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
     idx1o = (idx // bs[2]) % bs[1] * gs[1]
     idx2o = idx % bs[2] * gs[2]
 
+    # Find the max exponent from each group
     M = 0
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -80,7 +80,7 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
                     M = e
     if M == 0:
         return
-    # Replace that area
+    # Remove each mantissa to desired values
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
             break
@@ -100,13 +100,13 @@ def make_groups_3d_internal(v, dim, bs, gs, group_mantissa):
 @cuda.jit
 # TODO : make another function to just grouping tensor...?
 def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
-    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
-    
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x     
     idx0o = (idx // (bs[3] * bs[2] * bs[1])) * gs[0]
     idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
     idx2o = (idx // bs[3]) % bs[2] * gs[2]
     idx3o = idx % bs[3] * gs[3]
 
+    # Find the max exponent from each group
     M = 0
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
@@ -125,7 +125,7 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
                         M = e
     if M == 0:
         return
-    # Replace that area
+    # Remove each mantissa to desired values
     for idx0 in range(idx0o, idx0o + gs[0]):
         if idx0 >= dim[0]:
             break
@@ -147,52 +147,60 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
 
     cuda.syncthreads()
 
-from utils.logger import Log
-
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    if FLAGS.ZSE:
-        analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
+    # Make true to ZSE analyze, temporal disabled
+    # if FLAGS.ZSE:
+    #     analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
 
+    # Set pointer of tensor as int, easier to manipulate
     inp_ = inp.view(torch.int32)
     ins = np.array(inp.size())
-    if len(ins) == 4:
-        
+    if len(ins) == 4: # If the tensor size is 4d
+        # Choose Ideal thread size
         threads = (ins[0]*ins[1]*ins[2]*ins[3]) // (group_dim[0]*group_dim[1]*group_dim[2]*group_dim[3])
-        # print(threads, end=",")
         threads = threads + (32 - threads % 32)
         if threads > 1024:
             threads = 1024
-        # while threads > 1024:
-        #     threads /= 2
         threads = int(threads)
-        # print(threads)
-        
+
+        # Set blockspergrid and call internal function
         bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1, (ins[2]-1)//group_dim[2]+1, (ins[3]-1)//group_dim[3]+1)
         blockspergrid = (ins[0]*ins[1]*ins[2]*ins[3] +  (threads - 1)) // threads
         inpsize = (ins[0], ins[1], ins[2], ins[3])
         make_groups_4d_internal[blockspergrid, threads](inp_, inpsize, bs, group_dim, group_mantissa)
-    elif len(ins) == 3:
-        threads = 128
+    elif len(ins) == 3: # If the tensor size is 3d
+        # Choose Ideal thread size
+        threads = (ins[0]*ins[1]*ins[2]) // (group_dim[0]*group_dim[1]*group_dim[2])
+        threads = threads + (32 - threads % 32)
+        if threads > 1024:
+            threads = 1024
+        threads = int(threads)
+
+        # Set blockspergrid and call internal function
         bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1, (ins[2]-1)//group_dim[2]+1)
         blockspergrid = (ins[0]*ins[1]*ins[2] + (threads - 1)) // threads
         inpsize = (ins[0], ins[1], ins[2])
         make_groups_3d_internal[blockspergrid, threads](inp_, inpsize, bs, group_dim, group_mantissa)
     elif len(ins) == 2:
-        threads = 128
+        # Choose Ideal thread size
+        threads = (ins[0]*ins[1]) // (group_dim[0]*group_dim[1])
+        threads = threads + (32 - threads % 32)
+        if threads > 1024:
+            threads = 1024
+        threads = int(threads)
+        
+        # Set blockspergrid and call internal function
         bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1)
         blockspergrid = (ins[0]*ins[1] + (threads - 1)) // threads
         inpsize = (ins[0], ins[1])
         make_groups_2d_internal[blockspergrid, threads](inp_, inpsize, bs, group_dim, group_mantissa)
     else: # Tensor dimension is not supported
         inpsize = (ins[0], ins[1], ins[2], ins[3])
-        Log.Print("Tensor dimension not supported %s"%(str(inpsize)))
+        print("make_groups_tensor ERROR: Tensor dimension not supported %s"%(str(inpsize)))
         return inp
 
-
     return inp
-
-
 
 # Linear Backward Gradient Computation
 @cuda.jit
