@@ -58,9 +58,10 @@ def ReturnBFPLinear(ta, bfpc):
     new = BFPLinear(in_features = ta.in_features, out_features=ta.out_features, bias=bias)
     return new
 
-def _ReplaceInternal(net, name, attr_str, attr_value, bfpc, mode):
+def _ReplaceInternal(net, name, attr_str, attr_value, bfp_dict, mode):
     if type(attr_value) == torch.nn.Conv2d: # Conv2d is replaced
         Log.Print("Detected %s : %s"%(name+"."+attr_str, attr_value), current=False, elapsed=False)
+        bfpc = GetValueFromDict(bfp_dict, name+"."+attr_str)
         if bfpc == None:
             Log.Print("  == Didn't replaced", current=False, elapsed=False)
         else:
@@ -91,13 +92,11 @@ def ReplaceLayers(net, bfp_dict, name="net"):
     # Replace child objects
     for attr_str in dir(net):
         attr_value = getattr(net, attr_str)
-        bfpc = GetValueFromDict(bfp_dict, name+"."+attr_str)
-        _ReplaceInternal(net, name, attr_str, attr_value, bfpc, mode="C")
+        _ReplaceInternal(net, name, attr_str, attr_value, bfp_dict, mode="C")
 
     # Replacing List, sequential, etc
     for attr_idx, attr_value in enumerate(net.children()):
-        bfpc = GetValueFromDict(bfp_dict, name+"."+attr_str)
-        _ReplaceInternal(net, name, str(attr_idx), attr_value, bfpc, mode="S")
+        _ReplaceInternal(net, name, str(attr_idx), attr_value, bfp_dict, mode="S")
             
 
     # Recursive call to replace other layers
