@@ -1,9 +1,7 @@
 
 
 
-# FlexBlock
-
-This repository contains source code execution of the FlexBlock's simulation.
+# BFPSim
 
 
 # Features
@@ -18,8 +16,8 @@ This repository features...
 ## Setup with docker (Recommended)
 
 1. Install [Docker](https://docs.docker.com/engine/install/) on the targeted machine.
-2. Clone this repository with `git clone https://github.com/r3coder/FlexBlock`
-3. Make a docker container as: `docker build . -t $(whoami)/flexblock:latest`
+2. Clone this repository with `git clone https://github.com/IDS-Lab-DGIST/BFPsim`
+3. Run Installation `./install.sh` (You may need to edit file's authority using chmod)
 
 
 ## Setup tensorboard
@@ -36,12 +34,13 @@ If you are running this on local machine, just type `http://localhost:[External 
 ## Setup without docker
 1. Clone this repository
 2. Install requirements listed below 
-- `torch >= 1.7.1`
+- `torch >= 1.9.1`
 - `torchvision >= 0.5.0`
-- `numba >= 0.50.1`
+- `numba >= 0.53.1`
 - `matplotlib >= 3.4.2`
 - `einops >= 0.3.0`
-- `tensorboard >= 2.6.0`
+- `slack_sdk`
+- `tensorboard >= 2.7.0` (tensorboard can be any version, though)
 
 # Execution examples
 
@@ -49,9 +48,7 @@ If you are running this on local machine, just type `http://localhost:[External 
 
 For the simple execution of the ResNet18 with the FlexBlock12 data structure, execute
 
-```docker run --rm --gpus '"device=0"' --cpus="4" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app floatblock:latest python3 -u /app/main.py --mode train --model ResNet18 -bf ResNet18_FB12```
-
-It takes quite time to show the result (30min / epoch), so please be patient.
+```docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:main python3 -u /app/main.py --model --arch resnet18```
 
 ## More information
 

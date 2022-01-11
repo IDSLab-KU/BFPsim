@@ -1,7 +1,20 @@
 {
     "name":"default",
     "default":{
-        "fw_bit":16
+        "fw_bit":16,
+        "fw_dim":[1,24,3,3],
+        "fi_dim":[1,6,3,3],
+        "bwo_dim":[1,1,18,3],
+        "bwi_dim":[1,1,18,3]
+    },
+    "net.layer2.0.downsample":{
+        "type":"torch.Conv2d"
+    },
+    "net.layer3.0.downsample":{
+        "type":"torch.Conv2d"
+    },
+    "net.layer4.0.downsample":{
+        "type":"torch.Conv2d"
     },
     "net.layer2.0.shortcut.0":{
         "type":"torch.Conv2d"

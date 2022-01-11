@@ -2,8 +2,8 @@
     "name":"default",
     "default":{
         "fw_bit":4,
-        "bwo_bit":16,
-        "bwi_bit":16,
+        "bwo_bit":8,
+        "bwi_bit":8,
         "fw_dim":[1,16,3,3],
         "fi_dim":[1,4,3,3],
         "bwo_dim":[1,1,18,3],
