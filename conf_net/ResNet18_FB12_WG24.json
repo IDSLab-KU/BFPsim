@@ -10,21 +10,24 @@
         "bwi_dim":[1,1,18,3]
     },
     "net.layer2.0.downsample":{
-        "type":"torch.Conv2d"
+        "type":"default"
     },
     "net.layer3.0.downsample":{
-        "type":"torch.Conv2d"
+        "type":"default"
     },
     "net.layer4.0.downsample":{
-        "type":"torch.Conv2d"
+        "type":"default"
     },
     "net.layer2.0.shortcut.0":{
-        "type":"torch.Conv2d"
+        "type":"default"
     },
     "net.layer3.0.shortcut.0":{
-        "type":"torch.Conv2d"
+        "type":"default"
     },
     "net.layer4.0.shortcut.0":{
-        "type":"torch.Conv2d"
+        "type":"default"
+    },
+    "net.linear":{
+        "type":"default"
     }
 }

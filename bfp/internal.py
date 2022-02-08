@@ -212,7 +212,7 @@ def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
 
 # Linear Backward Gradient Computation
 @cuda.jit
-def gradient_linear_weight_internal(o, a, b):
+def gradient_linear_weight_internal_3d(o, a, b):
     idx = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) % a.shape[2]
     idy = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) // a.shape[2]
 
@@ -226,8 +226,8 @@ def gradient_linear_weight_internal(o, a, b):
     o[idx,idy] = tmp
     # cuda.syncthreads()
 
-# gradient_linear_weight : (b*n*i)*(b*n*o) = (i*o)
-def gradient_linear_weight(grad_output, input, weight_shape):
+# gradient_linear_weight_3d : (b*n*i)*(b*n*o) = (i*o)
+def gradient_linear_weight_3d(grad_output, input, weight_shape):
     # Create grad_weight to store data
     grad_weight = torch.empty((grad_output.shape[2], input.shape[2]),dtype=torch.float).cuda()
     # Handling error
@@ -248,6 +248,43 @@ def gradient_linear_weight(grad_output, input, weight_shape):
     threads = int(threads)
     blockspergrid = (grad_output.shape[2] * input.shape[2] + (threads - 1)) // threads
     # Call internal function to calcaluate actually
-    gradient_linear_weight_internal[blockspergrid, threads](grad_weight, grad_output, input)
+    gradient_linear_weight_internal_3d[blockspergrid, threads](grad_weight, grad_output, input)
+
+    return grad_weight
+
+@cuda.jit
+def gradient_linear_weight_internal_2d(o, a, b):
+    idx = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) % a.shape[1]
+    idy = ( cuda.threadIdx.x + cuda.blockDim.x * cuda.blockIdx.x ) // a.shape[1]
+
+    if idx >= a.shape[1] or idy >= b.shape[1]:
+        return
+    # Concat calculated data to dimension of (0,1)
+    tmp = 0
+    for ix in range(a.shape[0]):
+        tmp += a[ix,idx] * b[ix,idy]
+    o[idx,idy] = tmp
+    # cuda.syncthreads()
+
+# gradient_linear_weight_2d : (b*i)*(b*o) = (i*o)
+def gradient_linear_weight_2d(grad_output, input, weight_shape):
+    # Create grad_weight to store data
+    grad_weight = torch.empty((grad_output.shape[1], input.shape[1]),dtype=torch.float).cuda()
+    # Handling error
+    if grad_output.is_cuda == False:
+        print("gradient_linear_weight ERROR: grad_output is not in cuda")
+        return None
+    if input.is_cuda == False:
+        print("gradient_linear_weight ERROR: input is not in cuda")
+        return None
+    # Define threads and blockspergrid (Optimizeable, I think)
+    threads = grad_output.shape[1] * input.shape[1]
+    threads = threads + (32 - threads % 32)
+    if threads > 1024:
+        threads = 1024
+    threads = int(threads)
+    blockspergrid = (grad_output.shape[1] * input.shape[1] + (threads - 1)) // threads
+    # Call internal function to calcaluate actually
+    gradient_linear_weight_internal_2d[blockspergrid, threads](grad_weight, grad_output, input)
 
     return grad_weight

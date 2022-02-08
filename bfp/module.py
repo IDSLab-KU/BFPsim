@@ -25,7 +25,7 @@ _size_1_t = _scalar_or_tuple_1_t[int]
 _size_2_t = _scalar_or_tuple_2_t[int]
 _size_3_t = _scalar_or_tuple_3_t[int]
 
-from bfp.internal import make_groups_tensor, gradient_linear_weight
+from bfp.internal import make_groups_tensor, gradient_linear_weight_2d, gradient_linear_weight_3d
 from bfp.conf import BFPConf
 
 # BlockFloat Linear Function
@@ -105,7 +105,13 @@ class BFPLinearFunction(torch.autograd.Function):
         
 
         # grad_weight = torch.empty((grad_output.shape[2], input.shape[2]),dtype=torch.float).cuda()
-        grad_weight = gradient_linear_weight(grad_output_.clone().detach(), input_.clone().detach(), weight.shape)
+        if len(grad_output.shape == 2):
+            grad_weight = gradient_linear_weight_2d(grad_output_.clone().detach(), input_.clone().detach(), weight.shape)
+        elif len(grad_output.shape == 3):
+            grad_weight = gradient_linear_weight_3d(grad_output_.clone().detach(), input_.clone().detach(), weight.shape)
+        else:
+            print("BFLinear - Backward ERROR: gradient weight dimention not supported")
+            
         # Group the gradient of weight
         
         if bfp_conf.bwg:
@@ -119,7 +125,7 @@ class BFPLinearFunction(torch.autograd.Function):
         if bias is not None:
             grad_bias = grad_output.sum(0)
 
-        return grad_input_, grad_weight_, grad_bias, None
+        return grad_input_, grad_weight, grad_bias, None
 
 
 
