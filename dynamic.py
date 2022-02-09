@@ -129,12 +129,23 @@ class DynamicOptimizer:
             if type(inst) == BFPConv2d:
                 Log.Print(str(inst))
     
-    def PrintGradSegment(self):
+    def GetGradSegment(self, print_info=True):
+        lst = []
         str = "ZSE "
         for key, value in self.layers.items():
             v, a = value.Segment()
             str += "%2.4f "%a
-        Log.Print(str, elapsed=False, current=False)
+            lst.append(a)
+        if print_info:
+            Log.Print(str, elapsed=False, current=False)
+        return lst
+
+    def GetLayerNames(self):
+        lst = []
+        for key, value in self.layers.items():
+            lst.append(key)
+        return lst
+
 
     def _GradAvg(self):
         st = "G:"

@@ -114,14 +114,14 @@ def Train(args, epoch_current):
                 (epoch_current + 1, args.training_epochs,
                 i + 1, len(args.trainloader),
                 running_loss / batch_count))
-            DO.PrintGradSegment()
+
             args.writer.add_scalar('training loss',
                     running_loss / batch_count,
                     epoch_current * len(args.trainloader) + i)
             # statManager.AddData("training loss", running_loss / batch_count)
             running_loss = 0.0
             batch_count = 0
-            
+    
     
 
 """
@@ -215,6 +215,13 @@ def TrainNetwork(args):
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
 
+        ls = DO.GetGradSegment()
+        ln = DO.GetLayerNames()
+        for i in range(len(ls)):
+            args.writer.add_scalar('zse layer ' + ln[i],
+                    ls[i],
+                    epoch_current)
+        
         # Send progress to printing expected time
         if epoch_current == args.start_epoch:
             slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
