@@ -8,6 +8,8 @@ from utils.save import SaveModel
 from train.network import GetNetwork, GetOptimizer, GetScheduler
 from bfp.functions import LoadBFPDictFromFile
 
+from dynamic import DO
+
 def TrainMixed(args, epoch_current):
     running_loss = 0.0
     batch_count = 0
@@ -63,7 +65,9 @@ def Train(args, epoch_current):
     ptc_count = 1
     ptc_target = ptc_count / args.print_train_count
 
+    # DO.FlatModel(args.net)
 
+    grad_avg = 0
     # with torch.autograd.profiler.profile(use_cuda=True) as prof:
     for i, data in enumerate(args.trainloader, 0):
     
@@ -89,6 +93,9 @@ def Train(args, epoch_current):
 
         running_loss += loss.item()
 
+        # O.AddGradients(args.net)
+        DO.AppendGrad(args.net)
+
         args.optimizer.step()
         args.optimizer.zero_grad()
         # Print and record the running loss
@@ -107,6 +114,7 @@ def Train(args, epoch_current):
                 (epoch_current + 1, args.training_epochs,
                 i + 1, len(args.trainloader),
                 running_loss / batch_count))
+            DO.PrintGradSegment()
             args.writer.add_scalar('training loss',
                     running_loss / batch_count,
                     epoch_current * len(args.trainloader) + i)
@@ -159,11 +167,14 @@ def Evaluate(args, mode = "test"):
             total += images.size(0)
     return (top1/total).cpu().item(), (top3/total).cpu().item(), (top5/total).cpu().item()
 
+
 # Train the network and evaluate
 def TrainNetwork(args):
     Log.Print("========== Starting Training ==========")
     slackBot.ResetStartTime()
     
+    DO.PreloadDict(args.net)
+
     # args.scaler = torch.cuda.amp.GradScaler() # FP16 Mixed Precision
 
     for epoch_current in range(args.start_epoch, args.training_epochs):
@@ -181,6 +192,7 @@ def TrainNetwork(args):
             if args.cuda:
                 args.net.to('cuda')
         
+
         # Train the net
         Train(args, epoch_current)
         # Evaluate the net
@@ -206,6 +218,8 @@ def TrainNetwork(args):
         # Send progress to printing expected time
         if epoch_current == args.start_epoch:
             slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
+
+        # Calculate the zse of the layers and replace model if needed
 
         # Optional Progress Sending        
         # if (epoch_current+1) % 5 == 0:

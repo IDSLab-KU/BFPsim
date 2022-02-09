@@ -288,3 +288,92 @@ def gradient_linear_weight_2d(grad_output, input, weight_shape):
     gradient_linear_weight_internal_2d[blockspergrid, threads](grad_weight, grad_output, input)
 
     return grad_weight
+
+
+
+
+@cuda.jit
+# TODO : make another function to just grouping tensor...?
+def get_zse_internal(v, res, bs, gs, group_mantissa):
+    
+    idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x     
+    idx0o = (idx // (bs[3] * bs[2] * bs[1])) * gs[0]
+    idx1o = (idx // (bs[3] * bs[2])) % bs[1] * gs[1]
+    idx2o = (idx // bs[3]) % bs[2] * gs[2]
+    idx3o = idx % bs[3] * gs[3]
+
+    # Find the max exponent from each group
+    M = 0
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= v.shape[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= v.shape[1]:
+                break
+            for idx2 in range(idx2o, idx2o + gs[2]):
+                if idx2 >= v.shape[2]:
+                    break
+                for idx3 in range(idx3o, idx3o + gs[3]):
+                    if idx3 >= v.shape[3]:
+                        break
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if M < e:
+                        M = e
+    if M == 0:
+        return
+    
+    idx0g = idx // (bs[3] * bs[2] * bs[1])
+    idx1g = (idx // (bs[3] * bs[2])) % bs[1]
+    idx2g = (idx // bs[3]) % bs[2]
+    idx3g = idx % bs[3]
+
+    rs = 0
+    # Remove each mantissa to desired values
+    for idx0 in range(idx0o, idx0o + gs[0]):
+        if idx0 >= v.shape[0]:
+            break
+        for idx1 in range(idx1o, idx1o + gs[1]):
+            if idx1 >= v.shape[1]:
+                break
+            for idx2 in range(idx2o, idx2o + gs[2]):
+                if idx2 >= v.shape[2]:
+                    break
+                for idx3 in range(idx3o, idx3o + gs[3]):
+                    if idx3 >= v.shape[3]:
+                        break
+                    e = (v[idx0,idx1,idx2,idx3] & 0x7f800000 ) >> 23
+                    if M - e + 1 > group_mantissa:
+                        rs += 1
+    res[idx0g, idx1g, idx2g, idx3g] = rs
+    cuda.syncthreads()
+
+# get_zse : Get ZSE of a 4d tensor
+def get_zse(inp, group_mantissa, group_dim):
+    # Make true to ZSE analyze, temporal disabled
+    # if FLAGS.ZSE:
+    #     analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
+
+    # Set pointer of tensor as int, easier to manipulate
+    inp_ = inp.view(torch.int32)
+    ins = np.array(inp.size())
+    # Array to store result
+    res = np.zeros((ins[0]//group_dim[0], ins[1]//group_dim[1], ins[2]//group_dim[2], ins[3]//group_dim[3]))
+    if len(ins) == 4: # If the tensor size is 4d
+        # Choose Ideal thread size
+        threads = (ins[0]*ins[1]*ins[2]*ins[3]) // (group_dim[0]*group_dim[1]*group_dim[2]*group_dim[3])
+        threads = threads + (32 - threads % 32)
+        if threads > 512: # Adjusted here!
+            threads = 512
+        threads = int(threads)
+
+        # Set blockspergrid and call internal function
+        bs = ((ins[0]-1)//group_dim[0]+1, (ins[1]-1)//group_dim[1]+1, (ins[2]-1)//group_dim[2]+1, (ins[3]-1)//group_dim[3]+1)
+        blockspergrid = (ins[0]*ins[1]*ins[2]*ins[3] +  (threads - 1)) // threads
+        inpsize = (ins[0], ins[1], ins[2], ins[3])
+        get_zse_internal[blockspergrid, threads](inp_, res, bs, group_dim, group_mantissa)
+    else: # Tensor dimension is not supported
+        inpsize = (ins[0], ins[1], ins[2], ins[3])
+        print("make_groups_tensor ERROR: Tensor dimension not supported %s"%(str(inpsize)))
+    # print(np.sum(res) / np.prod(ins))
+
+    return np.sum(res) / np.prod(ins) 
