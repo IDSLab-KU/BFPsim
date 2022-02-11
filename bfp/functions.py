@@ -70,7 +70,7 @@ def GetValueFromDict(bfp_dict, attr_str):
     else: # If no default value is set, don't replace
         return None
 
-def ReplaceLayers(net, bfp_dict, name="net"):
+def ReplaceLayers(net, bfp_dict, name="net", silence = False):
     # Log.Print("%s / %s"%(type(net),name), current=False, elapsed=False)
     for attr_str in dir(net):
         # Get the Attributes
@@ -78,7 +78,8 @@ def ReplaceLayers(net, bfp_dict, name="net"):
         if attr_str == "zero_grad":
             continue
         if type(attr_value) in [torch.nn.Conv2d, torch.nn.Linear]:
-            Log.Print("Detected(N) %s : %s"%(name+"."+attr_str, attr_value), current=False, elapsed=False)
+            if not silence:
+                Log.Print("Detected(N) %s : %s"%(name+"."+attr_str, attr_value), current=False, elapsed=False)
             bfpc = GetValueFromDict(bfp_dict, name+"."+attr_str)
             if bfpc != None:
                 # Replace Actual
@@ -86,18 +87,21 @@ def ReplaceLayers(net, bfp_dict, name="net"):
                     setattr(net, attr_str, ReturnBFPConv2d(attr_value, bfpc))
                 elif type(attr_value) == torch.nn.Linear:
                     setattr(net, attr_str, ReturnBFPLinear(attr_value, bfpc))
-                Log.Print("  => Replaced : %s"%(str(bfpc)), current=False, elapsed=False)
+                if not silence:
+                    Log.Print("  => Replaced : %s"%(str(bfpc)), current=False, elapsed=False)
             else:
-                Log.Print("  == Didn't replaced", current=False, elapsed=False)
+                if not silence:
+                    Log.Print("  == Didn't replaced", current=False, elapsed=False)
     
     # Log.Print("Child @ %s"%name, current=False, elapsed=False)
     for n, ch in net.named_children():
-        ReplaceLayers(ch, bfp_dict, name+"."+n)
+        ReplaceLayers(ch, bfp_dict, name+"."+n, silence = silence)
     # Log.Print("Iter @ %s"%name, current=False, elapsed=False)
     if type(net) in [list, tuple, torch.nn.Sequential]:
         for i, n in enumerate(net.children()):
             if type(net[i]) in [torch.nn.Conv2d, torch.nn.Linear]:
-                Log.Print("Detected(I) %s : %s"%(name+"."+str(i), n), current=False, elapsed=False)
+                if not silence:
+                    Log.Print("Detected(I) %s : %s"%(name+"."+str(i), n), current=False, elapsed=False)
                 bfpc = GetValueFromDict(bfp_dict, name+"."+str(i))
                 if bfpc != None:
                     # Replace Actual
@@ -106,11 +110,13 @@ def ReplaceLayers(net, bfp_dict, name="net"):
                         net[i] = ReturnBFPConv2d(n, bfpc)
                     elif type(n) == torch.nn.Linear:
                         net[i] = ReturnBFPLinear(n, bfpc)
-                    Log.Print("  => Replaced : %s"%(str(bfpc)), current=False, elapsed=False)
+                    if not silence:
+                        Log.Print("  => Replaced : %s"%(str(bfpc)), current=False, elapsed=False)
                 else:
-                    Log.Print("  == Didn't replaced", current=False, elapsed=False)
+                    if not silence:
+                        Log.Print("  == Didn't replaced", current=False, elapsed=False)
 
-            ReplaceLayers(net[i], bfp_dict, name+"."+str(i))
+            ReplaceLayers(net[i], bfp_dict, name+"."+str(i), silence = silence)
 
     # Log.Print("End @ %s"%name, current=False, elapsed=False)
 

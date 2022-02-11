@@ -1,6 +1,8 @@
 from bfp.module import BFPConv2d, BFPLinear
 from bfp.internal import get_zse
 from bfp.conf import BFPConf
+from bfp.functions import LoadBFPDictFromFile
+from train.network import GetNetwork, GetOptimizer, GetScheduler, GetDefOptimizer, GetDefScheduler
 import torch
 import numpy as np
 from utils.logger import Log
@@ -56,19 +58,61 @@ class LayerElement:
         self.valueTotal = 0
 
         self.mode = mode
+        self.zseBorder = 0
     
+    def IncreaseZseBorder(self):
+        self.zseBorder += 1
+        st = "++ Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
+        if self.zseBorder > 4:
+            if self.mode == "FB12":
+                self.mode = "FB16"
+                st += " ->:" + self.mode
+                self.zseBorder = 0
+            elif self.mode == "FB16":
+                self.mode = "FB24"
+                st += " ->:" + self.mode
+                self.zseBorder = 0
+        if self.mode == "FB24":
+            self.zseBorder = 0
+            st += " M-"
+        Log.Print(st, elapsed = False, current = False)
+
+    def PrintZseBorder(self):
+        st = "   Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
+        Log.Print(st, elapsed = False, current = False)
+
+    def DecreaseZseBorder(self):
+        self.zseBorder -= 1
+        st = "-- Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
+        if self.zseBorder < -4:
+            if self.mode == "FB24":
+                self.mode = "FB16"
+                st += " ->" + self.mode
+                self.zseBorder = 0
+            elif self.mode == "FB16":
+                self.mode = "FB12"
+                st += " ->" + self.mode
+                self.zseBorder = 0
+        if self.mode == "FB12":
+            self.zseBorder = 0
+            st += " M+"
+        Log.Print(st, elapsed = False, current = False)
+
+
     def Add(self, val):
         self.value += val
         self.valueTotal += val
         self.count += 1
         self.countTotal += 1
 
-    def Segment(self):
+    def GetSegment(self):
         v = self.value
         c = self.count
+        return v, v/c
+    
+    def ResetSegment(self):
         self.value = 0
         self.count = 0
-        return v, v/c
     
     def Total(self):
         return self.valueTotal, self.countTotal
@@ -102,10 +146,8 @@ def setattrBetter(obj, name, target):
 
 class DynamicOptimizer:
     def __init__(self):
-        self._gradict = dict()
         self.step = 0
         self.layers = dict()
-        pass
 
     def PreloadDict(self, net):
         # Find all layers to be replaced (BFConv2d), and add to a list
@@ -113,32 +155,29 @@ class DynamicOptimizer:
         Log.Print("Detected BFP Layers to Optimize:")
         Log.Print(str(bfl),elapsed=False, current=False)
         for i in bfl:
-            self.layers[i] = LayerElement(i, "FB16")
+            self.layers[i] = LayerElement(i, "FB24")
 
     def AppendGrad(self, net):
-        
         for key, value in self.layers.items():
             layer = getattrBetter(net, key[4:])
             # print(key, layer, layer.bfp_conf)
             value.Add(get_zse(layer.weight.grad, layer.bfp_conf.bwg_bit, layer.bfp_conf.bwg_dim))
 
-
-    def FlatModel(self, net):
-        # Log.Print(str(flatten(net)))
-        for inst in flatten(net):
-            if type(inst) == BFPConv2d:
-                Log.Print(str(inst))
-    
     def GetGradSegment(self, print_info=True):
         lst = []
         str = "ZSE "
         for key, value in self.layers.items():
-            v, a = value.Segment()
+            v, a = value.GetSegment()
             str += "%2.4f "%a
             lst.append(a)
         if print_info:
             Log.Print(str, elapsed=False, current=False)
         return lst
+
+    def ResetGradSegment(self):
+        for key, value in self.layers.items():
+            value.ResetSegment()
+
 
     def GetLayerNames(self):
         lst = []
@@ -146,14 +185,77 @@ class DynamicOptimizer:
             lst.append(key)
         return lst
 
+    def ReplaceModel(self, args, epoch_current):
+        Log.Print("==== ReplaceModel @ Epoch " + str(epoch_current) + " ====", elapsed = False, current = False)
+        bfp_dict = LoadBFPDictFromFile(args.bfp_layer_conf_file)
+        # Adjust model information
+        initial_preserve = 1
+        if epoch_current < initial_preserve:
+            Log.Print("First " + str(initial_preserve) + " epoch(s): preserve precision", elapsed = False, current = False)
+        else:
+            for key, value in self.layers.items():
+                _, v = value.GetSegment()
+                if value.mode == "FB24":
+                    # Decrease if needed
+                    if v < 0.3:
+                        value.DecreaseZseBorder()
+                elif value.mode == "FB16":
+                    if v < 0.3:
+                        value.DecreaseZseBorder()
+                    elif v > 0.5:
+                        value.IncreaseZseBorder()
+                elif value.mode == "FB12":
+                    if v > 0.5:
+                        value.IncreaseZseBorder()
 
-    def _GradAvg(self):
-        st = "G:"
-        for key, value in self._gradict.items():
-            st += "%2.4f "%value
-        Log.Print(st, elapsed = False, current = False)
-        self._gradict = dict()
+        # Add bfp_dict in each stuffs
+        ss = ""
+        for key, value in self.layers.items():
+            # Log.Print("Layer " + str(key) + " : " + str(value.mode), elapsed = False, current = False)
+            bfp_dict[key] = dict()
+            if value.mode == "FB24":
+                bfp_dict[key]["fw_bit"] = 16
+                bfp_dict[key]["bwo_bit"] = 16
+                bfp_dict[key]["bwi_bit"] = 16
+                bfp_dict[key]["bwg_bit"] = 16
+            elif value.mode == "FB16":
+                bfp_dict[key]["fw_bit"] = 8
+                bfp_dict[key]["bwo_bit"] = 8
+                bfp_dict[key]["bwi_bit"] = 8
+                bfp_dict[key]["bwg_bit"] = 8
+            elif value.mode == "FB12":
+                bfp_dict[key]["fw_bit"] = 4
+                bfp_dict[key]["bwo_bit"] = 4
+                bfp_dict[key]["bwi_bit"] = 4
+                bfp_dict[key]["bwg_bit"] = 4
+                
+            bfp_dict[key]["fw_dim"] = [1,24,3,3]
+            bfp_dict[key]["fi_dim"] = [1,6,3,3]
+            bfp_dict[key]["bwo_dim"] = [1,1,18,3]
+            bfp_dict[key]["bwi_dim"] = [1,1,18,3]
+            bfp_dict[key]["bwg_dim"] = [16,1,3,3]
 
+            ss += value.mode + " "
+        Log.Print(ss, elapsed=False, current=False)
+
+        # Change Model to desired 
+        net_ = args.net
+        args.net = GetNetwork(args.dataset, args.model, args.num_classes, bfp_dict, silence=True)
+        args.net.load_state_dict(net_.state_dict())
+        args.net.eval()
+
+        # Load Optimizer, Scheduler, stuffs
+        # Fixed Step
+        args.optimizer = GetDefOptimizer(args, epoch_current)
+        args.scheduler = GetDefScheduler(args, epoch_current)
+        if args.cuda:
+            args.net.to('cuda')
+        
+        bfp_dict = dict()
+        Log.Print("==== ReplaceModel ====", elapsed = False, current = False)
+
+
+    """
     def AddGradients(self, net):
         self.step += 1
         for cnt, inst in enumerate(flatten(net)):
@@ -162,7 +264,6 @@ class DynamicOptimizer:
                     self._gradict[str(cnt)] = 0
                 # Log.Print(str(inst))
                 self._gradict[str(cnt)] += np.average(np.absolute(inst.weight.grad.detach().cpu()))
-        """
         for name, param in net.named_parameters():
             if param.requires_grad:
                 Log.Print(str(name))
@@ -170,7 +271,7 @@ class DynamicOptimizer:
                 Log.Print(str(param.grad.shape))
                 Log.Print(str(param.grad))
                 Log.Print("")
-        """
+    """
 
 
 def Gradients(args):

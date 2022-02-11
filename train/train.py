@@ -175,9 +175,13 @@ def TrainNetwork(args):
     
     DO.PreloadDict(args.net)
 
+    DO.ReplaceModel(args, args.start_epoch)
     # args.scaler = torch.cuda.amp.GradScaler() # FP16 Mixed Precision
 
     for epoch_current in range(args.start_epoch, args.training_epochs):
+
+        
+
         # Change and transfer model
         if epoch_current != args.start_epoch and str(epoch_current) in args.bfp_layer_conf_dict:
             Log.Print("Changing Model bfp config to: %s"%args.bfp_layer_conf_dict[str(epoch_current)], elapsed=False, current=False)
@@ -221,7 +225,10 @@ def TrainNetwork(args):
             args.writer.add_scalar('zse layer ' + ln[i],
                     ls[i],
                     epoch_current)
-        
+        # Replace for next epoch
+        DO.ReplaceModel(args, epoch_current + 1)
+        DO.ResetGradSegment()
+
         # Send progress to printing expected time
         if epoch_current == args.start_epoch:
             slackBot.SendProgress(float(epoch_current+1)/args.training_epochs, length=0)
