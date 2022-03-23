@@ -60,43 +60,56 @@ class LayerElement:
         self.mode = mode
         self.zseBorder = 0
     
-    def IncreaseZseBorder(self):
-        self.zseBorder += 1
-        st = "++ Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
-        if self.zseBorder > 4:
-            if self.mode == "FB12":
-                self.mode = "FB16"
-                st += " ->:" + self.mode
-                self.zseBorder = 0
-            elif self.mode == "FB16":
-                self.mode = "FB24"
-                st += " ->:" + self.mode
-                self.zseBorder = 0
-        if self.mode == "FB24":
-            self.zseBorder = 0
-            st += " M-"
-        Log.Print(st, elapsed = False, current = False)
+    def UpdateStep(self, print_level = 2):
+        prevmode = self.mode
+        prevlev = self.zseBorder
+        st = ""
+        _, v = self.GetSegment()
+        if v < 0.45:
+            if self.mode != "FB12":
+                self.zseBorder -= 1
+                st = "-- "
+            else:
+                st = "M- "
+        elif v > 0.65:
+            if self.mode != "FB16":
+                self.zseBorder += 1
+                st = "++ "
+            else:
+                st = "M+ "
+        else:
+            st = "   "
 
-    def PrintZseBorder(self):
-        st = "   Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
-        Log.Print(st, elapsed = False, current = False)
+        st += "N:" + str(self.name) + " " +  " V:%2.4f"%(v) + " "
 
-    def DecreaseZseBorder(self):
-        self.zseBorder -= 1
-        st = "-- Layer:" + str(self.name) + " Mode:"+self.mode + " val:%2.4f"%(self.value/self.count) + " zseB:"+str(self.zseBorder)
-        if self.zseBorder < -4:
+        threshold = 4
+        if self.zseBorder <= -threshold:
             if self.mode == "FB24":
                 self.mode = "FB16"
-                st += " ->" + self.mode
-                self.zseBorder = 0
             elif self.mode == "FB16":
                 self.mode = "FB12"
-                st += " ->" + self.mode
-                self.zseBorder = 0
-        if self.mode == "FB12":
+        if self.zseBorder >= threshold:
+            if self.mode == "FB12":
+                self.mode = "FB16"
+            # elif self.mode == "FB16":
+            #     self.mode = "FB24"
+        
+        if prevmode != self.mode:
+            st += prevmode + "->" + self.mode
             self.zseBorder = 0
-            st += " M+"
-        Log.Print(st, elapsed = False, current = False)
+        else:
+            st += " L:" + str(self.zseBorder)
+        
+        if print_level == 0:
+            pass
+        elif print_level == 1: # Only print when precision change
+            if prevmode != self.mode:
+                Log.Print(st, elapsed = False, current = False)
+        elif print_level == 2:
+            if prevlev != self.zseBorder:
+                Log.Print(st, elapsed = False, current = False)
+        else:
+            Log.Print(st, elapsed = False, current = False)
 
 
     def Add(self, val):
@@ -116,13 +129,6 @@ class LayerElement:
     
     def Total(self):
         return self.valueTotal, self.countTotal
-
-    def GetConf(self):
-        if mode == "FB16":
-            return '"' + name + '":' + FB16_CONF
-        elif mode == "FB12":
-            return '"' + name + '":' + FB12_CONF
-
 
 def getattrBetter(obj, name):
     name = name.split(".")
@@ -155,7 +161,7 @@ class DynamicOptimizer:
         Log.Print("Detected BFP Layers to Optimize:")
         Log.Print(str(bfl),elapsed=False, current=False)
         for i in bfl:
-            self.layers[i] = LayerElement(i, "FB24")
+            self.layers[i] = LayerElement(i, "FB16")
 
     def AppendGrad(self, net):
         for key, value in self.layers.items():
@@ -194,19 +200,7 @@ class DynamicOptimizer:
             Log.Print("First " + str(initial_preserve) + " epoch(s): preserve precision", elapsed = False, current = False)
         else:
             for key, value in self.layers.items():
-                _, v = value.GetSegment()
-                if value.mode == "FB24":
-                    # Decrease if needed
-                    if v < 0.3:
-                        value.DecreaseZseBorder()
-                elif value.mode == "FB16":
-                    if v < 0.3:
-                        value.DecreaseZseBorder()
-                    elif v > 0.5:
-                        value.IncreaseZseBorder()
-                elif value.mode == "FB12":
-                    if v > 0.5:
-                        value.IncreaseZseBorder()
+                value.UpdateStep()
 
         # Add bfp_dict in each stuffs
         ss = ""
