@@ -7,6 +7,9 @@
         "bwo_dim":[1,1,18,3],
         "bwi_dim":[1,1,18,3]
     },
+    "net.conv1":{
+        "type":"default"
+    },
     "net.layer2.0.downsample":{
         "type":"default"
     },
@@ -14,6 +17,15 @@
         "type":"default"
     },
     "net.layer4.0.downsample":{
+        "type":"default"
+    },
+    "net.layer2.0.downsample.0":{
+        "type":"default"
+    },
+    "net.layer3.0.downsample.0":{
+        "type":"default"
+    },
+    "net.layer4.0.downsample.0":{
         "type":"default"
     },
     "net.layer2.0.shortcut.0":{
@@ -26,6 +38,9 @@
         "type":"default"
     },
     "net.linear":{
+        "type":"default"
+    },
+    "net.fc":{
         "type":"default"
     }
 }
