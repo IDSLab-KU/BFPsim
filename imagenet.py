@@ -31,6 +31,8 @@ from datetime import datetime
 import string
 import random
 
+from dynamic import DO
+
 def SaveModel(args, suffix):
     PATH = "%s/%s.model"%(args.save_prefix,suffix)
     Log.Print("Saving model file as %s"%PATH)
@@ -98,6 +100,8 @@ parser.add_argument("--run-dir", type=str, default = "",
 parser.add_argument("-bfp", "--bfp-layer-conf-file", type=str, default="",
     help = "Config of the bfp setup, if not set, original network will be trained")
     
+parser.add_argument('--do', default='', type=str,
+                    help='activate to dynamic optimization')
 best_acc1 = 0
 
 
@@ -159,6 +163,7 @@ def main():
 
 from bfp.functions import ReplaceLayers
 from bfp.functions import LoadBFPDictFromFile
+from train.network import GetNetwork
 
 def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
@@ -189,13 +194,16 @@ def main_worker(gpu, ngpus_per_node, args):
     # model_ = models.resnet18(pretrained=False)
 
     # model = models.resnet18(pretrained=False)
-    model = models.__dict__[args.arch]()
-    if args.bfp_layer_conf_file != "":
-        ReplaceLayers(model, LoadBFPDictFromFile(args.bfp_layer_conf_file))
+    # model = models.__dict__[args.arch]()
+    # if args.bfp_layer_conf_file != "":
+    #     ReplaceLayers(model, LoadBFPDictFromFile(args.bfp_layer_conf_file))
+    
+    model = GetNetwork("imagenet", args.arch, 0, LoadBFPDictFromFile(args.bfp_layer_conf_file), silence=True)
 
     # model.load_state_dict(model_.state_dict())
     # model = models.densenet121(pretrained=False)
     # model = torch.hub.load('pytorch/vision:v0.10.0', 'densenet121', pretrained=False)
+    model.cuda()
     model.eval()
     Log.Print("model:")
     Log.Print(str(model))
@@ -231,7 +239,7 @@ def main_worker(gpu, ngpus_per_node, args):
             model.cuda()
         else:
             model = torch.nn.DataParallel(model).cuda()
-
+    
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
@@ -314,7 +322,12 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
+    if args.do != "":
+        DO.Initialize(model, 500, args.save_prefix, args.do)
+
+    model.cuda()
     for epoch in range(args.start_epoch, args.epochs):
+        
         if args.distributed:
             train_sampler.set_epoch(epoch)
         adjust_learning_rate(optimizer, epoch, args)
@@ -341,6 +354,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
             }, is_best)
+        
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
@@ -363,14 +377,13 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         if i/len(train_loader) > args.train_partial:
             print("Stopping by early stopping")
             break
-
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if args.gpu is not None:
-            images = images.cuda(args.gpu, non_blocking=True)
-        if torch.cuda.is_available():
-            target = target.cuda(args.gpu, non_blocking=True)
+        # if args.gpu is not None:
+        images = images.cuda(args.gpu, non_blocking=True)
+        # if torch.cuda.is_available():
+        target = target.cuda(args.gpu, non_blocking=True)
 
         # compute output
         output = model(images)
@@ -382,11 +395,15 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
 
+        # Append to DO
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         loss.backward()
+        
+        if args.do != "":
+            DO.Update(model)
         optimizer.step()
-
+        optimizer.zero_grad()
+        
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -415,10 +432,10 @@ def validate(val_loader, model, criterion, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            if args.gpu is not None:
-                images = images.cuda(args.gpu, non_blocking=True)
-            if torch.cuda.is_available():
-                target = target.cuda(args.gpu, non_blocking=True)
+            # if args.gpu is not None:
+            images = images.cuda(args.gpu, non_blocking=True)
+            # if torch.cuda.is_available():
+            target = target.cuda(args.gpu, non_blocking=True)
 
             # compute output
             output = model(images)

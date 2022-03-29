@@ -112,6 +112,8 @@ def ArgumentParse():
     parser.add_argument("--zse-print-mode", type=str, default = "sum",
         help = "[zse-analyze] Choose print mode [none, sum, format, all]")
 
+    parser.add_argument('--do', default='', type=str,
+                    help='activate to dynamic optimization')
     # Parse arguments
     args = parser.parse_args()
 

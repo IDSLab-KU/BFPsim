@@ -121,6 +121,9 @@ class Logger:
             self.Print(msg,current=False,elapsed=False,col='k',bg='bc',file=False)
 
     def Print(self, msg, level = 0, current = None, elapsed = None, col='', bg='', end = '\n', file = None, flush = False):
+        if not isinstance(msg,str):
+            msg = str(msg)
+
         if level <= self.printLevel:
             t = ""
             if self.MSPrecision == 0:

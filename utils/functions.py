@@ -22,3 +22,34 @@ def DictKey(d, v):
     for key in d:
         if d[key] == v:
             return key
+
+
+# Flatten all childrens to 1-d array
+def flatten(el):
+    flattened = [flatten(children) for children in el.children()]
+    res = [el]
+    for c in flattened:
+        res += c
+    return res
+
+# Better version of GetAttr, it supports list / sequential too
+def getattr_(obj, name):
+    name = name.split(".")
+    for i in name:
+        if i.isdigit():
+            obj = obj[int(i)]
+        else:
+            obj = getattr(obj, i)
+    return obj
+
+# Better version of setattr, it supports list / sequential too
+def setattr_(obj, name, target):
+    name = name.split(".")
+    if len(name) > 1:
+        for i in name[:-1]:
+            if i.isdigit():
+                obj = obj[int(i)]
+            else:
+                obj = getattr(obj, i)
+    setattr(obj, name[-1], target)
+

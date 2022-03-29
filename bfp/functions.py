@@ -59,7 +59,6 @@ def ReturnBFPLinear(ta, bfpc):
     return new
 
 def GetValueFromDict(bfp_dict, attr_str):
-    
     if attr_str in bfp_dict: # Layer configuration is found
         if "type" in bfp_dict[attr_str] and bfp_dict[attr_str]["type"] in ["torch.nn.Conv2d", "torch.nn.Linear", "default"]:
             return None
@@ -119,6 +118,18 @@ def ReplaceLayers(net, bfp_dict, name="net", silence = False):
             ReplaceLayers(net[i], bfp_dict, name+"."+str(i), silence = silence)
 
     # Log.Print("End @ %s"%name, current=False, elapsed=False)
+
+def GetBFLayerNames(net, name="net"):
+    # print(type(net), name)
+    res = []
+    for n, ch in net.named_children():
+        if type(ch) in [BFPConv2d, BFPLinear]:
+            # Log.Print("Detected(N) %s : %s"%(name+"."+n, ch), current=False, elapsed=False)
+            res.append(name+"."+n)
+        l = GetBFLayerNames(ch, name + "." + n)
+        for i in l:
+            res.append(i)
+    return res
 
 
 """

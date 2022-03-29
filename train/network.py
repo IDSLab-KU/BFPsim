@@ -23,11 +23,11 @@ def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = F
     if dataset.lower() == "imagenet":
         if model.lower() in model_names:
             if pretrained:
-                net = models.__dict__[args.arch](pretrained=True)
+                net = models.__dict__[model](pretrained=True)
                 if not silence:
                     Log.Print("Using pretrained pytorch {model} imagenet model...", current=False, elapsed=False)
             else:
-                net = models.__dict__[args.arch]()
+                net = models.__dict__[model]()
                 if not silence:
                     Log.Print("Using pytorch {model} imagenet model...", current=False, elapsed=False)
         else:

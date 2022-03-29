@@ -93,8 +93,8 @@ def Train(args, epoch_current):
 
         running_loss += loss.item()
 
-        # O.AddGradients(args.net)
-        DO.AppendGrad(args.net)
+        if args.do != "":
+            DO.Update(args.net)
 
         args.optimizer.step()
         args.optimizer.zero_grad()
@@ -172,10 +172,10 @@ def Evaluate(args, mode = "test"):
 def TrainNetwork(args):
     Log.Print("========== Starting Training ==========")
     slackBot.ResetStartTime()
-    
-    DO.PreloadDict(args.net)
 
-    DO.ReplaceModel(args, args.start_epoch)
+    if args.do != "":
+        DO.Initialize(args.net, len(args.trainloader), args.save_prefix, args.do)
+
     # args.scaler = torch.cuda.amp.GradScaler() # FP16 Mixed Precision
 
     for epoch_current in range(args.start_epoch, args.training_epochs):
@@ -218,16 +218,6 @@ def TrainNetwork(args):
         if args.save:
             if args.save_interval != 0 and (epoch_current+1)%args.save_interval == 0:
                 SaveModel(args, "%03d"%(epoch_current+1))
-
-        ls = DO.GetGradSegment()
-        ln = DO.GetLayerNames()
-        for i in range(len(ls)):
-            args.writer.add_scalar('zse layer ' + ln[i],
-                    ls[i],
-                    epoch_current)
-        # Replace for next epoch
-        DO.ReplaceModel(args, epoch_current + 1)
-        DO.ResetGradSegment()
 
         # Send progress to printing expected time
         if epoch_current == args.start_epoch:

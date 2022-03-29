@@ -1,285 +1,218 @@
-from bfp.module import BFPConv2d, BFPLinear
 from bfp.internal import get_zse
-from bfp.conf import BFPConf
-from bfp.functions import LoadBFPDictFromFile
-from train.network import GetNetwork, GetOptimizer, GetScheduler, GetDefOptimizer, GetDefScheduler
-import torch
-import numpy as np
+from bfp.functions import GetBFLayerNames
+
 from utils.logger import Log
+from utils.functions import getattr_
 
-def flatten(el):
-    flattened = [flatten(children) for children in el.children()]
-    res = [el]
-    for c in flattened:
-        res += c
-    return res
+# Directly attach to the BFP Layers (Works for any other layers, too btw) 
+def PrepareSegment(target, name):
+    target.opt_name = name
+    # Save values
+    target.opt_value_weight = 0
+    target.opt_value_grad = 0
+    target.opt_value_weight_last = 0
+    target.opt_value_grad_last = 0
 
+    # Save counts
+    target.opt_count = 0
+    target.opt_count_total = 0
 
-def GetBFLayers(net, name="net"):
-    # print(type(net), name)
-    res = []
-    for n, ch in net.named_children():
-        # if type(ch) in [torch.nn.Conv2d, torch.nn.Linear, BFPConv2d, BFPLinear]:
-        if type(ch) in [BFPConv2d, BFPLinear]:
-            # Log.Print("Detected(N) %s : %s"%(name+"."+n, ch), current=False, elapsed=False)
-            res.append(name+"."+n)
-        l = GetBFLayers(ch, name + "." + n)
-        for i in l:
-            res.append(i)
-    return res
-
-FB16_CONF = '''{
-        "fw_bit":8,
-        "bwo_bit":8,
-        "bwi_bit":8,
-        "fw_dim":[1,24,3,3],
-        "fi_dim":[1,6,3,3],
-        "bwo_dim":[1,1,18,3],
-        "bwi_dim":[1,1,18,3]
-    }
-'''
-FB12_CONF = '''{
-        "fw_bit":4,
-        "bwo_bit":4,
-        "bwi_bit":4,
-        "fw_dim":[1,24,3,3],
-        "fi_dim":[1,6,3,3],
-        "bwo_dim":[1,1,18,3],
-        "bwi_dim":[1,1,18,3]
-    }
-'''
-
-class LayerElement:
-    def __init__(self, name, mode):
-        self.name = name
-        self.value = 0
-        self.count = 0
-        self.countTotal = 0
-        self.valueTotal = 0
-
-        self.mode = mode
-        self.zseBorder = 0
-    
-    def UpdateStep(self, print_level = 2):
-        prevmode = self.mode
-        prevlev = self.zseBorder
-        st = ""
-        _, v = self.GetSegment()
-        if v < 0.45:
-            if self.mode != "FB12":
-                self.zseBorder -= 1
-                st = "-- "
-            else:
-                st = "M- "
-        elif v > 0.65:
-            if self.mode != "FB16":
-                self.zseBorder += 1
-                st = "++ "
-            else:
-                st = "M+ "
-        else:
-            st = "   "
-
-        st += "N:" + str(self.name) + " " +  " V:%2.4f"%(v) + " "
-
-        threshold = 4
-        if self.zseBorder <= -threshold:
-            if self.mode == "FB24":
-                self.mode = "FB16"
-            elif self.mode == "FB16":
-                self.mode = "FB12"
-        if self.zseBorder >= threshold:
-            if self.mode == "FB12":
-                self.mode = "FB16"
-            # elif self.mode == "FB16":
-            #     self.mode = "FB24"
-        
-        if prevmode != self.mode:
-            st += prevmode + "->" + self.mode
-            self.zseBorder = 0
-        else:
-            st += " L:" + str(self.zseBorder)
-        
-        if print_level == 0:
-            pass
-        elif print_level == 1: # Only print when precision change
-            if prevmode != self.mode:
-                Log.Print(st, elapsed = False, current = False)
-        elif print_level == 2:
-            if prevlev != self.zseBorder:
-                Log.Print(st, elapsed = False, current = False)
-        else:
-            Log.Print(st, elapsed = False, current = False)
+    # Optimizer variables
 
 
-    def Add(self, val):
-        self.value += val
-        self.valueTotal += val
-        self.count += 1
-        self.countTotal += 1
+def UpdateSegment(target, value):
+    target.opt_value_weight_last = value["weight"]
+    target.opt_value_grad_last = value["grad"]
+    target.opt_value_weight += value["weight"]
+    target.opt_value_grad += value["grad"]
+    target.opt_count += 1
 
-    def GetSegment(self):
-        v = self.value
-        c = self.count
-        return v, v/c
-    
-    def ResetSegment(self):
-        self.value = 0
-        self.count = 0
-    
-    def Total(self):
-        return self.valueTotal, self.countTotal
+def ResetSegment(target):
+    target.opt_value_weight = 0
+    target.opt_value_grad = 0
+    target.opt_count = 0
 
-def getattrBetter(obj, name):
-    name = name.split(".")
-    for i in name:
-        if i.isdigit():
-            obj = obj[int(i)]
-        else:
-            obj = getattr(obj, i)
-    return obj
+def GetSegment(target):
+    if target.opt_count == 0:
+        return (target.opt_value_weight_last, target.opt_value_grad_last), 0, (target.opt_value_weight/1, target.opt_value_grad/1)
+    return (target.opt_value_weight_last, target.opt_value_grad_last), target.opt_count, (target.opt_value_weight/target.opt_count, target.opt_value_grad/target.opt_count)
 
 
-def setattrBetter(obj, name, target):
-    name = name.split(".")
-    if len(name) > 1:
-        for i in name[:-1]:
-            if i.isdigit():
-                obj = obj[int(i)]
-            else:
-                obj = getattr(obj, i)
-    setattr(obj, name[-1], target)
+CANDIDATE = ["FB24", "FB16", "FB12"]
+THRESHOLD_UP = [0.65, 0.55]
+THRESHOLD_DOWN = [0.45, 0.35]
+HOLDING = 3
 
+from utils.logger import rCol, tCol, bCol
+
+# Much color. So colorful
+def CoLoRiZe(val, format = "%2.4f"):
+    # magenta - red - yellow - green - cyan - blue
+    tl = [tCol['b'], tCol['bb'], tCol['c'], tCol['g'], tCol['y'], tCol['r'], tCol['r'], tCol['r'], tCol['m'], tCol['m']]
+    tc = tl[int(val*len(tl))]
+    tx = format%val
+    return tc + tx[2:] + rCol
+
+def CoLoRiZeB(val, txt = '@'):
+    if val == 16:
+        bg = bCol['g']
+    elif val == 8:
+        bg = bCol['y']
+    else:
+        bg = bCol['r']
+
+    return bg + txt + rCol
 class DynamicOptimizer:
     def __init__(self):
         self.step = 0
         self.layers = dict()
+        self.layerNames = list()
+        self.updateCount = 0
+        self.updateCountTotal = 0
+        self.optimizeCount = 0
+        self.optimizeStep = -1
 
-    def PreloadDict(self, net):
-        # Find all layers to be replaced (BFConv2d), and add to a list
-        bfl = GetBFLayers(net)
-        Log.Print("Detected BFP Layers to Optimize:")
-        Log.Print(str(bfl),elapsed=False, current=False)
-        for i in bfl:
-            self.layers[i] = LayerElement(i, "FB16")
+        self.log_dir = ""
 
-    def AppendGrad(self, net):
-        for key, value in self.layers.items():
-            layer = getattrBetter(net, key[4:])
-            # print(key, layer, layer.bfp_conf)
-            value.Add(get_zse(layer.weight.grad, layer.bfp_conf.bwg_bit, layer.bfp_conf.bwg_dim))
-
-    def GetGradSegment(self, print_info=True):
-        lst = []
-        str = "ZSE "
-        for key, value in self.layers.items():
-            v, a = value.GetSegment()
-            str += "%2.4f "%a
-            lst.append(a)
-        if print_info:
-            Log.Print(str, elapsed=False, current=False)
-        return lst
-
-    def ResetGradSegment(self):
-        for key, value in self.layers.items():
-            value.ResetSegment()
-
-
-    def GetLayerNames(self):
-        lst = []
-        for key, value in self.layers.items():
-            lst.append(key)
-        return lst
-
-    def ReplaceModel(self, args, epoch_current):
-        Log.Print("==== ReplaceModel @ Epoch " + str(epoch_current) + " ====", elapsed = False, current = False)
-        bfp_dict = LoadBFPDictFromFile(args.bfp_layer_conf_file)
-        # Adjust model information
-        initial_preserve = 1
-        if epoch_current < initial_preserve:
-            Log.Print("First " + str(initial_preserve) + " epoch(s): preserve precision", elapsed = False, current = False)
-        else:
-            for key, value in self.layers.items():
-                value.UpdateStep()
-
-        # Add bfp_dict in each stuffs
-        ss = ""
-        for key, value in self.layers.items():
-            # Log.Print("Layer " + str(key) + " : " + str(value.mode), elapsed = False, current = False)
-            bfp_dict[key] = dict()
-            if value.mode == "FB24":
-                bfp_dict[key]["fw_bit"] = 16
-                bfp_dict[key]["bwo_bit"] = 16
-                bfp_dict[key]["bwi_bit"] = 16
-                bfp_dict[key]["bwg_bit"] = 16
-            elif value.mode == "FB16":
-                bfp_dict[key]["fw_bit"] = 8
-                bfp_dict[key]["bwo_bit"] = 8
-                bfp_dict[key]["bwi_bit"] = 8
-                bfp_dict[key]["bwg_bit"] = 8
-            elif value.mode == "FB12":
-                bfp_dict[key]["fw_bit"] = 4
-                bfp_dict[key]["bwo_bit"] = 4
-                bfp_dict[key]["bwi_bit"] = 4
-                bfp_dict[key]["bwg_bit"] = 4
-                
-            bfp_dict[key]["fw_dim"] = [1,24,3,3]
-            bfp_dict[key]["fi_dim"] = [1,6,3,3]
-            bfp_dict[key]["bwo_dim"] = [1,1,18,3]
-            bfp_dict[key]["bwi_dim"] = [1,1,18,3]
-            bfp_dict[key]["bwg_dim"] = [16,1,3,3]
-
-            ss += value.mode + " "
-        Log.Print(ss, elapsed=False, current=False)
-
-        # Change Model to desired 
-        net_ = args.net
-        args.net = GetNetwork(args.dataset, args.model, args.num_classes, bfp_dict, silence=True)
-        args.net.load_state_dict(net_.state_dict())
-        args.net.eval()
-
-        # Load Optimizer, Scheduler, stuffs
-        # Fixed Step
-        args.optimizer = GetDefOptimizer(args, epoch_current)
-        args.scheduler = GetDefScheduler(args, epoch_current)
-        if args.cuda:
-            args.net.to('cuda')
+    def Initialize(self, net, step = -1, log_dir = "", option = ""):
+        Log.Print("=== DYNAMIC OPTIMIZER INITIALIZING ===", elapsed=False, current=False)
+        self.layerNames = GetBFLayerNames(net)
+        # Print information about detected layers
+        Log.Print("Detected Layer:", elapsed=False, current=False)
+        for i in self.layerNames:
+            PrepareSegment(getattr_(net, i[4:]), i)    
+            s = " - " + str(i) + " : " + str(type(getattr_(net, i[4:])))
+            Log.Print(s, elapsed=False, current=False)
         
-        bfp_dict = dict()
-        Log.Print("==== ReplaceModel ====", elapsed = False, current = False)
+        # Set the optimize step. every # of steps, optimizer will called
+        self.optimizeStep = step
+        if self.optimizeStep != -1:
+            Log.Print("optimizeStep is set to %d steps."%self.optimizeStep, elapsed=False, current=False)
+        else:
+            Log.Print("optimizeStep is not set. Trainer need to manually call Optimize()",elapsed=False, current=False)
+
+        # Set the log directory
+        if log_dir != "":
+            self.log_dir = log_dir + "/dynamic.txt"
+            self.data_dir = log_dir + "/data.txt"
+            Log.Print("Log will be saved to %s, %s"%(self.log_dir, self.data_dir),elapsed=False, current=False)
+            self.log_file = open(self.log_dir, mode="w", newline='', encoding='utf-8')
+            self.data_file = open(self.data_dir, mode="w", newline='', encoding='utf-8')
+
+            self.log_file.write(option + "\n")
+            # Write Information
+            s = "\n"
+            self.log_file.write(s)
+            # Write Table Information
+            s = "Step\t"
+            for i in self.layerNames:
+                s += i + ".weight\t" + i + ".grad\t"
+            s += "\n"
+            self.log_file.write(s)
+            self.data_file.write(s)
+        Log.Print("=== DYNAMIC OPTIMIZER INITIALIZED ===", elapsed=False, current=False)
+
+    def CoLoRpRiNt(self, net):
+        # Additional printable variables
+        svv = "%4d: "%self.updateCount
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            v, _, _ = GetSegment(layer)
+            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v[0]) + "/" + CoLoRiZeB(layer.bfp_conf.bwg_bit) + CoLoRiZe(v[1]) + " "
+        """
+        svv += "\n      "
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            _, _, v = GetSegment(layer)
+            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v[0]) + "/" + CoLoRiZeB(layer.bfp_conf.bwg_bit) + CoLoRiZe(v[1]) + " "
+        """
+        print(svv)
 
 
-    """
-    def AddGradients(self, net):
-        self.step += 1
-        for cnt, inst in enumerate(flatten(net)):
-            if type(inst) in [BFPConv2d, torch.nn.Conv2d]:
-                if str(cnt) not in self._gradict:
-                    self._gradict[str(cnt)] = 0
-                # Log.Print(str(inst))
-                self._gradict[str(cnt)] += np.average(np.absolute(inst.weight.grad.detach().cpu()))
-        for name, param in net.named_parameters():
-            if param.requires_grad:
-                Log.Print(str(name))
-                # Log.Print(str(param.data.shape))
-                Log.Print(str(param.grad.shape))
-                Log.Print(str(param.grad))
-                Log.Print("")
-    """
 
+    def Update(self, net):
+        if len(self.layerNames) == 0:
+            return
+        self.updateCount += 1
+        self.updateCountTotal += 1
 
-def Gradients(args):
-    # print(args.net)
-#         Log.Print(str(parameter.grad.shape))
-    for name, param in args.net.named_parameters():
-        if param.requires_grad:
-            Log.Print(str(name))
-            Log.Print(str(type(param)))
-            # Log.Print(str(param.data.shape))
-            Log.Print(str(param.grad.shape))
-            Log.Print(str(param.grad))
-            Log.Print("")
+        # Updates gradient and weight information of layer
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            # print(key, layer, layer.bfp_conf)
+            if layer.weight.grad == None:
+                Log.Print("Warning: Layer " + i + "'s gradient is NULL. Skipping...")
+                continue
+            v = dict()
+            v["grad"] = get_zse(layer.weight.grad, layer.bfp_conf.bwg_bit, layer.bfp_conf.bwg_dim)
+            v["weight"] = get_zse(layer.weight, layer.bfp_conf.fw_bit, layer.bfp_conf.fw_dim)
+            UpdateSegment(layer, v)
 
+        self.CoLoRpRiNt(net)
+        
+        if self.optimizeStep != -1 and self.updateCount == self.optimizeStep:
+            self.Optimize(net)
+
+    def Optimize(self, net):
+        Log.Print("=== OPTIMIZING STEP %d ==="%self.optimizeCount, elapsed=False, current=False)
+        # Optimizes one step further
+        self.optimizeCount += 1
+        
+        # Optimize Method
+
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            prev_fw_bit = layer.bfp_conf.fw_bit
+            prev_bwg_bit = layer.bfp_conf.bwg_bit
+            _, _, a = GetSegment(layer)
+            s = " - " + str(i) + " : %2.4f/%2.4f "%(a[0],a[1])
+            
+            if self.optimizeCount > 100:
+                if a[0] < 0.4:
+                    if layer.bfp_conf.fw_bit == 16:
+                        layer.bfp_conf.fw_bit = 8
+                    elif layer.bfp_conf.fw_bit == 8:
+                        layer.bfp_conf.fw_bit = 4
+                elif a[0] > 0.6:
+                    if layer.bfp_conf.fw_bit == 4:
+                        layer.bfp_conf.fw_bit = 8
+                    elif layer.bfp_conf.fw_bit == 8:
+                        layer.bfp_conf.fw_bit = 16
+                if a[1] < 0.4:
+                    if layer.bfp_conf.bwg_bit == 16:
+                        layer.bfp_conf.bwg_bit = 8
+                    elif layer.bfp_conf.bwg_bit == 8:
+                        layer.bfp_conf.bwg_bit = 4
+                elif a[1] > 0.6:
+                    if layer.bfp_conf.bwg_bit == 4:
+                        layer.bfp_conf.bwg_bit = 8
+                    elif layer.bfp_conf.bwg_bit == 8:
+                        layer.bfp_conf.bwg_bit = 16
+            if prev_fw_bit != layer.bfp_conf.fw_bit:
+                s += "fw %2d->%2d"%(prev_fw_bit, layer.bfp_conf.fw_bit)
+            if prev_bwg_bit != layer.bfp_conf.bwg_bit:
+                s += "bwg %2d->%2d"%(prev_bwg_bit, layer.bfp_conf.bwg_bit)
+            Log.Print(s, elapsed=False, current=False)
+
+        # Show overall
+        sl = str(self.optimizeCount) + "\t"
+        sd = str(self.optimizeCount) + "\t"
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            sl += "%d\t%d\t"%(layer.bfp_conf.fw_bit,layer.bfp_conf.bwg_bit)
+            _, _, a = GetSegment(layer)
+            sd += "%.4f\t%.4f\t"%(a[0],a[1])
+        sl += "\n"
+        sd += "\n"
+        if self.log_dir != "":
+            self.log_file.write(sl)
+            self.data_file.write(sd)
+        Log.Print(sl.replace("\t"," "), end="", elapsed=False, current=False)
+
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+            ResetSegment(layer)
+        self.updateCount = 0
 
 
 DO = DynamicOptimizer()
