@@ -98,6 +98,12 @@ def Train(args, epoch_current):
 
         args.optimizer.step()
         args.optimizer.zero_grad()
+
+        
+        
+        if args.warmup:
+            if epoch_current < args.warmup_epoch:
+                args.scheduler_warmup.step()
         # Print and record the running loss
         pF = False
         batch_count += 1

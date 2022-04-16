@@ -9,7 +9,7 @@ from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
 from utils.tensorAnalyze import TensorAnalyze
 from utils.statManager import statManager
-from utils.functions import str2bool
+from utils.functions import str2bool, WarmUpLR
 from torch.utils.tensorboard import SummaryWriter
 
 from train.dataset import LoadDataset
@@ -24,6 +24,7 @@ from datetime import datetime
 import string
 import random
 args = None
+
 
 
 def SetArgsFromConf(args, attr_name):
@@ -212,6 +213,13 @@ def ArgumentParse():
     SetArgsFromConf(args, "optim-weight-decay")
     args.optimizer = GetOptimizer(args, args.start_epoch)
     args.scheduler = GetScheduler(args, args.start_epoch)
+    
+    # Overriding
+    # args.scheduler = optim.lr_scheduler.MultiStepLR(args.optimizer, milestones=[60, 120, 160], gamma=0.2)
+    args.warmup = False
+    if args.warmup:
+        args.warmup_epoch = 5
+        args.scheduler_warmup = WarmUpLR(args.optimizer, 391*args.warmup_epoch)
     
     # tag:Print
     SetArgsFromConf(args, "print-train-batch")
