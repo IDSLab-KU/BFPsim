@@ -197,8 +197,10 @@ def main_worker(gpu, ngpus_per_node, args):
     # model = models.__dict__[args.arch]()
     # if args.bfp_layer_conf_file != "":
     #     ReplaceLayers(model, LoadBFPDictFromFile(args.bfp_layer_conf_file))
-    
-    model = GetNetwork("imagenet", args.arch, 0, LoadBFPDictFromFile(args.bfp_layer_conf_file), silence=True)
+    if args.bfp_layer_conf_file != "":
+        model = GetNetwork("imagenet", args.arch, 0, LoadBFPDictFromFile(args.bfp_layer_conf_file), silence=True)
+    else:
+        model = models.__dict__[args.arch]()
 
     # model.load_state_dict(model_.state_dict())
     # model = models.densenet121(pretrained=False)
