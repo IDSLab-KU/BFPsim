@@ -148,6 +148,8 @@ def ArgumentParse():
             if args.bfp_layer_conf_file != "":
                 s = args.bfp_layer_conf_file
                 args.run_dir += "_" + s[s.index("_")+1:]
+            if args.do != "":
+                args.run_dir += "_" + args.do
         # args.run_dir += "_" + str(datetime.now())[4:-7].replace("-","").replace(":","").replace(" ","_")
         # Random ID...?
         args.run_dir += "_" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
