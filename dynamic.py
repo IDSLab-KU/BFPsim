@@ -137,8 +137,8 @@ class DynamicOptimizer:
             layer = getattr_(net, i[4:])
             PrepareSegment(layer, i)    
             # Register hook for save intermediate result
-            # layer.register_forward_hook(self.SetActivationForward(i))
-            # layer.register_backward_hook(self.SetActivationBackward(i))
+            layer.register_forward_hook(self.SetActivationForward(i))
+            layer.register_backward_hook(self.SetActivationBackward(i))
             # Print tracked information
             s = " - " + str(i) + " : " + str(type(layer))
             Log.Print(s, elapsed=False, current=False)
@@ -180,7 +180,7 @@ class DynamicOptimizer:
         for i in self.layerNames:
             layer = getattr_(net, i[4:])
             v, _, _ = GetSegment(layer)
-            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v["fw"], "%2.2f") + CoLoRiZeB(layer.bfp_conf.fi_bit) + CoLoRiZe(v["fi"], "%2.2f") + CoLoRiZeB(layer.bfp_conf.bwg_bit) + CoLoRiZe(v["bwg"],"%2.2f") + CoLoRiZeB(layer.bfp_conf.bio_bit) + CoLoRiZe(v["bio"], "%2.2f") + " "
+            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v["fw"], "%2.2f") + CoLoRiZeB(layer.bfp_conf.biw_bit) + CoLoRiZe(v["biw"],"%2.2f") + CoLoRiZeB(layer.bfp_conf.bwo_bit) + CoLoRiZe(v["bwo"], "%2.2f") + " "
         """
         svv += "\n      "
         for i in self.layerNames:
@@ -206,10 +206,10 @@ class DynamicOptimizer:
                 Log.Print("Warning: Layer " + i + "'s gradient is NULL. Skipping...")
                 continue
             v = dict()
-            v["bwg"] = get_zse(layer.weight.grad, layer.bfp_conf.bwg_bit, layer.bfp_conf.bwg_dim)
+            v["biw"] = get_zse(layer.weight.grad, layer.bfp_conf.biw_bit, layer.bfp_conf.biw_dim)
             v["fw"] = get_zse(layer.weight, layer.bfp_conf.fw_bit, layer.bfp_conf.fw_dim)
             # v["fi"] = get_zse(self.actForwardOutput[i], layer.bfp_conf.fi_bit, layer.bfp_conf.fi_dim)
-            # v["bio"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.bio_bit, layer.bfp_conf.bio_dim)
+            v["bwo"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.bwo_bit, layer.bfp_conf.bwo_dim)
             # v["fo"] = get_zse(self.actForwardOutput[i], layer.bfp_conf.fo_bit, layer.bfp_conf.fo_dim)
             # v["bwi"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.big_bit, layer.bfp_conf.big_dim)
             UpdateSegment(layer, v)
@@ -235,43 +235,45 @@ class DynamicOptimizer:
                 if a["fw"] < self.optLowerThreshold:
                     if layer.bfp_conf.fw_bit == 16:
                         layer.bfp_conf.fw_bit = 8
+                        layer.bfp_conf.fi_bit = 8
                     elif layer.bfp_conf.fw_bit == 8:
                         layer.bfp_conf.fw_bit = 4
+                        layer.bfp_conf.fi_bit = 4
                 elif a["fw"] > self.optUpperThreshold:
                     if layer.bfp_conf.fw_bit == 4:
                         layer.bfp_conf.fw_bit = 8
+                        layer.bfp_conf.fi_bit = 8
                     elif layer.bfp_conf.fw_bit == 8:
                         layer.bfp_conf.fw_bit = 16
-                if a["bwg"] < self.optLowerThreshold:
-                    if layer.bfp_conf.bwg_bit == 16:
-                        layer.bfp_conf.bwg_bit = 8
-                    elif layer.bfp_conf.bwg_bit == 8:
-                        layer.bfp_conf.bwg_bit = 4
-                elif a["bwg"] > self.optUpperThreshold:
-                    if layer.bfp_conf.bwg_bit == 4:
-                        layer.bfp_conf.bwg_bit = 8
-                    elif layer.bfp_conf.bwg_bit == 8:
-                        layer.bfp_conf.bwg_bit = 16
-                if a["fi"] < self.optLowerThreshold:
-                    if layer.bfp_conf.fi_bit == 16:
-                        layer.bfp_conf.fi_bit = 8
-                    elif layer.bfp_conf.fi_bit == 8:
-                        layer.bfp_conf.fi_bit = 4
-                elif a["fi"] > self.optUpperThreshold:
-                    if layer.bfp_conf.fi_bit == 4:
-                        layer.bfp_conf.fi_bit = 8
-                    elif layer.bfp_conf.fi_bit == 8:
                         layer.bfp_conf.fi_bit = 16
-                if a["bio"] < self.optLowerThreshold:
-                    if layer.bfp_conf.bio_bit == 16:
+                if a["biw"] < self.optLowerThreshold:
+                    if layer.bfp_conf.biw_bit == 16:
+                        layer.bfp_conf.biw_bit = 8
                         layer.bfp_conf.bio_bit = 8
-                    elif layer.bfp_conf.bio_bit == 8:
+                    elif layer.bfp_conf.biw_bit == 8:
+                        layer.bfp_conf.biw_bit = 4
                         layer.bfp_conf.bio_bit = 4
-                elif a["bio"] > self.optUpperThreshold:
-                    if layer.bfp_conf.bio_bit == 4:
+                elif a["biw"] > self.optUpperThreshold:
+                    if layer.bfp_conf.biw_bit == 4:
+                        layer.bfp_conf.biw_bit = 8
                         layer.bfp_conf.bio_bit = 8
-                    elif layer.bfp_conf.bio_bit == 8:
+                    elif layer.bfp_conf.biw_bit == 8:
+                        layer.bfp_conf.biw_bit = 16
                         layer.bfp_conf.bio_bit = 16
+                if a["bwo"] < self.optLowerThreshold:
+                    if layer.bfp_conf.bwo_bit == 16:
+                        layer.bfp_conf.bwo_bit = 8
+                        layer.bfp_conf.bwi_bit = 8
+                    elif layer.bfp_conf.bwo_bit == 8:
+                        layer.bfp_conf.bwo_bit = 4
+                        layer.bfp_conf.bwi_bit = 4
+                elif a["bwo"] > self.optUpperThreshold:
+                    if layer.bfp_conf.bwo_bit == 4:
+                        layer.bfp_conf.bwo_bit = 8
+                        layer.bfp_conf.bwi_bit = 8
+                    elif layer.bfp_conf.bwo_bit == 8:
+                        layer.bfp_conf.bwo_bit = 16
+                        layer.bfp_conf.bwi_bit = 16
 
     def Optimize(self, net):
         Log.Print("=== OPTIMIZING STEP %d ==="%self.optimizeCount, elapsed=False, current=False)
