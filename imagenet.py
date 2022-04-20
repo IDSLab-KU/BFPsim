@@ -30,7 +30,7 @@ from utils.slackBot import slackBot
 from datetime import datetime
 import string
 import random
-
+from utils.functions import str2bool
 from dynamic import DO
 
 def SaveModel(args, suffix):
@@ -102,6 +102,8 @@ parser.add_argument("-bfp", "--bfp-layer-conf-file", type=str, default="",
     
 parser.add_argument('--do', default='', type=str,
                     help='activate to dynamic optimization')
+parser.add_argument('--do-color', type=str2bool, default = True,
+                help='MaKe CoLoRfUl')
 best_acc1 = 0
 
 
@@ -120,7 +122,7 @@ def main():
             s = args.bfp_layer_conf_file
             args.run_dir += "_" + s[s.index("_")+1:]
         if args.do != "":
-            args.run_dir += "_" + args.do
+            args.run_dir += "_" + args.do.replace("/","-")
         args.run_dir += "_" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     
     args.writer = SummaryWriter('runs/'+args.run_dir)
@@ -328,6 +330,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.do != "":
         DO.Initialize(model, 500, args.save_prefix, args.do)
+        DO.CoLoR = args.do_color
 
     model.cuda()
     for epoch in range(args.start_epoch, args.epochs):

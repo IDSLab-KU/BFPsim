@@ -76,7 +76,8 @@ def CoLoRiZe(val, format = "%2.4f"):
     # magenta - red - yellow - green - cyan - blue
     tl = [tCol['b'], tCol['bb'], tCol['c'], tCol['g'], tCol['y'], tCol['r'], tCol['r'], tCol['r'], tCol['m'], tCol['m']]
     if val > 1:
-        return bCol['r'] + "XX" + rCol
+        v = "X"*int(format[3])
+        return bCol['r'] + v + rCol
     else:
         v = len(tl)-1 if int(val*len(tl)) >= len(tl) else int(val*len(tl))
         tc = tl[v]
@@ -97,6 +98,7 @@ def CoLoRiZeB(val, txt = '@'):
 
 class DynamicOptimizer:
     def __init__(self):
+        self.CoLoR = True
         self.step = 0
         self.layers = dict()
         self.layerNames = list()
@@ -139,6 +141,7 @@ class DynamicOptimizer:
             # Register hook for save intermediate result
             layer.register_forward_hook(self.SetActivationForward(i))
             layer.register_backward_hook(self.SetActivationBackward(i))
+            # layer.register_module_full_backward_hook(self.SetActivationBackward(i))
             # Print tracked information
             s = " - " + str(i) + " : " + str(type(layer))
             Log.Print(s, elapsed=False, current=False)
@@ -161,18 +164,27 @@ class DynamicOptimizer:
 
             self.log_file.write("optimizeArg:" + option + "\n")
             self.optimizeArg = option
+
+            split = self.optimizeArg.split("/")
+            if self.optimizeMode == "" and split[0] == "Simple":
+                self.optimizeMode = "Simple"
+                self.optUpperThreshold = float(split[2])
+                self.optLowerThreshold = float(split[1])
+                self.optInitialBreak = int(split[3])
+                self.optHoldLength = int(split[4])
             # Write Information
             s = "\n"
             self.log_file.write(s)
             # Write Table Information
             s = "Step\t"
             for i in self.layerNames:
-                for seg in ["fi", "fw", "fo", "bio", "biw", "big", "bwo", "bwi", "bwg"]:
+                for seg in ["fw", "biw", "bwo"]:
                     s += i + "." + seg + "\t"
             s += "\n"
             self.log_file.write(s)
             self.data_file.write(s)
         Log.Print("=== DYNAMIC OPTIMIZER INITIALIZED ===", elapsed=False, current=False)
+
 
     def CoLoRpRiNt(self, net):
         # Additional printable variables
@@ -180,7 +192,7 @@ class DynamicOptimizer:
         for i in self.layerNames:
             layer = getattr_(net, i[4:])
             v, _, _ = GetSegment(layer)
-            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v["fw"], "%2.2f") + CoLoRiZeB(layer.bfp_conf.biw_bit) + CoLoRiZe(v["biw"],"%2.2f") + CoLoRiZeB(layer.bfp_conf.bwo_bit) + CoLoRiZe(v["bwo"], "%2.2f") + " "
+            svv += CoLoRiZeB(layer.bfp_conf.fw_bit) + CoLoRiZe(v["fw"], "%2.3f") + CoLoRiZeB(layer.bfp_conf.biw_bit) + CoLoRiZe(v["biw"],"%2.3f") + CoLoRiZeB(layer.bfp_conf.bwo_bit) + CoLoRiZe(v["bwo"], "%2.3f") + " "
         """
         svv += "\n      "
         for i in self.layerNames:
@@ -206,15 +218,16 @@ class DynamicOptimizer:
                 Log.Print("Warning: Layer " + i + "'s gradient is NULL. Skipping...")
                 continue
             v = dict()
-            v["biw"] = get_zse(layer.weight.grad, layer.bfp_conf.biw_bit, layer.bfp_conf.biw_dim)
+            v["bwo"] = get_zse(layer.weight.grad, layer.bfp_conf.bwo_bit, layer.bfp_conf.bwo_dim)
             v["fw"] = get_zse(layer.weight, layer.bfp_conf.fw_bit, layer.bfp_conf.fw_dim)
+            v["biw"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.biw_bit, layer.bfp_conf.biw_dim)
             # v["fi"] = get_zse(self.actForwardOutput[i], layer.bfp_conf.fi_bit, layer.bfp_conf.fi_dim)
-            v["bwo"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.bwo_bit, layer.bfp_conf.bwo_dim)
             # v["fo"] = get_zse(self.actForwardOutput[i], layer.bfp_conf.fo_bit, layer.bfp_conf.fo_dim)
             # v["bwi"] = get_zse(self.actBackwardGradInput[i], layer.bfp_conf.big_bit, layer.bfp_conf.big_dim)
             UpdateSegment(layer, v)
-
-        self.CoLoRpRiNt(net)
+        
+        if self.CoLoR:
+            self.CoLoRpRiNt(net)
         
         if self.optimizeStep != -1 and self.updateCount == self.optimizeStep:
             self.Optimize(net)
@@ -222,13 +235,6 @@ class DynamicOptimizer:
     def OptimizeLayer(self, layer):
         _, _, a = GetSegment(layer)
 
-        split = self.optimizeArg.split("/")
-        if self.optimizeMode == "" and split[0] == "Simple":
-            self.optimizeMode = "Simple"
-            self.optUpperThreshold = float(split[2])
-            self.optLowerThreshold = float(split[1])
-            self.optInitialBreak = int(split[3])
-            self.optHoldLength = int(split[4])
         
         if self.optimizeMode == "Simple":
             if self.optimizeCount > self.optInitialBreak:
@@ -278,35 +284,16 @@ class DynamicOptimizer:
     def Optimize(self, net):
         Log.Print("=== OPTIMIZING STEP %d ==="%self.optimizeCount, elapsed=False, current=False)
         # Optimizes one step further
-        self.optimizeCount += 1
         
-        # Optimize Method
-
-        for i in self.layerNames:
-            layer = getattr_(net, i[4:])
-            prev_fw_bit = layer.bfp_conf.fw_bit
-            prev_bwg_bit = layer.bfp_conf.bwg_bit
-            _, _, a = GetSegment(layer)
-            s = " - " + str(i) + " : "
-            for key in a:
-                s += "%2.4f/"%a[key]
-            self.OptimizeLayer(layer)
-            """
-            if prev_fw_bit != layer.bfp_conf.fw_bit:
-                s += "fw %2d->%2d"%(prev_fw_bit, layer.bfp_conf.fw_bit)
-            if prev_bwg_bit != layer.bfp_conf.bwg_bit:
-                s += "bwg %2d->%2d"%(prev_bwg_bit, layer.bfp_conf.bwg_bit)
-            """
-            Log.Print(s, elapsed=False, current=False)
-
-        # Show overall
+        # Save Training Scheme
         sl = str(self.optimizeCount) + "\t"
         sd = str(self.optimizeCount) + "\t"
         for i in self.layerNames:
             layer = getattr_(net, i[4:])
-            sl += "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t"%(layer.bfp_conf.fi_bit,layer.bfp_conf.fw_bit,layer.bfp_conf.fo_bit,layer.bfp_conf.bio_bit,layer.bfp_conf.biw_bit,layer.bfp_conf.big_bit,layer.bfp_conf.bwo_bit,layer.bfp_conf.bwi_bit,layer.bfp_conf.bwg_bit)
+            # sl += "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t"%(layer.bfp_conf.fi_bit,layer.bfp_conf.fw_bit,layer.bfp_conf.fo_bit,layer.bfp_conf.bio_bit,layer.bfp_conf.biw_bit,layer.bfp_conf.big_bit,layer.bfp_conf.bwo_bit,layer.bfp_conf.bwi_bit,layer.bfp_conf.bwg_bit)
+            sl += "%d\t%d\t%d\t"%(layer.bfp_conf.fw_bit,layer.bfp_conf.biw_bit,layer.bfp_conf.bwo_bit) # Save only significant precision
             _, _, a = GetSegment(layer)
-            for key in a:
+            for key in ["fw", "biw", "bwo"]:
                 sd += "%.4f\t"%a[key]
             # sd += "%.4f\t%.4f\t"%(a["fi"],a["fw"],a["fo"],a["bio"])
         sl += "\n"
@@ -314,7 +301,40 @@ class DynamicOptimizer:
         if self.log_dir != "":
             self.log_file.write(sl)
             self.data_file.write(sd)
-        Log.Print(sl.replace("\t"," "), end="", elapsed=False, current=False)
+
+        self.optimizeCount += 1
+
+        # Optimize Method
+        for i in self.layerNames:
+            layer = getattr_(net, i[4:])
+
+            prev_fw_bit = layer.bfp_conf.fw_bit
+            prev_biw_bit = layer.bfp_conf.biw_bit
+            prev_bwo_bit = layer.bfp_conf.bwo_bit
+
+            _, _, a = GetSegment(layer)
+            s = " - " + str(i) + " : "
+            # for key in a:
+            for key in ["fw", "biw", "bwo"]: # Print only significant methods
+                if key == "fw":
+                    prec = layer.bfp_conf.fw_bit
+                elif key == "biw":
+                    prec = layer.bfp_conf.biw_bit
+                elif key == "bwo":
+                    prec = layer.bfp_conf.bwo_bit
+                s += "%2.4f(%2d) / "%(a[key], prec)
+            self.OptimizeLayer(layer)
+
+            s = s[:-3]
+
+            if prev_fw_bit != layer.bfp_conf.fw_bit:
+                s += " fw %2d->%2d"%(prev_fw_bit, layer.bfp_conf.fw_bit)
+            if prev_biw_bit != layer.bfp_conf.biw_bit:
+                s += " biw %2d->%2d"%(prev_biw_bit, layer.bfp_conf.biw_bit)
+            if prev_bwo_bit != layer.bfp_conf.bwo_bit:
+                s += " bwo %2d->%2d"%(prev_bwo_bit, layer.bfp_conf.bwo_bit)
+
+            Log.Print(s, elapsed=False, current=False)
 
         for i in self.layerNames:
             layer = getattr_(net, i[4:])
