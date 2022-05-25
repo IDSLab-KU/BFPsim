@@ -181,6 +181,7 @@ def TrainNetwork(args):
 
     if args.do != "":
         DO.Initialize(args.net, len(args.trainloader), args.save_prefix, args.do)
+        DO.CoLoR = args.do_color
 
     # args.scaler = torch.cuda.amp.GradScaler() # FP16 Mixed Precision
 
