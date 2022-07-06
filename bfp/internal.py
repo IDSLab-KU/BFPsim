@@ -27,9 +27,6 @@ fp64_mask = [0,
 from numba import jit, cuda
 import numba
 
-# from conf import FLAGS
-# from utils.tensorAnalyze import analyzeObject
-
 @cuda.jit
 def make_groups_2d_internal(v, dim, bs, gs, group_mantissa):
     idx = cuda.threadIdx.x + cuda.blockDim.x  * cuda.blockIdx.x 
@@ -157,9 +154,6 @@ def make_groups_4d_internal(v, dim, bs, gs, group_mantissa):
 
 # make_group_tensor : Group values as same exponent bits, which shifts mantissa
 def make_groups_tensor(inp, group_mantissa, group_dim, type = -1):
-    # Make true to ZSE analyze, temporal disabled
-    # if FLAGS.ZSE:
-    #     analyzeObject.AddData(inp.clone().detach(), group_mantissa, group_dim, type)
 
     # Set pointer of tensor as int, easier to manipulate
     inp_ = inp.view(torch.int32)

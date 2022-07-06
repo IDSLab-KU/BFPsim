@@ -7,7 +7,6 @@ import torch.nn as nn
 from utils.logger import Log
 from utils.slackBot import slackBot
 from utils.generateConfig import GenerateConfig
-from utils.tensorAnalyze import TensorAnalyze
 from utils.statManager import statManager
 from utils.functions import str2bool, WarmUpLR
 from torch.utils.tensorboard import SummaryWriter
@@ -106,12 +105,6 @@ def ArgumentParse():
     # Tag:zseAnalyze
     parser.add_argument("--save-file", type=str, default = "",
         help = "Saved checkpoint of the model")
-    parser.add_argument("--zse-bfp", type=str2bool, default = False,
-        help = "[zse-analyze] If saved file is BFP network, set this to true")
-    parser.add_argument("--zse-graph-mode", type=str, default="percentage",
-        help = "[zse-analyze] Choose graph mode [none, percentage, count]")
-    parser.add_argument("--zse-print-mode", type=str, default = "sum",
-        help = "[zse-analyze] Choose print mode [none, sum, format, all]")
 
     parser.add_argument('--do', default='', type=str,
                     help='activate to dynamic optimization')
@@ -257,9 +250,12 @@ if __name__ == '__main__':
             s += str(arg) + " : " + str(getattr(args, arg)) + "\n\n"
         args.writer.add_text("config", s)
         # Setup Slackbot
-        text_file = open("./slackbot.token", "r")
-        data = text_file.read()
-        text_file.close()
+        try:
+            text_file = open("./slackbot.token", "r")
+            data = text_file.read()
+            text_file.close()
+        except:
+            data = ""
         slackBot.SetToken(data)
         slackBot.SendStartSignal()
         try:
@@ -275,14 +271,6 @@ if __name__ == '__main__':
                 slackBot.SendError("User Interrupted")
         # End the Training Signal
         slackBot.SendEndSignal()
-    elif args.mode == "analyze":
-        for arg in vars(args):
-            if arg in ["bfp_layer_confs", "checkpoints" "trainset", "testset", "classes", "trainloader", "testloader", "bfp_layer_conf",
-            "criterion", "optimizer", "scheduler", "stat_location", "save_prefix", "loss_boost", "training_epochs", "train_config_file"]:
-                continue
-            Log.Print(str(arg) + " : " + str(getattr(args, arg)), current=False, elapsed=False)
-        # zse analyze mode
-        TensorAnalyze(args)
     elif args.mode == "generate-config":
         # Generating config mode
         GenerateConfig(args)

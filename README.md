@@ -47,21 +47,35 @@ If you want to set by your own, follow [Tutorial](https://github.com/slackapi/py
 
 ## Resnet with preset config
 
-Execting FP32 Normal ResNet
+Executing ResNet18 on CIFAR100, with FP32
 
-```docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py --model --arch resnet18``
+```docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/cifar.py --mode train --model ResNet18 --dataset CIFAR100 --log True``
 
-ResNet18 with FB24 
+Executing ResNet18 on CIFAR100, with FP24
 
-```docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/main.py --mode train --model ResNet18 --dataset CIFAR100 --log True --bfp ResNet18_FB24```
+```docker run --rm --gpus '"device=0"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/cifar.py --mode train --model ResNet18 --dataset CIFAR100 --log True --bfp ResNet18_FB24```
+`
+Executing ResNet18 on ImageNet([Original Code](https://github.com/pytorch/examples/tree/main/imagenet)), with FP24
+
+```docker run --rm --gpus '"device=3"' --cpus="64" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/imagenet.py --arch resnet18 --bfp ResNet18_FB12LG24 --log True```
 `
 
-## More information
+Executing runs will automatically added to the folder names `./runs/`. Visualization is also available on the tensorboard, which is mentioned before
 
-More specifically, look at the [docs](/docs/_index.md) for the arguments and setup your custom network, etc... (TBD)
+## Simple Dynamic Precision Control
+
+By adding optional argument `--do`, it will execute the dynamic optimizer with simple method mentioned on original paper, FlexBlock.
+```docker run --rm --gpus '"device=5"' --cpus="64" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/imagenet.py --arch resnet18 --bfp ResNet18_FB12LG24 --do Simple/0.1/0.2/150/1/L8 --do-color False```
+
+Execution of CIFAR100, with Dynamic
+```docker run --rm --gpus '"device=3"' --cpus="8" --user "$(id -u):$(id -g)" --mount type=bind,source=/dataset,target=/dataset --shm-size 24G --workdir /app -v "$(pwd)":/app $(whoami)/bfpsim:latest python3 -u /app/cifar.py --mode train --model ResNet18 --dataset CIFAR10 --log True --bfp ResNet18_FB24 --do Simple/0.6/0.8/0/1 --do-color False```
+
+If you enable `-do-color` option, console window will shine like rainbow :), and see the zero-setting error of each weights/weight gradients/local gradients.
+
+## Useful arguments to be set
+
+
 
 # Citation
 
-# License
-
-This repository uses [CC BY 4.0](https://creativecommons.org/licenses/)
+[FlexBlock: A Flexible DNN Training Accelerator with Multi-Mode Block Floating Point Support](https://arxiv.org/abs/2203.06673)

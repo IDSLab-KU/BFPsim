@@ -7,8 +7,7 @@ from utils.statManager import statManager
 from utils.save import SaveModel
 from train.network import GetNetwork, GetOptimizer, GetScheduler
 from bfp.functions import LoadBFPDictFromFile
-
-from dynamic import DO
+from utils.dynamic import DO
 
 def TrainMixed(args, epoch_current):
     running_loss = 0.0

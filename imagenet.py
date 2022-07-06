@@ -31,7 +31,7 @@ from datetime import datetime
 import string
 import random
 from utils.functions import str2bool
-from dynamic import DO
+from utils.dynamic import DO
 
 def SaveModel(args, suffix):
     PATH = "%s/%s.model"%(args.save_prefix,suffix)
@@ -518,7 +518,8 @@ class ProgressMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
+#     lr = args.lr * (0.1 ** (epoch // 30)) 
+    lr = args.lr * (0.1 ** (epoch // (args.epochs//3))) 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
