@@ -92,7 +92,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 
 parser.add_argument('--train-partial', default=1, type=float,
                     help='train partial value')
-parser.add_argument("-tc", "--train-config-file", type=str, default="",
+parser.add_argument("--tc", "--train-config-file", type=str, default="",
     help = "Train config file. Please see documentation about usage")
 
 parser.add_argument("--run-dir", type=str, default = "",

@@ -1,9 +1,0 @@
-{
-    "name":"VGG16_CIFAR10_FB12",
-    "description":"",
-    "model":"VGG16",
-    "training-epochs":200,
-    "dataset":"CIFAR10",
-    "save-name":"VGG16_CIFAR10_FB12",
-    "bfp-layer-conf-file":"default_FB12"
-}
