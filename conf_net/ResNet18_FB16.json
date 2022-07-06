@@ -7,12 +7,12 @@
         "bwi_bit":8,
         "biw_bit":8,
         "bio_bit":8,
-        "fw_dim":[1,4,3,3],
-        "fi_dim":[1,4,3,3],
-        "bwo_dim":[1,1,12,3],
-        "bwi_dim":[1,1,12,3],
-        "biw_dim":[1,4,3,3],
-        "bio_dim":[1,1,12,3]
+        "fw_dim":[1,12,3,3],
+        "fi_dim":[1,12,3,3],
+        "bwo_dim":[1,12,3,3],
+        "bwi_dim":[1,12,3,3],
+        "biw_dim":[1,12,3,3],
+        "bio_dim":[1,12,3,3]
     },
     "net.conv1":{
         "type":"default"
