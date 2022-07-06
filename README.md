@@ -119,7 +119,7 @@ Each notation will indicates...
  - `big_dim`: Group dimension of mantissa (precision) on local gradient
 
 Group dimension is provided as list like `[x,y,z,w]`. Example is shown below.
- - Group size of 8, direction of input channel : `[8,1,1,1]`
+ - Group size of 8, direction of input channel : `[1,8,1,1]`
  - Group size of 9, group by kernel (weight) : `[1,1,3,3]`
  - Group size of 216, mentioned on FlexBlock : `[1,24,3,3]`
 
