@@ -104,7 +104,7 @@ class BFPConf():
         # Backward - Calculated weight gradient
         self.bwg     = dic["bwg"]                       if "bwg"     in dic.keys() else False
         self.bwg_bit = dic["bwg_bit"]                   if "bwg_bit" in dic.keys() else self.fw_bit
-        self.bwg_dim  = GetDimension(dic["bwg_dim"],dw) if "bwg_dim" in dic.keys() else (1,1,1,1)
+        self.bwg_dim  = GetDimension(dic["bwg_dim"],dw) if "bwg_dim" in dic.keys() else (4, 1, 3, 3)
 
         self.bwg_boost = bwg_boost
 

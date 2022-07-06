@@ -19,15 +19,17 @@ model_names = sorted(name for name in models.__dict__
 
 from bfp.functions import ReplaceLayers
 
-def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = False):
+def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = False, silence = False):
     if dataset.lower() == "imagenet":
         if model.lower() in model_names:
             if pretrained:
-                net = models.__dict__[args.arch](pretrained=True)
-                Log.Print("Using pretrained pytorch {model} imagenet model...", current=False, elapsed=False)
+                net = models.__dict__[model](pretrained=True)
+                if not silence:
+                    Log.Print("Using pretrained pytorch {model} imagenet model...", current=False, elapsed=False)
             else:
-                net = models.__dict__[args.arch]()
-                Log.Print("Using pytorch {model} imagenet model...", current=False, elapsed=False)
+                net = models.__dict__[model]()
+                if not silence:
+                    Log.Print("Using pytorch {model} imagenet model...", current=False, elapsed=False)
         else:
             NotImplementedError("Imagenet model {model} not defined on pytorch")
     elif dataset.lower() in ["cifar10", "cifar100"]:
@@ -47,23 +49,26 @@ def GetNetwork(dataset, model, num_classes = 10, bfp_conf = None, pretrained = F
         NotImplementedError("Dataset {datset} not supported.")
 
     if bfp_conf != None:
-        ReplaceLayers(net, bfp_conf)
-        Log.Print("Replacing model's layers to provided bfp config...", current=False, elapsed=False)
+        if not silence:
+            Log.Print("Replacing model's layers to provided bfp config...", current=False, elapsed=False)
+        ReplaceLayers(net, bfp_conf, silence = silence)
     return net
 
 
 import torch.optim as optim
 
 
-def GetOptimizer(args, epoch):
+def GetOptimizer(args, epoch, silence=False):
     if str(epoch) in args.optimizer_dict:
-        Log.Print("Setting optimizer from dict", elapsed=False, current=False)
+        if not silence:
+            Log.Print("Setting optimizer from dict", elapsed=False, current=False)
         config = args.optimizer_dict[str(epoch)]
         lr = config["lr-initial"] if "lr-initial" in config else args.optim_lr
         momentum = config["momentum"] if "momentum" in config else args.optim_momentum
         weight_decay = config["weight-decay"] if "weight-decay" in config else args.optim_weight_decay
     else:
-        Log.Print("Configuration not found. Returning default Optimizer...", elapsed=False, current=False)
+        if not silence:
+            Log.Print("Configuration not found. Returning default Optimizer...", elapsed=False, current=False)
         lr = args.optim_lr
         momentum = args.optim_momentum
         weight_decay = args.optim_weight_decay
@@ -78,12 +83,14 @@ def GetOptimizer(args, epoch):
     return opt
 
 # Scheduler also uses same dict with optimizer
-def GetScheduler(args, epoch):
+def GetScheduler(args, epoch, silence=False):
     if str(epoch) in args.optimizer_dict:
-        Log.Print("Setting scheduler from dict", elapsed=False, current=False)
+        if not silence:
+            Log.Print("Setting scheduler from dict", elapsed=False, current=False)
         config = args.optimizer_dict[str(epoch)]
     else:
-        Log.Print("Configuration not found. Returning default Scheduler from args...", elapsed=False, current=False)
+        if not silence:
+            Log.Print("Configuration not found. Returning default Scheduler from args...", elapsed=False, current=False)
         
     sche = optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=args.training_epochs)
         
@@ -92,5 +99,28 @@ def GetScheduler(args, epoch):
         if "step" in config:
             for i in range(config["step"]):
                 sche.step()
+
+    return sche
+
+
+def GetDefOptimizer(args, epoch):
+    lr = args.optim_lr
+    momentum = args.optim_momentum
+    weight_decay = args.optim_weight_decay
+
+    opt = optim.SGD(args.net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+
+    for i in range(epoch):
+        opt.step()
+
+    return opt
+
+
+# Scheduler also uses same dict with optimizer
+def GetDefScheduler(args, epoch):
+    sche = optim.lr_scheduler.CosineAnnealingLR(args.optimizer, T_max=args.training_epochs)
+        
+    for i in range(epoch):
+        sche.step()
 
     return sche

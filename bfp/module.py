@@ -105,9 +105,9 @@ class BFPLinearFunction(torch.autograd.Function):
         
 
         # grad_weight = torch.empty((grad_output.shape[2], input.shape[2]),dtype=torch.float).cuda()
-        if len(grad_output.shape == 2):
+        if len(grad_output.shape) == 2:
             grad_weight = gradient_linear_weight_2d(grad_output_.clone().detach(), input_.clone().detach(), weight.shape)
-        elif len(grad_output.shape == 3):
+        elif len(grad_output.shape) == 3:
             grad_weight = gradient_linear_weight_3d(grad_output_.clone().detach(), input_.clone().detach(), weight.shape)
         else:
             print("BFLinear - Backward ERROR: gradient weight dimention not supported")

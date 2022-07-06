@@ -1,18 +1,18 @@
 {
     "name":"default",
     "default":{
-        "fw_bit":16,
-        "fi_bit":16,
-        "bwo_bit":16,
-        "bwi_bit":16,
-        "biw_bit":16,
-        "bio_bit":16,
-        "fw_dim":[1,6,3,3],
-        "fi_dim":[1,6,3,3],
-        "bwo_dim":[1,6,3,3],
-        "bwi_dim":[1,6,3,3],
-        "biw_dim":[1,6,3,3],
-        "bio_dim":[1,6,3,3]
+        "fw_bit":4,
+        "fi_bit":4,
+        "bwo_bit":4,
+        "bwi_bit":4,
+        "biw_bit":8,
+        "bio_bit":8,
+        "fw_dim":[1,24,3,3],
+        "fi_dim":[1,24,3,3],
+        "bwo_dim":[1,24,3,3],
+        "bwi_dim":[1,24,3,3],
+        "biw_dim":[1,12,3,3],
+        "bio_dim":[1,12,3,3]
     },
     "net.conv1":{
         "type":"default"
@@ -49,5 +49,5 @@
     },
     "net.fc":{
         "type":"default"
-    }
+    }   
 }

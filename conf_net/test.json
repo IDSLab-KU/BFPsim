@@ -1,26 +1,53 @@
 {
     "name":"default",
     "default":{
-        "fw_bit":4,
+        "fw_bit":16,
+        "fi_bit":16,
         "bwo_bit":16,
         "bwi_bit":16,
-        "fw":true,
-        "fi":true,
-        "fo":false,
-        "bio":true,
-        "biw":true,
-        "big":false,
-        "bwi":true,
-        "bwo":true,
-        "bwg":false,
-        "fw_dim":"wi, 216",
-        "fi_dim":"fc, 54",
-        "fo_dim":1,
-        "biw_dim":"fx, 54",
-        "bio_dim":"fx, 54",
-        "big_dim":1,
-        "bwo_dim":"fx, 54",
-        "bwi_dim":"fx, 54",
-        "bwg_dim":1
+        "biw_bit":16,
+        "bio_bit":16,
+        "fw_dim":[1,6,3,3],
+        "fi_dim":[1,6,3,3],
+        "bwo_dim":[1,6,3,3],
+        "bwi_dim":[1,6,3,3],
+        "biw_dim":[1,6,3,3],
+        "bio_dim":[1,6,3,3]
+    },
+    "net.conv1":{
+        "type":"default"
+    },
+    "net.layer2.0.downsample":{
+        "type":"default"
+    },
+    "net.layer3.0.downsample":{
+        "type":"default"
+    },
+    "net.layer4.0.downsample":{
+        "type":"default"
+    },
+    "net.layer2.0.downsample.0":{
+        "type":"default"
+    },
+    "net.layer3.0.downsample.0":{
+        "type":"default"
+    },
+    "net.layer4.0.downsample.0":{
+        "type":"default"
+    },
+    "net.layer2.0.shortcut.0":{
+        "type":"default"
+    },
+    "net.layer3.0.shortcut.0":{
+        "type":"default"
+    },
+    "net.layer4.0.shortcut.0":{
+        "type":"default"
+    },
+    "net.linear":{
+        "type":"default"
+    },
+    "net.fc":{
+        "type":"default"
     }
 }

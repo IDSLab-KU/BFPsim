@@ -1,0 +1,9 @@
+{
+    "name":"ResNet18_CIFAR10_FB12WG16",
+    "description":"",
+    "model":"ResNet18",
+    "training-epochs":200,
+    "dataset":"CIFAR10",
+    "save-name":"ResNet18_CIFAR10_FB12WG16",
+    "bfp-layer-conf-file":"ResNet18_FB12WG16"
+}

@@ -9,3 +9,4 @@ extensions/build.ninja
 extensions/.ninja_deps
 extensions/cudnn_convolution.so
 extensions/cudnn_convolution.o
+run_archive/

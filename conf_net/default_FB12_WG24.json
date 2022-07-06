@@ -1,8 +1,0 @@
-{
-    "name":"default",
-    "default":{
-        "fw_bit":4,
-        "bwo_bit":16,
-        "bwi_bit":16
-    }
-}
