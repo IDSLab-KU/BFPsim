@@ -1,3 +1,5 @@
 FROM pytorch/pytorch:1.9.0-cuda11.1-cudnn8-runtime
 
+RUN pip install protobuf==3.20.*
+
 RUN pip install tensorboard==2.7.0
